@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Strongest</string>
+    <string name="app_description">Free workout tracker with 800+ exercises</string>
+
+    <!-- Navigation -->
+    <string name="nav_workout">Workout</string>
+    <string name="nav_routines">Routines</string>
+    <string name="nav_history">History</string>
+    <string name="nav_progress">Progress</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Workout -->
+    <string name="start_workout">Start Workout</string>
+    <string name="finish_workout">Finish Workout</string>
+    <string name="add_exercise">Add Exercise</string>
+    <string name="add_set">Add Set</string>
+    <string name="log_set">Log Set</string>
+    <string name="previous">Previous</string>
+    <string name="weight">Weight</string>
+    <string name="reps">Reps</string>
+    <string name="rpe">RPE</string>
+    <string name="set_type">Set Type</string>
+    <string name="normal_set">Normal</string>
+    <string name="warmup_set">Warm Up</string>
+    <string name="failure_set">Failure</string>
+    <string name="drop_set">Drop Set</string>
+    <string name="rest_timer">Rest Timer</string>
+
+    <!-- Routines -->
+    <string name="create_routine">Create Routine</string>
+    <string name="routine_name">Routine Name</string>
+    <string name="routine_description">Description (optional)</string>
+    <string name="delete_routine">Delete Routine</string>
+    <string name="edit_routine">Edit Routine</string>
+
+    <!-- Exercises -->
+    <string name="exercise_library">Exercise Library</string>
+    <string name="search_exercises">Search exercises...</string>
+    <string name="all_muscles">All</string>
+    <string name="chest">Chest</string>
+    <string name="back">Back</string>
+    <string name="shoulders">Shoulders</string>
+    <string name="biceps">Biceps</string>
+    <string name="triceps">Triceps</string>
+    <string name="legs">Legs</string>
+    <string name="calves">Calves</string>
+    <string name="abs">Abs</string>
+    <string name="lower_back">Lower Back</string>
+    <string name="cardio">Cardio</string>
+    <string name="stretching">Stretching</string>
+
+    <!-- Progress -->
+    <string name="personal_records">Personal Records</string>
+    <string name="one_rep_max">1 Rep Max</string>
+    <string name="volume">Volume</string>
+    <string name="muscle_heatmap">Muscle Heatmap</string>
+    <string name="body_measurements">Body Measurements</string>
+
+    <!-- Settings -->
+    <string name="weight_unit">Weight Unit</string>
+    <string name="kilograms">Kilograms (kg)</string>
+    <string name="pounds">Pounds (lbs)</string>
+    <string name="theme">Theme</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="light_mode">Light Mode</string>
+    <string name="system_default">System Default</string>
+    <string name="export_csv">Export CSV</string>
+    <string name="import_csv">Import CSV</string>
+    <string name="about">About</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="donate">Support Development</string>
+
+    <!-- Common -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="confirm">Confirm</string>
+    <string name="undo">Undo</string>
+    <string name="duration">Duration</string>
+    <string name="notes">Notes</string>
+    <string name="date">Date</string>
+</resources>

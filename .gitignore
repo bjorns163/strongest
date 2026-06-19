@@ -1,0 +1,29 @@
+# Gradle files
+.gradle/
+build/
+
+# Local configuration file (contains your local SDK path)
+local.properties
+
+# Log/OS Files
+*.log
+.DS_Store (Mac)
+Thumbs.db (Windows)
+
+# Android Studio / IntelliJ generated files
+*.iml
+.idea/workspace.xml
+.idea/libraries
+.idea/caches
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Output files
+*.apk
+*.aab
+output-metadata.json
+
+# Signing files (NEVER share your keys!)
+*.jks
+*.keystore

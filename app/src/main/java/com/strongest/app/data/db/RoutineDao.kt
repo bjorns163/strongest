@@ -39,6 +39,9 @@ interface RoutineDao {
     @Query("SELECT * FROM routine_sets WHERE routineExerciseId IN (:exerciseIds) ORDER BY setNumber ASC")
     suspend fun getRoutineSetsForExercises(exerciseIds: List<Long>): List<RoutineSet>
 
+    @Query("SELECT * FROM routine_sets")
+    suspend fun getAllRoutineSetsList(): List<RoutineSet>
+
     @Transaction
     suspend fun getRoutineWithExercises(id: Long): Pair<Routine?, List<RoutineExercise>> {
         val routine = getRoutineById(id)
@@ -91,6 +94,9 @@ interface RoutineDao {
 
     @Query("SELECT * FROM routine_groups ORDER BY orderIndex ASC, name ASC")
     fun getAllRoutineGroups(): Flow<List<RoutineGroup>>
+
+    @Query("SELECT * FROM routine_groups ORDER BY orderIndex ASC, name ASC")
+    suspend fun getAllRoutineGroupsList(): List<RoutineGroup>
 
     @Query("SELECT * FROM routine_groups WHERE id = :id")
     suspend fun getRoutineGroupById(id: Long): RoutineGroup?

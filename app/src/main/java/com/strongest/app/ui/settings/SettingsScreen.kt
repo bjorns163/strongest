@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -100,6 +101,46 @@ fun SettingsScreen(
     LaunchedEffect(uiState.lastSetRestSeconds) {
         if (!showLastSetTimerDialog) {
             lastSetTimerInput = uiState.lastSetRestSeconds.toString()
+        }
+    }
+
+    val context = LocalContext.current
+    val exportImportResult by viewModel.exportImportResult.collectAsState()
+    var showImportConfirmDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(exportImportResult) {
+        when (val result = exportImportResult) {
+            is ExportImportResult.ExportSuccess -> {
+                snackbarHostState.showSnackbar("Data exported successfully")
+                viewModel.resetExportImportResult()
+            }
+            is ExportImportResult.ImportSuccess -> {
+                snackbarHostState.showSnackbar(
+                    "Imported ${result.workoutCount} workouts, ${result.exerciseCount} exercises"
+                )
+                viewModel.resetExportImportResult()
+            }
+            is ExportImportResult.Error -> {
+                snackbarHostState.showSnackbar(result.message)
+                viewModel.resetExportImportResult()
+            }
+            else -> {}
+        }
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportData(context, uri)
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importData(context, uri)
         }
     }
 
@@ -589,6 +630,43 @@ fun SettingsScreen(
             }
 
             item {
+                SettingSection(title = "Data")
+            }
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            exportLauncher.launch("strongest_export.json")
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = exportImportResult !is ExportImportResult.InProgress
+                    ) {
+                        if (exportImportResult is ExportImportResult.InProgress) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(4.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Export Data")
+                        }
+                    }
+                    Button(
+                        onClick = { showImportConfirmDialog = true },
+                        modifier = Modifier.weight(1f),
+                        enabled = exportImportResult !is ExportImportResult.InProgress
+                    ) {
+                        Text("Import Data")
+                    }
+                }
+            }
+
+            item {
                 SettingSection(title = "About")
             }
 
@@ -792,6 +870,35 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLastSetTimerDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showImportConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportConfirmDialog = false },
+            title = { Text("Import Data") },
+            text = {
+                Text(
+                    "This will REPLACE all existing data in the app with the imported data. " +
+                    "This cannot be undone. Make sure you have exported your current data first " +
+                    "if you want to keep it.\n\nContinue?"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showImportConfirmDialog = false
+                        importLauncher.launch(arrayOf("application/json", "*/*"))
+                    }
+                ) {
+                    Text("Continue")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportConfirmDialog = false }) {
                     Text("Cancel")
                 }
             }

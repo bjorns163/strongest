@@ -22,6 +22,9 @@ interface MeasurementEntryDao {
     @Query("SELECT * FROM measurement_entries ORDER BY timestamp DESC")
     fun getAllEntries(): Flow<List<MeasurementEntry>>
 
+    @Query("SELECT * FROM measurement_entries ORDER BY timestamp DESC")
+    suspend fun getAllEntriesList(): List<MeasurementEntry>
+
     @Query("SELECT * FROM measurement_entries WHERE metric = :metric ORDER BY timestamp ASC")
     fun getEntriesForMetric(metric: BodyMetric): Flow<List<MeasurementEntry>>
 

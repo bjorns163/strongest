@@ -277,4 +277,29 @@ class SettingsRepository @Inject constructor(
             }
         }
     }
+
+    suspend fun importSettings(settings: AppSettings) {
+        context.dataStore.edit { preferences ->
+            preferences[THEME_KEY] = settings.themeMode.name
+            preferences[WEIGHT_UNIT_KEY] = settings.weightUnit.name
+            preferences[DEFAULT_REST_KEY] = settings.defaultRestSeconds
+            preferences[TIMER_ADJUST_KEY] = settings.timerAdjustmentSeconds
+            preferences[LAST_SET_REST_KEY] = settings.lastSetRestSeconds
+            preferences[KEEP_SCREEN_ON_KEY] = settings.keepScreenOn
+            preferences[RPE_TRACKING_ENABLED_KEY] = settings.rpeTrackingEnabled
+            preferences[AVAILABLE_KG_PLATES_KEY] = settings.availableKgPlates.map { it.toString() }.toSet()
+            preferences[AVAILABLE_LBS_PLATES_KEY] = settings.availableLbsPlates.map { it.toString() }.toSet()
+            preferences[ONE_RM_FORMULA_KEY] = settings.oneRmFormula.name
+            preferences[RECOVERY_BY_MUSCLE_KEY] =
+                settings.recoveryHoursByMuscle.entries.joinToString(";") { "${it.key.name}:${it.value}" }
+            preferences[USER_SEX_KEY] = settings.userSex.name
+            preferences[BIRTH_YEAR_KEY] = settings.birthYear
+            preferences[CALIPER_MODE_KEY] = settings.caliperMode.name
+            if (settings.notificationSoundUri != null) {
+                preferences[NOTIFICATION_SOUND_URI_KEY] = settings.notificationSoundUri
+            } else {
+                preferences.remove(NOTIFICATION_SOUND_URI_KEY)
+            }
+        }
+    }
 }

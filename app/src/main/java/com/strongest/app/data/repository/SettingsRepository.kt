@@ -31,8 +31,8 @@ data class AppSettings(
     val notificationSoundUri: String? = null,
     val rpeTrackingEnabled: Boolean = false,
     val workoutNotificationEnabled: Boolean = true,
-    val availableKgPlates: Set<Float> = STANDARD_KG_PLATES.toSet(),
-    val availableLbsPlates: Set<Float> = STANDARD_LBS_PLATES.toSet(),
+    val availableKgPlates: Map<Float, Int> = STANDARD_KG_PLATES.associateWith { 999 },
+    val availableLbsPlates: Map<Float, Int> = STANDARD_LBS_PLATES.associateWith { 999 },
     val oneRmFormula: OneRmFormula = OneRmFormula.EPLEY,
     val recoveryHoursByMuscle: Map<MuscleGroup, Int> = defaultRecoveryHoursMap(),
     val userSex: Sex = Sex.UNSET,
@@ -101,9 +101,16 @@ class SettingsRepository @Inject constructor(
     private val BIRTH_YEAR_KEY = intPreferencesKey("birth_year")
     private val CALIPER_MODE_KEY = stringPreferencesKey("caliper_mode")
 
-    private fun parsePlateSet(stored: Set<String>?, fallback: Set<Float>): Set<Float> {
+    private fun parsePlateMap(stored: Set<String>?, fallback: Map<Float, Int>): Map<Float, Int> {
         if (stored == null) return fallback
-        return stored.mapNotNull { it.toFloatOrNull() }.toSet()
+        val map = mutableMapOf<Float, Int>()
+        for (s in stored) {
+            val parts = s.split(":")
+            val weight = parts[0].toFloatOrNull() ?: continue
+            val qty = if (parts.size >= 2) parts[1].toIntOrNull() ?: 999 else 999
+            map[weight] = qty
+        }
+        return if (map.isEmpty()) fallback else map
     }
 
     /** Parses stored "MUSCLE:hours;..." overrides, merged onto the per-muscle defaults. */
@@ -155,8 +162,8 @@ class SettingsRepository @Inject constructor(
                 notificationSoundUri = preferences[NOTIFICATION_SOUND_URI_KEY],
                 rpeTrackingEnabled = preferences[RPE_TRACKING_ENABLED_KEY] ?: false,
                 workoutNotificationEnabled = preferences[WORKOUT_NOTIFICATION_ENABLED_KEY] ?: true,
-                availableKgPlates = parsePlateSet(preferences[AVAILABLE_KG_PLATES_KEY], STANDARD_KG_PLATES.toSet()),
-                availableLbsPlates = parsePlateSet(preferences[AVAILABLE_LBS_PLATES_KEY], STANDARD_LBS_PLATES.toSet()),
+                availableKgPlates = parsePlateMap(preferences[AVAILABLE_KG_PLATES_KEY], STANDARD_KG_PLATES.associateWith { 999 }),
+                availableLbsPlates = parsePlateMap(preferences[AVAILABLE_LBS_PLATES_KEY], STANDARD_LBS_PLATES.associateWith { 999 }),
                 oneRmFormula = safeEnum(preferences[ONE_RM_FORMULA_KEY], OneRmFormula.EPLEY),
                 recoveryHoursByMuscle = parseRecoveryHours(preferences[RECOVERY_BY_MUSCLE_KEY]),
                 userSex = safeEnum(preferences[USER_SEX_KEY], Sex.UNSET),
@@ -213,10 +220,10 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    suspend fun setAvailablePlates(unit: WeightUnit, plates: Set<Float>) {
+    suspend fun setAvailablePlates(unit: WeightUnit, plates: Map<Float, Int>) {
         context.dataStore.edit { preferences ->
             val key = if (unit == WeightUnit.KG) AVAILABLE_KG_PLATES_KEY else AVAILABLE_LBS_PLATES_KEY
-            preferences[key] = plates.map { it.toString() }.toSet()
+            preferences[key] = plates.map { (weight, qty) -> "${weight}:${qty}" }.toSet()
         }
     }
 
@@ -297,8 +304,8 @@ class SettingsRepository @Inject constructor(
             preferences[KEEP_SCREEN_ON_KEY] = settings.keepScreenOn
             preferences[RPE_TRACKING_ENABLED_KEY] = settings.rpeTrackingEnabled
             preferences[WORKOUT_NOTIFICATION_ENABLED_KEY] = settings.workoutNotificationEnabled
-            preferences[AVAILABLE_KG_PLATES_KEY] = settings.availableKgPlates.map { it.toString() }.toSet()
-            preferences[AVAILABLE_LBS_PLATES_KEY] = settings.availableLbsPlates.map { it.toString() }.toSet()
+            preferences[AVAILABLE_KG_PLATES_KEY] = settings.availableKgPlates.map { (w, q) -> "${w}:${q}" }.toSet()
+            preferences[AVAILABLE_LBS_PLATES_KEY] = settings.availableLbsPlates.map { (w, q) -> "${w}:${q}" }.toSet()
             preferences[ONE_RM_FORMULA_KEY] = settings.oneRmFormula.name
             preferences[RECOVERY_BY_MUSCLE_KEY] =
                 settings.recoveryHoursByMuscle.entries.joinToString(";") { "${it.key.name}:${it.value}" }

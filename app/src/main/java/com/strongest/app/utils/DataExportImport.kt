@@ -280,8 +280,8 @@ private fun AppSettings.toJson(): JSONObject = JSONObject().apply {
     put(SET_KEEP_SCREEN_ON, keepScreenOn)
     put(SET_NOTIFICATION_SOUND_URI, notificationSoundUri ?: JSONObject.NULL)
     put(SET_RPE_TRACKING_ENABLED, rpeTrackingEnabled)
-    put(SET_AVAILABLE_KG_PLATES, JSONArray(availableKgPlates.map { it.toDouble() }))
-    put(SET_AVAILABLE_LBS_PLATES, JSONArray(availableLbsPlates.map { it.toDouble() }))
+    put(SET_AVAILABLE_KG_PLATES, JSONObject(availableKgPlates.mapValues { it.value.toString() }))
+    put(SET_AVAILABLE_LBS_PLATES, JSONObject(availableLbsPlates.mapValues { it.value.toString() }))
     put(SET_ONE_RM_FORMULA, oneRmFormula.name)
     put(
         SET_RECOVERY_HOURS_BY_MUSCLE,
@@ -310,12 +310,20 @@ private fun JSONObject.toAppSettings(): AppSettings = AppSettings(
     notificationSoundUri = if (isNull(SET_NOTIFICATION_SOUND_URI)) null
     else optString(SET_NOTIFICATION_SOUND_URI),
     rpeTrackingEnabled = optBoolean(SET_RPE_TRACKING_ENABLED, false),
-    availableKgPlates = optJSONArray(SET_AVAILABLE_KG_PLATES)?.let { arr ->
-        (0 until arr.length()).map { arr.getDouble(it).toFloat() }.toSet()
-    } ?: emptySet(),
-    availableLbsPlates = optJSONArray(SET_AVAILABLE_LBS_PLATES)?.let { arr ->
-        (0 until arr.length()).map { arr.getDouble(it).toFloat() }.toSet()
-    } ?: emptySet(),
+    availableKgPlates = optJSONObject(SET_AVAILABLE_KG_PLATES)?.let { obj ->
+        obj.keys().asSequence().mapNotNull { key ->
+            val w = key.toFloatOrNull()
+            val q = obj.optString(key).toIntOrNull() ?: 999
+            if (w != null) w to q else null
+        }.toMap()
+    } ?: emptyMap(),
+    availableLbsPlates = optJSONObject(SET_AVAILABLE_LBS_PLATES)?.let { obj ->
+        obj.keys().asSequence().mapNotNull { key ->
+            val w = key.toFloatOrNull()
+            val q = obj.optString(key).toIntOrNull() ?: 999
+            if (w != null) w to q else null
+        }.toMap()
+    } ?: emptyMap(),
     oneRmFormula = try {
         OneRmFormula.valueOf(optString(SET_ONE_RM_FORMULA, "EPLEY"))
     } catch (_: Exception) {

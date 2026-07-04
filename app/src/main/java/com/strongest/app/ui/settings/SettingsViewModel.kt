@@ -51,8 +51,8 @@ data class SettingsUiState(
     val notificationSoundUri: String? = null,
     val rpeTrackingEnabled: Boolean = false,
     val workoutNotificationEnabled: Boolean = true,
-    val availableKgPlates: Set<Float> = emptySet(),
-    val availableLbsPlates: Set<Float> = emptySet(),
+    val availableKgPlates: Map<Float, Int> = emptyMap(),
+    val availableLbsPlates: Map<Float, Int> = emptyMap(),
     val oneRmFormula: OneRmFormula = OneRmFormula.EPLEY,
     val recoveryHoursByMuscle: Map<MuscleGroup, Int> = defaultRecoveryHoursMap(),
     val userSex: Sex = Sex.UNSET,
@@ -161,7 +161,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setAvailablePlates(unit: WeightUnit, plates: Set<Float>) {
+    fun setAvailablePlates(unit: WeightUnit, plates: Map<Float, Int>) {
         viewModelScope.launch {
             settingsRepository.setAvailablePlates(unit, plates)
         }

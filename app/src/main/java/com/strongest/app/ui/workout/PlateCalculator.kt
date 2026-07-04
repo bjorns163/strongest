@@ -57,19 +57,20 @@ data class PlateResult(
     val remainder: Float
 )
 
-fun calculatePlates(target: Float, bar: Float, availablePlates: List<Float>, singleSide: Boolean = false): PlateResult {
+fun calculatePlates(target: Float, bar: Float, availablePlates: Map<Float, Int>, singleSide: Boolean = false): PlateResult {
     val perSide = if (singleSide) (target - bar) else (target - bar) / 2f
     if (perSide <= 0f) {
         return PlateResult(emptyList(), bar.coerceAtMost(target), (target - bar).coerceAtLeast(0f))
     }
-    val sorted = availablePlates.sortedDescending()
+    val sorted = availablePlates.keys.sortedDescending()
     var remaining = perSide
     val counts = mutableListOf<Pair<Float, Int>>()
     val epsilon = 0.001f
     for (plate in sorted) {
         if (plate <= 0f) continue
+        val maxCount = availablePlates[plate] ?: 0
         var count = 0
-        while (remaining + epsilon >= plate) {
+        while (count < maxCount && remaining + epsilon >= plate) {
             remaining -= plate
             count++
         }
@@ -110,23 +111,23 @@ fun PlateCalculatorDialog(
     }
     var selectedBar by remember { mutableStateOf(defaultBars.first()) }
     var singleSide by remember { mutableStateOf(false) }
-    val plateSelections = remember(weightUnit) {
-        mutableStateOf(defaultPlates.associateWith { true })
+    var plateQuantities by remember(weightUnit) {
+        mutableStateOf(defaultPlates.associateWith { 999 })
     }
     var didInitFromSettings by remember(weightUnit) { mutableStateOf(false) }
     LaunchedEffect(appSettings, weightUnit) {
         val s = appSettings
         if (s != null && !didInitFromSettings) {
             val cfg = if (weightUnit == WeightUnit.KG) s.availableKgPlates else s.availableLbsPlates
-            plateSelections.value = defaultPlates.associateWith { plate ->
-                cfg.any { abs(it - plate) < 0.001f }
+            plateQuantities = defaultPlates.associateWith { plate ->
+                cfg.entries.find { abs(it.key - plate) < 0.001f }?.value ?: 0
             }
             didInitFromSettings = true
         }
     }
 
     val target = targetText.toFloatOrNull() ?: 0f
-    val activePlates = plateSelections.value.filter { it.value }.keys.toList()
+    val activePlates = plateQuantities.filter { it.value > 0 }
     val result = remember(target, selectedBar, singleSide, activePlates) {
         calculatePlates(target, selectedBar, activePlates, singleSide)
     }
@@ -192,32 +193,42 @@ fun PlateCalculatorDialog(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(text = "Available plates", style = MaterialTheme.typography.labelLarge)
+                Text(text = "Available plates (0 = not owned)", style = MaterialTheme.typography.labelLarge)
                 val plateRows = defaultPlates.chunked(2)
                 for (row in plateRows) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         for (plate in row) {
-                            val checked = plateSelections.value[plate] == true
+                            val qty = plateQuantities[plate] ?: 0
                             Row(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clickable {
-                                        plateSelections.value = plateSelections.value.toMutableMap().apply {
-                                            this[plate] = !checked
-                                        }
-                                    }
                                     .padding(vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Checkbox(
-                                    checked = checked,
-                                    onCheckedChange = { isChecked ->
-                                        plateSelections.value = plateSelections.value.toMutableMap().apply {
-                                            this[plate] = isChecked
-                                        }
-                                    }
+                                Text(
+                                    "${formatWeight(plate)} $unitLabel",
+                                    modifier = Modifier.weight(1f)
                                 )
-                                Text("${formatWeight(plate)} $unitLabel")
+                                OutlinedTextField(
+                                    value = qty.toString(),
+                                    onValueChange = { input ->
+                                        val filtered = input.filter { it.isDigit() }
+                                        val newQty = filtered.toIntOrNull()
+                                        if (newQty != null && newQty >= 0) {
+                                            plateQuantities = plateQuantities.toMutableMap().apply {
+                                                this[plate] = newQty
+                                            }
+                                        } else if (filtered.isEmpty()) {
+                                            plateQuantities = plateQuantities.toMutableMap().apply {
+                                                this[plate] = 0
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.width(72.dp),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    textStyle = MaterialTheme.typography.bodySmall
+                                )
                             }
                         }
                         if (row.size == 1) {

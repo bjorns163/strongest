@@ -57,8 +57,8 @@ data class PlateResult(
     val remainder: Float
 )
 
-fun calculatePlates(target: Float, bar: Float, availablePlates: List<Float>): PlateResult {
-    val perSide = (target - bar) / 2f
+fun calculatePlates(target: Float, bar: Float, availablePlates: List<Float>, singleSide: Boolean = false): PlateResult {
+    val perSide = if (singleSide) (target - bar) else (target - bar) / 2f
     if (perSide <= 0f) {
         return PlateResult(emptyList(), bar.coerceAtMost(target), (target - bar).coerceAtLeast(0f))
     }
@@ -76,8 +76,8 @@ fun calculatePlates(target: Float, bar: Float, availablePlates: List<Float>): Pl
         if (count > 0) counts.add(plate to count)
     }
     val achievedPerSide = perSide - remaining
-    val achievedTotal = bar + (achievedPerSide * 2f)
-    return PlateResult(counts, achievedTotal, remaining * 2f)
+    val achievedTotal = if (singleSide) bar + achievedPerSide else bar + (achievedPerSide * 2f)
+    return PlateResult(counts, achievedTotal, if (singleSide) remaining else remaining * 2f)
 }
 
 private fun formatWeight(value: Float): String {
@@ -109,6 +109,7 @@ fun PlateCalculatorDialog(
         )
     }
     var selectedBar by remember { mutableStateOf(defaultBars.first()) }
+    var singleSide by remember { mutableStateOf(false) }
     val plateSelections = remember(weightUnit) {
         mutableStateOf(defaultPlates.associateWith { true })
     }
@@ -126,8 +127,8 @@ fun PlateCalculatorDialog(
 
     val target = targetText.toFloatOrNull() ?: 0f
     val activePlates = plateSelections.value.filter { it.value }.keys.toList()
-    val result = remember(target, selectedBar, activePlates) {
-        calculatePlates(target, selectedBar, activePlates)
+    val result = remember(target, selectedBar, singleSide, activePlates) {
+        calculatePlates(target, selectedBar, activePlates, singleSide)
     }
 
     AlertDialog(
@@ -178,6 +179,18 @@ fun PlateCalculatorDialog(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { singleSide = !singleSide }
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = singleSide, onCheckedChange = { singleSide = it })
+                    Text("Single side (e.g. machines with one pin)")
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(text = "Available plates", style = MaterialTheme.typography.labelLarge)
                 val plateRows = defaultPlates.chunked(2)
@@ -216,7 +229,7 @@ fun PlateCalculatorDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Plates per side", style = MaterialTheme.typography.labelLarge)
+                Text(text = if (singleSide) "Plates to add" else "Plates per side", style = MaterialTheme.typography.labelLarge)
                 Spacer(modifier = Modifier.height(4.dp))
                 if (target <= 0f) {
                     Text(

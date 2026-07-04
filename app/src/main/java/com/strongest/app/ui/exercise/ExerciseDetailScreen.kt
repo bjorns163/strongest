@@ -197,12 +197,15 @@ fun ExerciseDetailContent(
     onSaveNote: (String) -> Unit = {},
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf(
-        "Details" to Icons.Default.Info,
-        "History" to Icons.AutoMirrored.Filled.ShowChart,
-        "1RM" to Icons.Default.Calculate,
-        "Warm-up" to Icons.Default.LocalFireDepartment
-    )
+    val isCardio = exercise.muscleGroup == com.strongest.app.data.model.MuscleGroup.CARDIO
+    val tabs = buildList {
+        add("Details" to Icons.Default.Info)
+        add("History" to Icons.AutoMirrored.Filled.ShowChart)
+        if (!isCardio) {
+            add("1RM" to Icons.Default.Calculate)
+            add("Warm-up" to Icons.Default.LocalFireDepartment)
+        }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         SecondaryScrollableTabRow(
@@ -226,11 +229,11 @@ fun ExerciseDetailContent(
         val initialWeightKg = bestWorkingSet?.weightKg ?: maxWeight
         val initialReps = bestWorkingSet?.reps ?: 0
 
-        when (selectedTab) {
-            0 -> DetailsTab(exercise = exercise, noteText = noteText, onSaveNote = onSaveNote)
-            1 -> HistoryTab(history, totalSets, totalWorkouts, maxWeight, rpeTrackingEnabled)
-            2 -> OneRmTab(initialWeightKg = initialWeightKg, initialReps = initialReps)
-            3 -> WarmupTab(initialWeightKg = initialWeightKg, initialReps = initialReps)
+        when (tabs[selectedTab].first) {
+            "Details" -> DetailsTab(exercise = exercise, noteText = noteText, onSaveNote = onSaveNote)
+            "History" -> HistoryTab(history, totalSets, totalWorkouts, maxWeight, rpeTrackingEnabled, isCardio = isCardio)
+            "1RM" -> OneRmTab(initialWeightKg = initialWeightKg, initialReps = initialReps)
+            "Warm-up" -> WarmupTab(initialWeightKg = initialWeightKg, initialReps = initialReps)
         }
     }
 }
@@ -649,6 +652,7 @@ fun HistoryTab(
     totalWorkouts: Int,
     maxWeight: Float,
     rpeTrackingEnabled: Boolean = false,
+    isCardio: Boolean = false,
 ) {
     val weightUnit by rememberWeightUnit()
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
@@ -674,8 +678,12 @@ fun HistoryTab(
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    label = "Max Weight",
-                    value = "${formatWeightForDisplay(maxWeight, weightUnit)} ${weightUnitLabel(weightUnit)}",
+                    label = if (isCardio) "Max Level" else "Max Weight",
+                    value = if (isCardio) {
+                        formatWeightForDisplay(maxWeight, weightUnit)
+                    } else {
+                        "${formatWeightForDisplay(maxWeight, weightUnit)} ${weightUnitLabel(weightUnit)}"
+                    },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -752,11 +760,19 @@ fun HistoryTab(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "${formatWeightForDisplay(entry.weightKg, weightUnit)} ${weightUnitLabel(weightUnit)}",
+                                    text = if (isCardio) {
+                                        formatWeightForDisplay(entry.weightKg, weightUnit)
+                                    } else {
+                                        "${formatWeightForDisplay(entry.weightKg, weightUnit)} ${weightUnitLabel(weightUnit)}"
+                                    },
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    text = "\u00d7 ${entry.reps} reps",
+                                    text = if (isCardio) {
+                                        "\u00d7 ${entry.reps}"
+                                    } else {
+                                        "\u00d7 ${entry.reps} reps"
+                                    },
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

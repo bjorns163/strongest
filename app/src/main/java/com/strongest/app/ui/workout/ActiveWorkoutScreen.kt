@@ -83,6 +83,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
 import com.strongest.app.utils.displayToKg
@@ -637,6 +638,7 @@ fun ExerciseBlock(
     var showNoteDialog by remember { mutableStateOf(false) }
     var showPlateCalc by remember { mutableStateOf(false) }
     var noteText by remember { mutableStateOf(exercise.noteText) }
+    val isCardio = exercise.muscleGroup == MuscleGroup.CARDIO
 
     if (showPlateCalc) {
         val initial = exercise.sets.firstOrNull { !it.isCompleted && it.weight > 0f }?.weight
@@ -809,8 +811,18 @@ fun ExerciseBlock(
             ) {
                 Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
                 Text("Last", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
-                Text(weightUnitLabel(weightUnit), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                Text("Reps", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text(
+                    if (isCardio) "Level" else weightUnitLabel(weightUnit),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    if (isCardio) "Duration" else "Reps",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
+                )
                 Text("Rest", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
                 if (rpeTrackingEnabled) {
                     Text("RPE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.5f), textAlign = TextAlign.Center)
@@ -824,6 +836,7 @@ fun ExerciseBlock(
                     weightUnit = weightUnit,
                     index = setIndex,
                     rpeTrackingEnabled = rpeTrackingEnabled,
+                    isCardio = isCardio,
                     onUpdateSet = onUpdateSet,
                     onUpdateRest = { restSec -> onUpdateSetRest(setIndex, restSec) },
                     onUpdateRpe = { rpe -> onUpdateSetRpe(setIndex, rpe) },
@@ -904,6 +917,7 @@ fun SwipeableSetRow(
     weightUnit: WeightUnit,
     index: Int,
     rpeTrackingEnabled: Boolean = false,
+    isCardio: Boolean = false,
     onUpdateSet: (Int, Float, Int) -> Unit,
     onUpdateRest: (Int) -> Unit,
     onUpdateRpe: (Float?) -> Unit = {},
@@ -1328,8 +1342,15 @@ fun PrSummaryCard(
             Spacer(modifier = Modifier.height(8.dp))
             for (pr in prs) {
                 val text = when (pr.kind) {
-                    com.strongest.app.utils.PrKind.WEIGHT ->
-                        "${pr.exerciseName ?: "?"} — heaviest set ${com.strongest.app.utils.formatWeightForDisplay(pr.weightKg ?: 0f, weightUnit)} $unitLabel × ${pr.reps ?: 0}"
+                    com.strongest.app.utils.PrKind.WEIGHT -> {
+                        val w = com.strongest.app.utils.formatWeightForDisplay(pr.weightKg ?: 0f, weightUnit)
+                        val r = pr.reps ?: 0
+                        if (pr.muscleGroup == "CARDIO") {
+                            "${pr.exerciseName ?: "?"} — best ${w} × ${r}"
+                        } else {
+                            "${pr.exerciseName ?: "?"} — heaviest set $w $unitLabel × $r"
+                        }
+                    }
                     com.strongest.app.utils.PrKind.ONE_RM ->
                         "${pr.exerciseName ?: "?"} — estimated 1RM ${com.strongest.app.utils.formatWeightForDisplay(pr.oneRmKg ?: 0f, weightUnit)} $unitLabel"
                     com.strongest.app.utils.PrKind.VOLUME ->

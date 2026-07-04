@@ -25,6 +25,7 @@ data class RoutineExerciseUi(
     val exerciseId: Long,
     val exerciseName: String,
     val routineExerciseId: Long,
+    val muscleGroup: String = "",
     val sets: List<RoutineSetUi>,
     val noteText: String = "",
     val previousSets: List<com.strongest.app.ui.workout.PreviousSetInfo> = emptyList()
@@ -119,6 +120,7 @@ class RoutineBuilderViewModel @Inject constructor(
                         exerciseId = re.exerciseId,
                         exerciseName = exercise?.name ?: "Unknown",
                         routineExerciseId = re.id,
+                        muscleGroup = exercise?.muscleGroup?.name ?: "",
                         noteText = note?.noteText ?: "",
                         sets = sets,
                         previousSets = previousSetInfos
@@ -155,6 +157,7 @@ class RoutineBuilderViewModel @Inject constructor(
                 exerciseId = exerciseId,
                 exerciseName = found.name,
                 routineExerciseId = nextTempId(),
+                muscleGroup = found.muscleGroup.name,
                 noteText = note?.noteText ?: "",
                 sets = List(defaultSetCount) { i ->
                     val prev = previousSets.getOrNull(i)

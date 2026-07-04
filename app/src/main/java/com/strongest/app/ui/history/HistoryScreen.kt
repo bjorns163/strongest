@@ -42,7 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.data.model.Workout
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.utils.formatWeightForDisplay
@@ -334,7 +334,11 @@ private fun ExerciseSummaryTable(
             )
             Text(
                 text = if (ex.setCount > 0 && (ex.bestWeightKg > 0f || ex.bestReps > 0)) {
-                    "${formatWeightForDisplay(ex.bestWeightKg, weightUnit)} ${weightUnitLabel(weightUnit)} × ${ex.bestReps}"
+                    if (ex.muscleGroup == "CARDIO") {
+                        "${formatWeightForDisplay(ex.bestWeightKg, weightUnit)} × ${ex.bestReps}"
+                    } else {
+                        "${formatWeightForDisplay(ex.bestWeightKg, weightUnit)} ${weightUnitLabel(weightUnit)} × ${ex.bestReps}"
+                    }
                 } else {
                     "—"
                 },

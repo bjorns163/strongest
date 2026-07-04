@@ -30,6 +30,7 @@ data class AppSettings(
     val keepScreenOn: Boolean = false,
     val notificationSoundUri: String? = null,
     val rpeTrackingEnabled: Boolean = false,
+    val workoutNotificationEnabled: Boolean = true,
     val availableKgPlates: Set<Float> = STANDARD_KG_PLATES.toSet(),
     val availableLbsPlates: Set<Float> = STANDARD_LBS_PLATES.toSet(),
     val oneRmFormula: OneRmFormula = OneRmFormula.EPLEY,
@@ -88,6 +89,7 @@ class SettingsRepository @Inject constructor(
     private val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
     private val NOTIFICATION_SOUND_URI_KEY = stringPreferencesKey("notification_sound_uri")
     private val RPE_TRACKING_ENABLED_KEY = booleanPreferencesKey("rpe_tracking_enabled")
+    private val WORKOUT_NOTIFICATION_ENABLED_KEY = booleanPreferencesKey("workout_notification_enabled")
     private val AVAILABLE_KG_PLATES_KEY = stringSetPreferencesKey("available_kg_plates")
     private val AVAILABLE_LBS_PLATES_KEY = stringSetPreferencesKey("available_lbs_plates")
     private val ONE_RM_FORMULA_KEY = stringPreferencesKey("one_rm_formula")
@@ -152,6 +154,7 @@ class SettingsRepository @Inject constructor(
                 keepScreenOn = preferences[KEEP_SCREEN_ON_KEY] ?: false,
                 notificationSoundUri = preferences[NOTIFICATION_SOUND_URI_KEY],
                 rpeTrackingEnabled = preferences[RPE_TRACKING_ENABLED_KEY] ?: false,
+                workoutNotificationEnabled = preferences[WORKOUT_NOTIFICATION_ENABLED_KEY] ?: true,
                 availableKgPlates = parsePlateSet(preferences[AVAILABLE_KG_PLATES_KEY], STANDARD_KG_PLATES.toSet()),
                 availableLbsPlates = parsePlateSet(preferences[AVAILABLE_LBS_PLATES_KEY], STANDARD_LBS_PLATES.toSet()),
                 oneRmFormula = safeEnum(preferences[ONE_RM_FORMULA_KEY], OneRmFormula.EPLEY),
@@ -201,6 +204,12 @@ class SettingsRepository @Inject constructor(
     suspend fun setRpeTrackingEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[RPE_TRACKING_ENABLED_KEY] = enabled
+        }
+    }
+
+    suspend fun setWorkoutNotificationEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[WORKOUT_NOTIFICATION_ENABLED_KEY] = enabled
         }
     }
 
@@ -287,6 +296,7 @@ class SettingsRepository @Inject constructor(
             preferences[LAST_SET_REST_KEY] = settings.lastSetRestSeconds
             preferences[KEEP_SCREEN_ON_KEY] = settings.keepScreenOn
             preferences[RPE_TRACKING_ENABLED_KEY] = settings.rpeTrackingEnabled
+            preferences[WORKOUT_NOTIFICATION_ENABLED_KEY] = settings.workoutNotificationEnabled
             preferences[AVAILABLE_KG_PLATES_KEY] = settings.availableKgPlates.map { it.toString() }.toSet()
             preferences[AVAILABLE_LBS_PLATES_KEY] = settings.availableLbsPlates.map { it.toString() }.toSet()
             preferences[ONE_RM_FORMULA_KEY] = settings.oneRmFormula.name

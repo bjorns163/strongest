@@ -50,6 +50,7 @@ data class SettingsUiState(
     val keepScreenOn: Boolean = false,
     val notificationSoundUri: String? = null,
     val rpeTrackingEnabled: Boolean = false,
+    val workoutNotificationEnabled: Boolean = true,
     val availableKgPlates: Set<Float> = emptySet(),
     val availableLbsPlates: Set<Float> = emptySet(),
     val oneRmFormula: OneRmFormula = OneRmFormula.EPLEY,
@@ -92,6 +93,7 @@ class SettingsViewModel @Inject constructor(
                             keepScreenOn = appSettings.keepScreenOn,
                             notificationSoundUri = appSettings.notificationSoundUri,
                             rpeTrackingEnabled = appSettings.rpeTrackingEnabled,
+                            workoutNotificationEnabled = appSettings.workoutNotificationEnabled,
                             availableKgPlates = appSettings.availableKgPlates,
                             availableLbsPlates = appSettings.availableLbsPlates,
                             oneRmFormula = appSettings.oneRmFormula,
@@ -150,6 +152,12 @@ class SettingsViewModel @Inject constructor(
     fun setRpeTrackingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setRpeTrackingEnabled(enabled)
+        }
+    }
+
+    fun setWorkoutNotificationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setWorkoutNotificationEnabled(enabled)
         }
     }
 

@@ -94,6 +94,14 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import android.Manifest
+import android.app.Activity
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -119,7 +127,18 @@ fun ActiveWorkoutScreen(
     val prs by viewModel.workoutPrs.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    var showNotificationRationale by remember { mutableStateOf(false) }
+    var canStartWorkout by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || initialWorkoutId != null
+        )
+    }
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    LaunchedEffect(canStartWorkout) {
+        if (!canStartWorkout) return@LaunchedEffect
         if (resumeWorkoutId != null) {
             viewModel.loadWorkout(resumeWorkoutId)
         } else if (initialWorkoutId != null) {
@@ -134,6 +153,35 @@ fun ActiveWorkoutScreen(
     }
 
     val context = androidx.compose.ui.platform.LocalContext.current
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            initialWorkoutId == null &&
+            state.workoutNotificationEnabled
+        ) {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                canStartWorkout = true
+            } else {
+                val activity = context as? Activity
+                if (activity != null && ActivityCompat.shouldShowRequestPermissionRationale(
+                        activity,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    )
+                ) {
+                    showNotificationRationale = true
+                } else {
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    canStartWorkout = true
+                }
+            }
+        } else {
+            canStartWorkout = true
+        }
+    }
     val exercisePickerResultHolder = remember {
         EntryPointAccessors.fromApplication(
             context,
@@ -163,6 +211,40 @@ fun ActiveWorkoutScreen(
     DisposableEffect(state.keepScreenOn) {
         currentView.keepScreenOn = state.keepScreenOn
         onDispose { currentView.keepScreenOn = false }
+    }
+
+    if (showNotificationRationale) {
+        AlertDialog(
+            onDismissRequest = {
+                showNotificationRationale = false
+                canStartWorkout = true
+            },
+            title = { Text("Notification Permission") },
+            text = {
+                Text(
+                    "Strongest uses the notification bar to show your active workout progress, " +
+                    "rest timer, and quick controls. Grant notification permission to see these " +
+                    "updates even when the app is in the background."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showNotificationRationale = false
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    canStartWorkout = true
+                }) {
+                    Text("Allow")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showNotificationRationale = false
+                    canStartWorkout = true
+                }) {
+                    Text("Not Now")
+                }
+            }
+        )
     }
 
     if (state.isFinished) {

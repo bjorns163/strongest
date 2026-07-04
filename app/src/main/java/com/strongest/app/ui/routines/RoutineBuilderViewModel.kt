@@ -361,7 +361,7 @@ class RoutineBuilderViewModel @Inject constructor(
             }
 
             if (stateVal.routineId != null) {
-                val existing = repository.getRoutineWithExercises(stateVal.routineId!!).first
+                val existing = repository.getRoutineWithExercises(stateVal.routineId).first
                 if (existing != null) {
                     repository.updateRoutine(
                         existing.copy(
@@ -371,7 +371,7 @@ class RoutineBuilderViewModel @Inject constructor(
                             updatedAt = System.currentTimeMillis()
                         )
                     )
-                    repository.saveRoutineExercises(stateVal.routineId!!, routineExercises, routineSetsMap)
+                    repository.saveRoutineExercises(stateVal.routineId, routineExercises, routineSetsMap)
                 }
             } else {
                 repository.saveRoutine(

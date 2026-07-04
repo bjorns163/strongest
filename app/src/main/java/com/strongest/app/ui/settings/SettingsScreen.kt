@@ -340,6 +340,27 @@ fun SettingsScreen(
             }
 
             item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Notification bar during workout")
+                        Switch(
+                            checked = uiState.workoutNotificationEnabled,
+                            onCheckedChange = { viewModel.setWorkoutNotificationEnabled(it) }
+                        )
+                    }
+                    Text(
+                        text = "Shows your active workout progress, rest timer, and quick controls in the notification bar.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            item {
                 val soundPickerLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) { result ->

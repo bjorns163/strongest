@@ -170,7 +170,8 @@ data class ActiveWorkoutState(
     val sourceRoutineId: Long? = null,
     val sourceRoutineExists: Boolean = false,
     val hasStructuralChanges: Boolean = false,
-    val weightUnit: com.strongest.app.data.repository.WeightUnit = com.strongest.app.data.repository.WeightUnit.KG
+    val weightUnit: com.strongest.app.data.repository.WeightUnit = com.strongest.app.data.repository.WeightUnit.KG,
+    val workoutNotificationEnabled: Boolean = true
 )
 
 data class WorkoutExerciseUi(
@@ -270,6 +271,7 @@ class ActiveWorkoutViewModel @Inject constructor(
         // A fresh/resumed workout is not in the finishing state.
         isFinishing = false
         if (isServiceStarted) return
+        if (!_state.value.workoutNotificationEnabled) return
         WorkoutForegroundService.start(context)
         isServiceStarted = true
     }
@@ -389,7 +391,8 @@ class ActiveWorkoutViewModel @Inject constructor(
                         keepScreenOn = settings.keepScreenOn,
                         notificationSoundUri = settings.notificationSoundUri,
                         rpeTrackingEnabled = settings.rpeTrackingEnabled,
-                        weightUnit = settings.weightUnit
+                        weightUnit = settings.weightUnit,
+                        workoutNotificationEnabled = settings.workoutNotificationEnabled
                     )
                 }
             }

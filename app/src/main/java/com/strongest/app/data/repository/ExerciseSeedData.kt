@@ -11,7 +11,7 @@ import com.strongest.app.data.model.classifyExercise
  * On the next launch, non-custom exercises are re-synced from the seed data without touching the
  * user's workout history, notes, routines, or any exercises they created themselves.
  */
-const val EXERCISE_SEED_VERSION = 1
+const val EXERCISE_SEED_VERSION = 2
 
 @Suppress("MagicNumber", "MaxLineLength")
 private val rawExerciseSeedData: List<Exercise> = listOf(

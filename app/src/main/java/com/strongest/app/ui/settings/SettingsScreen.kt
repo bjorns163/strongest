@@ -1,5 +1,6 @@
 package com.strongest.app.ui.settings
 
+import com.strongest.app.BuildConfig
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
@@ -699,7 +700,7 @@ fun SettingsScreen(
 
             item {
                 Text(
-                    text = "Strongest v1.0.0",
+                    text = "Strongest v${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )

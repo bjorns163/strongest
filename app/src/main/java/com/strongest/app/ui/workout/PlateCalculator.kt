@@ -32,9 +32,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
@@ -69,8 +72,10 @@ fun calculatePlates(target: Float, bar: Float, availablePlates: Map<Float, Int>,
     for (plate in sorted) {
         if (plate <= 0f) continue
         val maxCount = availablePlates[plate] ?: 0
+        // The quantity is the total owned; a barbell loads pairs, so each side gets half.
+        val maxPerSide = if (singleSide) maxCount else maxCount / 2
         var count = 0
-        while (count < maxCount && remaining + epsilon >= plate) {
+        while (count < maxPerSide && remaining + epsilon >= plate) {
             remaining -= plate
             count++
         }
@@ -106,8 +111,14 @@ fun PlateCalculatorDialog(
 
     var targetText by remember {
         mutableStateOf(
-            if (initialTargetWeight > 0f) formatWeight(initialTargetWeight) else ""
+            TextFieldValue(if (initialTargetWeight > 0f) formatWeight(initialTargetWeight) else "")
         )
+    }
+    var targetFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(targetFocused) {
+        if (targetFocused) {
+            targetText = targetText.copy(selection = TextRange(0, targetText.text.length))
+        }
     }
     var selectedBar by remember { mutableStateOf(defaultBars.first()) }
     var singleSide by remember { mutableStateOf(false) }
@@ -126,7 +137,7 @@ fun PlateCalculatorDialog(
         }
     }
 
-    val target = targetText.toFloatOrNull() ?: 0f
+    val target = targetText.text.toFloatOrNull() ?: 0f
     val activePlates = plateQuantities.filter { it.value > 0 }
     val result = remember(target, selectedBar, singleSide, activePlates) {
         calculatePlates(target, selectedBar, activePlates, singleSide)
@@ -140,12 +151,15 @@ fun PlateCalculatorDialog(
                 OutlinedTextField(
                     value = targetText,
                     onValueChange = { input ->
-                        targetText = input.filter { it.isDigit() || it == '.' }
+                        val filtered = input.text.filter { it.isDigit() || it == '.' }
+                        targetText = if (filtered == input.text) input else TextFieldValue(filtered)
                     },
                     label = { Text("Target weight ($unitLabel)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { targetFocused = it.isFocused }
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -199,6 +213,28 @@ fun PlateCalculatorDialog(
                     Row(modifier = Modifier.fillMaxWidth()) {
                         for (plate in row) {
                             val qty = plateQuantities[plate] ?: 0
+                            var qtyField by remember(plate, weightUnit) {
+                                mutableStateOf(TextFieldValue(qty.toString()))
+                            }
+                            var qtyFocused by remember(plate, weightUnit) { mutableStateOf(false) }
+
+                            // Select all on focus so typing replaces the existing value.
+                            LaunchedEffect(qtyFocused) {
+                                if (qtyFocused) {
+                                    qtyField = qtyField.copy(selection = TextRange(0, qtyField.text.length))
+                                }
+                            }
+                            // Keep the field in sync when the map changes externally
+                            // (e.g. settings load), but never while the user is editing.
+                            LaunchedEffect(qty, qtyFocused) {
+                                if (!qtyFocused) {
+                                    val mapText = qty.toString()
+                                    if (qtyField.text != mapText) {
+                                        qtyField = TextFieldValue(mapText)
+                                    }
+                                }
+                            }
+
                             Row(
                                 modifier = Modifier
                                     .weight(1f)
@@ -210,9 +246,10 @@ fun PlateCalculatorDialog(
                                     modifier = Modifier.weight(1f)
                                 )
                                 OutlinedTextField(
-                                    value = qty.toString(),
+                                    value = qtyField,
                                     onValueChange = { input ->
-                                        val filtered = input.filter { it.isDigit() }
+                                        val filtered = input.text.filter { it.isDigit() }
+                                        qtyField = if (filtered == input.text) input else TextFieldValue(filtered)
                                         val newQty = filtered.toIntOrNull()
                                         if (newQty != null && newQty >= 0) {
                                             plateQuantities = plateQuantities.toMutableMap().apply {
@@ -224,7 +261,9 @@ fun PlateCalculatorDialog(
                                             }
                                         }
                                     },
-                                    modifier = Modifier.width(72.dp),
+                                    modifier = Modifier
+                                        .width(72.dp)
+                                        .onFocusChanged { qtyFocused = it.isFocused },
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     textStyle = MaterialTheme.typography.bodySmall

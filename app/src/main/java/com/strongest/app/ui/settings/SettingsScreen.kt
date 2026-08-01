@@ -42,9 +42,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
@@ -423,7 +426,15 @@ fun SettingsScreen(
                         Row(modifier = Modifier.fillMaxWidth()) {
                             for (plate in row) {
                                 val currentQty = plateQtys.entries.find { kotlin.math.abs(it.key - plate) < 0.001f }?.value ?: 0
-                                var editText by remember(plate, unit) { mutableStateOf(currentQty.toString()) }
+                                var editText by remember(plate, unit) { mutableStateOf(TextFieldValue(currentQty.toString())) }
+                                var editFocused by remember(plate, unit) { mutableStateOf(false) }
+
+                                // Select all on focus so typing replaces the existing value.
+                                LaunchedEffect(editFocused) {
+                                    if (editFocused) {
+                                        editText = editText.copy(selection = TextRange(0, editText.text.length))
+                                    }
+                                }
 
                                 Row(
                                     modifier = Modifier
@@ -442,8 +453,8 @@ fun SettingsScreen(
                                     OutlinedTextField(
                                         value = editText,
                                         onValueChange = { input ->
-                                            val filtered = input.filter { it.isDigit() }
-                                            editText = filtered
+                                            val filtered = input.text.filter { it.isDigit() }
+                                            editText = if (filtered == input.text) input else TextFieldValue(filtered)
                                             val qty = filtered.toIntOrNull()
                                             if (qty != null && qty >= 0) {
                                                 val updated = plateQtys.toMutableMap()
@@ -451,7 +462,9 @@ fun SettingsScreen(
                                                 viewModel.setAvailablePlates(unit, updated)
                                             }
                                         },
-                                        modifier = Modifier.width(72.dp),
+                                        modifier = Modifier
+                                            .width(72.dp)
+                                            .onFocusChanged { editFocused = it.isFocused },
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         textStyle = MaterialTheme.typography.bodySmall

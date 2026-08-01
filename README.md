@@ -5,7 +5,7 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 ## Features
 
 ### Exercise Library
-- **515 exercises** across 17 muscle groups
+- **500+ exercises** across 17 muscle groups
 - **Exercise classification** — every exercise tagged as Compound, Accessory, or Isolation
 - **Filter by muscle group & equipment** — quickly narrow down exercises
 - **Search** by name

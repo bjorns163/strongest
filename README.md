@@ -1,6 +1,6 @@
 # Strongest - Free Android Workout Tracker
 
-A completely free Android workout tracker with **515 exercises** and no paywalls.
+A completely free Android workout tracker with **500+ exercises** and no paywalls.
 
 ## Features
 

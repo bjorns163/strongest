@@ -83,6 +83,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
 import com.strongest.app.utils.displayToKg
@@ -94,6 +95,14 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import android.Manifest
+import android.app.Activity
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -119,7 +128,18 @@ fun ActiveWorkoutScreen(
     val prs by viewModel.workoutPrs.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    var showNotificationRationale by remember { mutableStateOf(false) }
+    var canStartWorkout by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || initialWorkoutId != null
+        )
+    }
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    LaunchedEffect(canStartWorkout) {
+        if (!canStartWorkout) return@LaunchedEffect
         if (resumeWorkoutId != null) {
             viewModel.loadWorkout(resumeWorkoutId)
         } else if (initialWorkoutId != null) {
@@ -134,6 +154,35 @@ fun ActiveWorkoutScreen(
     }
 
     val context = androidx.compose.ui.platform.LocalContext.current
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            initialWorkoutId == null &&
+            state.workoutNotificationEnabled
+        ) {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                canStartWorkout = true
+            } else {
+                val activity = context as? Activity
+                if (activity != null && ActivityCompat.shouldShowRequestPermissionRationale(
+                        activity,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    )
+                ) {
+                    showNotificationRationale = true
+                } else {
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    canStartWorkout = true
+                }
+            }
+        } else {
+            canStartWorkout = true
+        }
+    }
     val exercisePickerResultHolder = remember {
         EntryPointAccessors.fromApplication(
             context,
@@ -163,6 +212,40 @@ fun ActiveWorkoutScreen(
     DisposableEffect(state.keepScreenOn) {
         currentView.keepScreenOn = state.keepScreenOn
         onDispose { currentView.keepScreenOn = false }
+    }
+
+    if (showNotificationRationale) {
+        AlertDialog(
+            onDismissRequest = {
+                showNotificationRationale = false
+                canStartWorkout = true
+            },
+            title = { Text("Notification Permission") },
+            text = {
+                Text(
+                    "Strongest uses the notification bar to show your active workout progress, " +
+                    "rest timer, and quick controls. Grant notification permission to see these " +
+                    "updates even when the app is in the background."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showNotificationRationale = false
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    canStartWorkout = true
+                }) {
+                    Text("Allow")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showNotificationRationale = false
+                    canStartWorkout = true
+                }) {
+                    Text("Not Now")
+                }
+            }
+        )
     }
 
     if (state.isFinished) {
@@ -239,13 +322,14 @@ fun ActiveWorkoutScreen(
             text = {
                 Column {
                     if (fromRoutine) {
-                        TextButton(
-                            onClick = { viewModel.updateRoutineSetsOnlyAndFinish() },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Update Sets/Reps/Weight Only", modifier = Modifier.fillMaxWidth())
-                        }
-                        if (state.hasStructuralChanges) {
+                        if (!state.hasStructuralChanges) {
+                            TextButton(
+                                onClick = { viewModel.updateRoutineSetsOnlyAndFinish() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Update Sets/Reps/Weight Only", modifier = Modifier.fillMaxWidth())
+                            }
+                        } else {
                             TextButton(
                                 onClick = { viewModel.updateRoutineFullAndFinish() },
                                 modifier = Modifier.fillMaxWidth()
@@ -555,6 +639,7 @@ fun ExerciseBlock(
     var showNoteDialog by remember { mutableStateOf(false) }
     var showPlateCalc by remember { mutableStateOf(false) }
     var noteText by remember { mutableStateOf(exercise.noteText) }
+    val isCardio = exercise.muscleGroup == MuscleGroup.CARDIO
 
     if (showPlateCalc) {
         val initial = exercise.sets.firstOrNull { !it.isCompleted && it.weight > 0f }?.weight
@@ -727,8 +812,18 @@ fun ExerciseBlock(
             ) {
                 Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
                 Text("Last", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
-                Text(weightUnitLabel(weightUnit), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                Text("Reps", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text(
+                    if (isCardio) "Level" else weightUnitLabel(weightUnit),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    if (isCardio) "Duration" else "Reps",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
+                )
                 Text("Rest", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
                 if (rpeTrackingEnabled) {
                     Text("RPE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.5f), textAlign = TextAlign.Center)
@@ -742,6 +837,7 @@ fun ExerciseBlock(
                     weightUnit = weightUnit,
                     index = setIndex,
                     rpeTrackingEnabled = rpeTrackingEnabled,
+                    isCardio = isCardio,
                     onUpdateSet = onUpdateSet,
                     onUpdateRest = { restSec -> onUpdateSetRest(setIndex, restSec) },
                     onUpdateRpe = { rpe -> onUpdateSetRpe(setIndex, rpe) },
@@ -822,6 +918,7 @@ fun SwipeableSetRow(
     weightUnit: WeightUnit,
     index: Int,
     rpeTrackingEnabled: Boolean = false,
+    isCardio: Boolean = false,
     onUpdateSet: (Int, Float, Int) -> Unit,
     onUpdateRest: (Int) -> Unit,
     onUpdateRpe: (Float?) -> Unit = {},
@@ -1246,8 +1343,15 @@ fun PrSummaryCard(
             Spacer(modifier = Modifier.height(8.dp))
             for (pr in prs) {
                 val text = when (pr.kind) {
-                    com.strongest.app.utils.PrKind.WEIGHT ->
-                        "${pr.exerciseName ?: "?"} — heaviest set ${com.strongest.app.utils.formatWeightForDisplay(pr.weightKg ?: 0f, weightUnit)} $unitLabel × ${pr.reps ?: 0}"
+                    com.strongest.app.utils.PrKind.WEIGHT -> {
+                        val w = com.strongest.app.utils.formatWeightForDisplay(pr.weightKg ?: 0f, weightUnit)
+                        val r = pr.reps ?: 0
+                        if (pr.muscleGroup == "CARDIO") {
+                            "${pr.exerciseName ?: "?"} — best ${w} × ${r}"
+                        } else {
+                            "${pr.exerciseName ?: "?"} — heaviest set $w $unitLabel × $r"
+                        }
+                    }
                     com.strongest.app.utils.PrKind.ONE_RM ->
                         "${pr.exerciseName ?: "?"} — estimated 1RM ${com.strongest.app.utils.formatWeightForDisplay(pr.oneRmKg ?: 0f, weightUnit)} $unitLabel"
                     com.strongest.app.utils.PrKind.VOLUME ->

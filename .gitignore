@@ -7,14 +7,12 @@ local.properties
 
 # Log/OS Files
 *.log
-.DS_Store (Mac)
-Thumbs.db (Windows)
+.DS_Store
+Thumbs.db
 
 # Android Studio / IntelliJ generated files
 *.iml
-.idea/workspace.xml
-.idea/libraries
-.idea/caches
+.idea/
 captures/
 .externalNativeBuild/
 .cxx/
@@ -23,7 +21,15 @@ captures/
 *.apk
 *.aab
 output-metadata.json
+app/release/             # For standard Android Gradle setups
+app/release/**/*
+app/release/**
+# release/               # Add this instead if it sits at the root directory
+
+# Custom/Local tooling notes
+.sisyphus/
 
 # Signing files (NEVER share your keys!)
 *.jks
 *.keystore
+

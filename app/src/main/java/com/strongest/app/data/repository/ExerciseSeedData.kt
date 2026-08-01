@@ -11,7 +11,7 @@ import com.strongest.app.data.model.classifyExercise
  * On the next launch, non-custom exercises are re-synced from the seed data without touching the
  * user's workout history, notes, routines, or any exercises they created themselves.
  */
-const val EXERCISE_SEED_VERSION = 1
+const val EXERCISE_SEED_VERSION = 2
 
 @Suppress("MagicNumber", "MaxLineLength")
 private val rawExerciseSeedData: List<Exercise> = listOf(
@@ -2332,8 +2332,8 @@ private val rawExerciseSeedData: List<Exercise> = listOf(
     ),
     Exercise(
         271,
-        "Hammer Curl",
-        MuscleGroup.FOREARMS,
+        "Standing Hammer Curl",
+        MuscleGroup.BICEPS,
         Equipment.DUMBBELL,
         "Neutral-grip curl emphasizing the brachioradialis.",
         "Hold a dumbbell in each hand with your palms facing each other. Keep your elbows tucked against your sides. Curl the dumbbells upward while maintaining the neutral grip. Lower them under control and repeat."
@@ -2416,12 +2416,12 @@ private val rawExerciseSeedData: List<Exercise> = listOf(
     ),
     Exercise(
         281,
-        "Reverse Hyperextension Weighted",
-        MuscleGroup.LOWER_BACK,
+        "Seated Triceps pushdown",
+        MuscleGroup.TRICEPS,
         Equipment.MACHINE,
-        "Weighted reverse hyperextension for the lower back and glutes.",
-        "Lie face down on the pad with your hips at the edge and weighted legs hanging down. Grip the handles for support. Raise your legs behind you until level with your torso. Squeeze your glutes and lower back, then lower under control and repeat.",
-        secondaryMuscles = listOf(MuscleGroup.GLUTES, MuscleGroup.HAMSTRINGS)
+        "A seated machine exercise that targets the triceps using a vertical downward pushing motion.",
+        "Adjust the seat height so the handles rest near chest level. Sit upright on the bench without leaning back and grip the handles. Keeping your elbows tucked close to your sides, press the handles straight down until your arms are fully extended. Squeeze your triceps at the bottom, then slowly raise your hands back up under control.",
+        secondaryMuscles = listOf(MuscleGroup.CHEST, MuscleGroup.SHOULDERS)
     ),
     Exercise(
         282,
@@ -4243,7 +4243,7 @@ private val rawExerciseSeedData: List<Exercise> = listOf(
         496,
         "Elevated Seated Calf Raise",
         MuscleGroup.CALVES,
-        Equipment.MACHINE,
+        Equipment.DUMBBELL,
         "Seated calf raise performed on an elevated platform for increased range of motion.",
         "Sit with your thighs secured under the pads and the balls of your feet on the platform. Lower your heels down for a full stretch. Press upward through your toes as high as possible. Pause at the top, then lower under control."
     ),
@@ -4401,6 +4401,23 @@ private val rawExerciseSeedData: List<Exercise> = listOf(
         "A compound lower body exercise that isolates the legs while supporting the lower back.",
         "Sit firmly in the machine with your back flat against the pad. Place your feet shoulder-width apart on the sled. Release the safety handles and lower the weight under control until your knees are at a 90-degree angle. Push the platform back up using your entire foot, ensuring you do not lock out your knees.",
         secondaryMuscles = listOf(MuscleGroup.GLUTES, MuscleGroup.HAMSTRINGS)
+    ),
+    Exercise(
+        516,
+        "Ticep Cable Kickback",
+        MuscleGroup.TRICEPS,
+        Equipment.CABLE,
+        "Cable kickback tricep isolation.",
+        "Set the cable pulley to a low or mid-low position and attach a single D-handle. Grasp the handle with one hand and step back from the machine. Hinge forward at the hips until your torso is roughly parallel to the floor, supporting yourself with your free hand on your knee or the machine. Raise your upper arm so it is parallel to the floor and pin it in place, with your elbow bent at 90 degrees. Extend your forearm backward by straightening your elbow, squeezing the tricep hard at full extension. Hold the fully extended position for a brief pause. Slowly bend your elbow to return to the starting position without dropping your upper arm. Complete all repetitions on one arm before switching to the other side."
+    ),
+    Exercise(
+        517,
+        "Standing Glute Kickback",
+        MuscleGroup.GLUTES,
+        Equipment.MACHINE,
+        "Cable kickback tricep isolation.",
+        "Adjust the machine to your body. The knees should be facing forward and resting near the bottom of the padding. Place your forearms on the upper padding and grip the handles. Next, make sure that you have the arm of the machine under your knee. Brace your core, keep your body still, and start to press your leg backwards and upwards by activating the glute. Push the leg as far up as you can without rotating in the hips, then return to the starting position. Do all reps on one side first, and then switch to the other leg.",
+        secondaryMuscles = listOf(MuscleGroup.HAMSTRINGS)
     )
 )
 

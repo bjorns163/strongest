@@ -28,7 +28,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.github.mikephil.charting.charts.HorizontalBarChart
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.charts.RadarChart
@@ -36,7 +36,6 @@ import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
-import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.data.RadarData
@@ -53,8 +52,12 @@ import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.exercise.FILTERABLE_EQUIPMENT
 import com.strongest.app.ui.exercise.FILTERABLE_MUSCLE_GROUPS
+import com.strongest.app.utils.DAY_MS
+import com.strongest.app.utils.dailyEntries
+import com.strongest.app.utils.daySlotCount
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
+import com.strongest.app.utils.localDayStart
 import com.strongest.app.utils.weightUnitLabel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -104,12 +107,13 @@ fun ProgressScreen(
                 }
             }
 
-            item { SectionHeader(perWorkoutTitle(state.metric)) }
+            item { SectionHeader(perDayTitle(state.metric)) }
             item {
                 PerWorkoutChartCard(
                     metric = state.metric,
                     weightUnit = weightUnit,
-                    volume = state.volumeByDate,
+                    rangeDays = state.range.days,
+                    volumeByDay = state.volumeByDay,
                     perDay = state.workoutsPerDay,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -252,9 +256,9 @@ fun ProgressScreen(
     }
 }
 
-private fun perWorkoutTitle(metric: ProgressMetric): String = when (metric) {
-    ProgressMetric.WEIGHT -> "Volume per Workout"
-    ProgressMetric.SETS -> "Sets per Workout"
+private fun perDayTitle(metric: ProgressMetric): String = when (metric) {
+    ProgressMetric.WEIGHT -> "Volume per Day"
+    ProgressMetric.SETS -> "Sets per Day"
     ProgressMetric.WORKOUTS -> "Workouts per Day"
 }
 
@@ -335,11 +339,12 @@ private fun RangePicker(
     onSelect: (ProgressRange) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    LazyRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        ProgressRange.entries.forEach { range ->
+        items(ProgressRange.entries.size) { idx ->
+            val range = ProgressRange.entries[idx]
             FilterChip(
                 selected = current == range,
                 onClick = { onSelect(range) },
@@ -373,7 +378,8 @@ private fun MetricPicker(
 private fun PerWorkoutChartCard(
     metric: ProgressMetric,
     weightUnit: WeightUnit,
-    volume: List<VolumeByDate>,
+    rangeDays: Int,
+    volumeByDay: List<VolumeByDate>,
     perDay: List<WorkoutsPerDay>,
     modifier: Modifier = Modifier
 ) {
@@ -387,76 +393,76 @@ private fun PerWorkoutChartCard(
         val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
         val primary = MaterialTheme.colorScheme.primary.toArgb()
 
-        val (labels, values, dsLabel) = when (metric) {
-            ProgressMetric.WEIGHT -> {
-                val sorted = volume.sortedBy { it.date }
-                Triple(
-                    sorted.map { dateFormat.format(Date(it.date)) },
-                    sorted.map { kgToDisplay(it.totalVolumeKg, weightUnit) },
-                    "Volume (${weightUnitLabel(weightUnit)})"
-                )
+        // The x-axis spans every calendar day in the selected range; days without data simply
+        // have no point, and the line connects across them.
+        val lastDay = localDayStart(System.currentTimeMillis())
+        val startDay = lastDay - (rangeDays - 1) * DAY_MS
+        val volumeMap = volumeByDay.associateBy { it.date }
+        val perDayMap = perDay.associateBy { it.dayStart }
+        val points = dailyEntries(startDay, lastDay) { day ->
+            when (metric) {
+                ProgressMetric.WEIGHT -> volumeMap[day]?.let { kgToDisplay(it.totalVolumeKg, weightUnit) }
+                ProgressMetric.SETS -> volumeMap[day]?.let { it.totalSets.toFloat() }
+                ProgressMetric.WORKOUTS -> perDayMap[day]?.let { it.count.toFloat() }
             }
-            ProgressMetric.SETS -> {
-                val sorted = volume.sortedBy { it.date }
-                Triple(
-                    sorted.map { dateFormat.format(Date(it.date)) },
-                    sorted.map { it.totalSets.toFloat() },
-                    "Sets"
-                )
-            }
-            ProgressMetric.WORKOUTS -> {
-                val sorted = perDay.sortedBy { it.dayStart }
-                Triple(
-                    sorted.map { dateFormat.format(Date(it.dayStart)) },
-                    sorted.map { it.count.toFloat() },
-                    "Workouts"
-                )
-            }
+        }
+        if (points.isEmpty()) {
+            ChartEmpty()
+            return@Card
+        }
+        val slotCount = daySlotCount(startDay, lastDay)
+        val dsLabel = when (metric) {
+            ProgressMetric.WEIGHT -> "Volume (${weightUnitLabel(weightUnit)})"
+            ProgressMetric.SETS -> "Sets"
+            ProgressMetric.WORKOUTS -> "Workouts"
         }
 
-        if (values.isEmpty()) {
-            ChartEmpty()
-        } else {
-            val entries = values.mapIndexed { idx, v -> Entry(idx.toFloat(), v) }
-            AndroidView(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .padding(8.dp),
-                factory = { ctx ->
-                    LineChart(ctx).apply {
-                        description.isEnabled = false
-                        legend.textColor = onSurface
-                        axisRight.isEnabled = false
-                        axisLeft.textColor = onSurface
-                        axisLeft.setDrawGridLines(false)
-                        axisLeft.axisMinimum = 0f
-                        xAxis.position = XAxis.XAxisPosition.BOTTOM
-                        xAxis.textColor = onSurface
-                        xAxis.setDrawGridLines(false)
-                        xAxis.granularity = 1f
-                        setNoDataTextColor(onSurface)
-                        setTouchEnabled(true)
-                        setScaleEnabled(true)
-                    }
-                },
-                update = { chart ->
-                    val dataSet = LineDataSet(entries, dsLabel).apply {
-                        color = primary
-                        valueTextColor = onSurface
-                        circleColors = listOf(primary)
-                        setDrawValues(false)
-                        lineWidth = 2f
-                        circleRadius = 3f
-                    }
-                    chart.data = LineData(dataSet)
-                    chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
-                    chart.xAxis.labelCount = minOf(labels.size, 6)
-                    chart.notifyDataSetChanged()
-                    chart.invalidate()
+        AndroidView(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .padding(8.dp),
+            factory = { ctx ->
+                LineChart(ctx).apply {
+                    description.isEnabled = false
+                    legend.textColor = onSurface
+                    axisRight.isEnabled = false
+                    axisLeft.textColor = onSurface
+                    axisLeft.setDrawGridLines(false)
+                    axisLeft.axisMinimum = 0f
+                    xAxis.position = XAxis.XAxisPosition.BOTTOM
+                    xAxis.textColor = onSurface
+                    xAxis.setDrawGridLines(false)
+                    xAxis.granularity = 1f
+                    setNoDataTextColor(onSurface)
+                    setTouchEnabled(true)
+                    setScaleEnabled(true)
                 }
-            )
-        }
+            },
+            update = { chart ->
+                val dataSet = LineDataSet(points, dsLabel).apply {
+                    color = primary
+                    valueTextColor = onSurface
+                    circleColors = listOf(primary)
+                    setDrawValues(false)
+                    lineWidth = 2f
+                    circleRadius = 3f
+                }
+                chart.data = LineData(dataSet)
+                chart.xAxis.valueFormatter = object : ValueFormatter() {
+                    override fun getFormattedValue(value: Float): String {
+                        val idx = value.toInt()
+                        if (idx < 0 || idx >= slotCount) return ""
+                        return dateFormat.format(Date(startDay + idx * DAY_MS))
+                    }
+                }
+                chart.xAxis.axisMinimum = 0f
+                chart.xAxis.axisMaximum = (slotCount - 1).coerceAtLeast(1).toFloat()
+                chart.xAxis.labelCount = 6
+                chart.notifyDataSetChanged()
+                chart.invalidate()
+            }
+        )
     }
 }
 
@@ -695,7 +701,11 @@ private fun PersonalRecordCard(
                 )
             }
             Text(
-                text = "${formatWeightForDisplay(pr.maxWeightKg, weightUnit)} ${weightUnitLabel(weightUnit)} × ${pr.maxReps}",
+                text = if (pr.muscleGroup == "CARDIO") {
+                    "${formatWeightForDisplay(pr.maxWeightKg, weightUnit)} × ${pr.maxReps}"
+                } else {
+                    "${formatWeightForDisplay(pr.maxWeightKg, weightUnit)} ${weightUnitLabel(weightUnit)} × ${pr.maxReps}"
+                },
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )

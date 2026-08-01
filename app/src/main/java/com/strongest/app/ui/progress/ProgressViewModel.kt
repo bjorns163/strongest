@@ -11,6 +11,7 @@ import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.utils.localDayStart
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,7 +28,9 @@ import javax.inject.Inject
 enum class ProgressRange(val days: Int, val label: String) {
     DAYS_7(7, "7d"),
     DAYS_30(30, "30d"),
-    DAYS_90(90, "90d")
+    DAYS_90(90, "90d"),
+    DAYS_182(182, "6m"),
+    DAYS_365(365, "1y")
 }
 
 enum class ProgressMetric(val label: String) {
@@ -48,7 +51,7 @@ data class ProgressUiState(
     val range: ProgressRange = ProgressRange.DAYS_30,
     val metric: ProgressMetric = ProgressMetric.WEIGHT,
     val personalRecords: List<PersonalRecord> = emptyList(),
-    val volumeByDate: List<VolumeByDate> = emptyList(),
+    val volumeByDay: List<VolumeByDate> = emptyList(),
     val workoutsPerDay: List<WorkoutsPerDay> = emptyList(),
     val muscleVolume: List<MuscleVolume> = emptyList(),
     val recoveringMuscles: List<MuscleRecovery> = emptyList(),
@@ -131,14 +134,27 @@ class ProgressViewModel @Inject constructor(
     private fun loadRanged() {
         viewModelScope.launch {
             val rangeDays = _state.value.range.days
-            val startDate = System.currentTimeMillis() - rangeDays * 24L * 60 * 60 * 1000
+            // Align the query to the same calendar-day boundaries the chart uses.
+            val startDate = localDayStart(System.currentTimeMillis()) - (rangeDays - 1) * 24L * 60 * 60 * 1000
             val volume = repository.getVolumeByDate(startDate)
             val muscle = repository.getMuscleVolume(startDate)
             val perDay = repository.getWorkoutsPerDay(startDate)
+            // Aggregate volume/sets per local calendar day so the chart can sit on a continuous
+            // day axis (multiple workouts on one day collapse into a single point).
+            val volumeByDay = volume
+                .groupBy { localDayStart(it.date) }
+                .map { (day, rows) ->
+                    VolumeByDate(
+                        date = day,
+                        totalVolumeKg = rows.sumOf { it.totalVolumeKg.toDouble() }.toFloat(),
+                        totalSets = rows.sumOf { it.totalSets }
+                    )
+                }
+                .sortedBy { it.date }
             _state.update {
                 it.copy(
                     isLoading = false,
-                    volumeByDate = volume,
+                    volumeByDay = volumeByDay,
                     muscleVolume = muscle,
                     workoutsPerDay = perDay
                 )

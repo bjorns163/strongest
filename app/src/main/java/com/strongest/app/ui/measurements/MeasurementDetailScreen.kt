@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -46,23 +47,29 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
-import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
 import com.strongest.app.data.model.BodyMetric
 import com.strongest.app.data.model.MeasurementEntry
 import com.strongest.app.data.repository.WeightUnit
+import com.strongest.app.utils.DAY_MS
+import com.strongest.app.utils.dailyEntries
+import com.strongest.app.utils.daySlotCount
+import com.strongest.app.utils.localDayStart
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 enum class MeasurementRange(val label: String, val days: Int?) {
+    DAYS_7("7d", 7),
     DAYS_30("30d", 30),
+    DAYS_90("90d", 90),
     MONTHS_6("6m", 183),
+    YEAR_1("1y", 365),
     ALL_TIME("All", null)
 }
 
@@ -106,9 +113,6 @@ fun MeasurementDetailScreen(
             onDismiss = { showCaliperDialog = false }
         )
     }
-
-    val cutoff = range.days?.let { System.currentTimeMillis() - it * 24L * 60 * 60 * 1000 }
-    val rangedEntries = if (cutoff == null) entries else entries.filter { it.timestamp >= cutoff }
 
     if (showInfoDialog) {
         AlertDialog(
@@ -189,13 +193,14 @@ fun MeasurementDetailScreen(
             }
 
             item {
-                Row(
+                LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    MeasurementRange.entries.forEach { r ->
+                    items(MeasurementRange.entries.size) { idx ->
+                        val r = MeasurementRange.entries[idx]
                         FilterChip(
                             selected = range == r,
                             onClick = { range = r },
@@ -207,7 +212,8 @@ fun MeasurementDetailScreen(
             item {
                 ProgressChartCard(
                     metric = metric,
-                    entries = rangedEntries,
+                    entries = entries,
+                    range = range,
                     weightUnit = weightUnit,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -251,6 +257,7 @@ fun MeasurementDetailScreen(
 private fun ProgressChartCard(
     metric: BodyMetric,
     entries: List<MeasurementEntry>,
+    range: MeasurementRange,
     weightUnit: WeightUnit,
     modifier: Modifier = Modifier
 ) {
@@ -260,32 +267,38 @@ private fun ProgressChartCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        if (entries.size < 2) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = if (entries.isEmpty()) "Add measurements to see your progress"
-                    else "Add at least one more entry to see a trend",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
-            val primary = MaterialTheme.colorScheme.primary.toArgb()
-            val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
-            val sorted = entries.sortedBy { it.timestamp }
-            val labels = sorted.map { dateFormat.format(Date(it.timestamp)) }
-            val points = sorted.mapIndexed { idx, e ->
-                Entry(idx.toFloat(), convertCanonicalToDisplay(metric, e.value, weightUnit))
-            }
-            val unitLabel = metricUnitLabel(metric, weightUnit)
+        if (entries.isEmpty()) {
+            MeasurementChartEmpty("Add measurements to see your progress")
+            return@Card
+        }
+        val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
+        val primary = MaterialTheme.colorScheme.primary.toArgb()
+        val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
 
-            AndroidView(
+        // The x-axis spans every calendar day in the range; days without a measurement simply
+        // have no point, and the line connects across them.
+        val lastDay = localDayStart(System.currentTimeMillis())
+        val firstEntryDay = localDayStart(entries.minOf { it.timestamp })
+        val startDay = range.days?.let { lastDay - (it - 1) * DAY_MS } ?: firstEntryDay
+        if (startDay > lastDay) {
+            MeasurementChartEmpty("No measurements in this range")
+            return@Card
+        }
+        val byDay = entries.groupBy { localDayStart(it.timestamp) }
+        val points = dailyEntries(startDay, lastDay) { day ->
+            byDay[day]?.last()?.let { convertCanonicalToDisplay(metric, it.value, weightUnit) }
+        }
+        if (points.size < 2) {
+            MeasurementChartEmpty(
+                if (points.isEmpty()) "No measurements in this range"
+                else "Add at least one more entry to see a trend"
+            )
+            return@Card
+        }
+        val slotCount = daySlotCount(startDay, lastDay)
+        val unitLabel = metricUnitLabel(metric, weightUnit)
+
+        AndroidView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp)
@@ -316,13 +329,36 @@ private fun ProgressChartCard(
                         circleRadius = 3f
                     }
                     chart.data = LineData(ds)
-                    chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
-                    chart.xAxis.labelCount = minOf(labels.size, 6)
+                    chart.xAxis.valueFormatter = object : ValueFormatter() {
+                        override fun getFormattedValue(value: Float): String {
+                            val idx = value.toInt()
+                            if (idx < 0 || idx >= slotCount) return ""
+                            return dateFormat.format(Date(startDay + idx * DAY_MS))
+                        }
+                    }
+                    chart.xAxis.axisMinimum = 0f
+                    chart.xAxis.axisMaximum = (slotCount - 1).coerceAtLeast(1).toFloat()
+                    chart.xAxis.labelCount = 6
                     chart.notifyDataSetChanged()
                     chart.invalidate()
                 }
             )
-        }
+    }
+}
+
+@Composable
+private fun MeasurementChartEmpty(text: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

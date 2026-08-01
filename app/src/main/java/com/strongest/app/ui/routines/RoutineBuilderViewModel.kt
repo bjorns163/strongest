@@ -25,6 +25,7 @@ data class RoutineExerciseUi(
     val exerciseId: Long,
     val exerciseName: String,
     val routineExerciseId: Long,
+    val muscleGroup: String = "",
     val sets: List<RoutineSetUi>,
     val noteText: String = "",
     val previousSets: List<com.strongest.app.ui.workout.PreviousSetInfo> = emptyList()
@@ -119,6 +120,7 @@ class RoutineBuilderViewModel @Inject constructor(
                         exerciseId = re.exerciseId,
                         exerciseName = exercise?.name ?: "Unknown",
                         routineExerciseId = re.id,
+                        muscleGroup = exercise?.muscleGroup?.name ?: "",
                         noteText = note?.noteText ?: "",
                         sets = sets,
                         previousSets = previousSetInfos
@@ -155,6 +157,7 @@ class RoutineBuilderViewModel @Inject constructor(
                 exerciseId = exerciseId,
                 exerciseName = found.name,
                 routineExerciseId = nextTempId(),
+                muscleGroup = found.muscleGroup.name,
                 noteText = note?.noteText ?: "",
                 sets = List(defaultSetCount) { i ->
                     val prev = previousSets.getOrNull(i)
@@ -361,7 +364,7 @@ class RoutineBuilderViewModel @Inject constructor(
             }
 
             if (stateVal.routineId != null) {
-                val existing = repository.getRoutineWithExercises(stateVal.routineId!!).first
+                val existing = repository.getRoutineWithExercises(stateVal.routineId).first
                 if (existing != null) {
                     repository.updateRoutine(
                         existing.copy(
@@ -371,7 +374,7 @@ class RoutineBuilderViewModel @Inject constructor(
                             updatedAt = System.currentTimeMillis()
                         )
                     )
-                    repository.saveRoutineExercises(stateVal.routineId!!, routineExercises, routineSetsMap)
+                    repository.saveRoutineExercises(stateVal.routineId, routineExercises, routineSetsMap)
                 }
             } else {
                 repository.saveRoutine(

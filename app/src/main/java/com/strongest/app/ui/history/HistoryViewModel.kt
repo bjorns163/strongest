@@ -38,7 +38,8 @@ data class HistoryExerciseSummary(
     val exerciseName: String,
     val setCount: Int,
     val bestWeightKg: Float,
-    val bestReps: Int
+    val bestReps: Int,
+    val muscleGroup: String = ""
 )
 
 data class WorkoutSummary(
@@ -277,7 +278,8 @@ private fun buildSummaries(rows: List<HistorySetRow>): Map<Long, WorkoutSummary>
                 exerciseName = name,
                 setCount = setCount,
                 bestWeightKg = bestW,
-                bestReps = bestReps
+                bestReps = bestReps,
+                muscleGroup = exRows.first().muscleGroup
             )
         }
 

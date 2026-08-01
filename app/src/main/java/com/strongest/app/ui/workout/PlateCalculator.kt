@@ -32,9 +32,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
@@ -57,27 +60,30 @@ data class PlateResult(
     val remainder: Float
 )
 
-fun calculatePlates(target: Float, bar: Float, availablePlates: List<Float>): PlateResult {
-    val perSide = (target - bar) / 2f
+fun calculatePlates(target: Float, bar: Float, availablePlates: Map<Float, Int>, singleSide: Boolean = false): PlateResult {
+    val perSide = if (singleSide) (target - bar) else (target - bar) / 2f
     if (perSide <= 0f) {
         return PlateResult(emptyList(), bar.coerceAtMost(target), (target - bar).coerceAtLeast(0f))
     }
-    val sorted = availablePlates.sortedDescending()
+    val sorted = availablePlates.keys.sortedDescending()
     var remaining = perSide
     val counts = mutableListOf<Pair<Float, Int>>()
     val epsilon = 0.001f
     for (plate in sorted) {
         if (plate <= 0f) continue
+        val maxCount = availablePlates[plate] ?: 0
+        // The quantity is the total owned; a barbell loads pairs, so each side gets half.
+        val maxPerSide = if (singleSide) maxCount else maxCount / 2
         var count = 0
-        while (remaining + epsilon >= plate) {
+        while (count < maxPerSide && remaining + epsilon >= plate) {
             remaining -= plate
             count++
         }
         if (count > 0) counts.add(plate to count)
     }
     val achievedPerSide = perSide - remaining
-    val achievedTotal = bar + (achievedPerSide * 2f)
-    return PlateResult(counts, achievedTotal, remaining * 2f)
+    val achievedTotal = if (singleSide) bar + achievedPerSide else bar + (achievedPerSide * 2f)
+    return PlateResult(counts, achievedTotal, if (singleSide) remaining else remaining * 2f)
 }
 
 private fun formatWeight(value: Float): String {
@@ -105,29 +111,36 @@ fun PlateCalculatorDialog(
 
     var targetText by remember {
         mutableStateOf(
-            if (initialTargetWeight > 0f) formatWeight(initialTargetWeight) else ""
+            TextFieldValue(if (initialTargetWeight > 0f) formatWeight(initialTargetWeight) else "")
         )
     }
+    var targetFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(targetFocused) {
+        if (targetFocused) {
+            targetText = targetText.copy(selection = TextRange(0, targetText.text.length))
+        }
+    }
     var selectedBar by remember { mutableStateOf(defaultBars.first()) }
-    val plateSelections = remember(weightUnit) {
-        mutableStateOf(defaultPlates.associateWith { true })
+    var singleSide by remember { mutableStateOf(false) }
+    var plateQuantities by remember(weightUnit) {
+        mutableStateOf(defaultPlates.associateWith { 999 })
     }
     var didInitFromSettings by remember(weightUnit) { mutableStateOf(false) }
     LaunchedEffect(appSettings, weightUnit) {
         val s = appSettings
         if (s != null && !didInitFromSettings) {
             val cfg = if (weightUnit == WeightUnit.KG) s.availableKgPlates else s.availableLbsPlates
-            plateSelections.value = defaultPlates.associateWith { plate ->
-                cfg.any { abs(it - plate) < 0.001f }
+            plateQuantities = defaultPlates.associateWith { plate ->
+                cfg.entries.find { abs(it.key - plate) < 0.001f }?.value ?: 0
             }
             didInitFromSettings = true
         }
     }
 
-    val target = targetText.toFloatOrNull() ?: 0f
-    val activePlates = plateSelections.value.filter { it.value }.keys.toList()
-    val result = remember(target, selectedBar, activePlates) {
-        calculatePlates(target, selectedBar, activePlates)
+    val target = targetText.text.toFloatOrNull() ?: 0f
+    val activePlates = plateQuantities.filter { it.value > 0 }
+    val result = remember(target, selectedBar, singleSide, activePlates) {
+        calculatePlates(target, selectedBar, activePlates, singleSide)
     }
 
     AlertDialog(
@@ -138,12 +151,15 @@ fun PlateCalculatorDialog(
                 OutlinedTextField(
                     value = targetText,
                     onValueChange = { input ->
-                        targetText = input.filter { it.isDigit() || it == '.' }
+                        val filtered = input.text.filter { it.isDigit() || it == '.' }
+                        targetText = if (filtered == input.text) input else TextFieldValue(filtered)
                     },
                     label = { Text("Target weight ($unitLabel)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { targetFocused = it.isFocused }
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -178,33 +194,80 @@ fun PlateCalculatorDialog(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { singleSide = !singleSide }
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = singleSide, onCheckedChange = { singleSide = it })
+                    Text("Single side (e.g. machines with one pin)")
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(text = "Available plates", style = MaterialTheme.typography.labelLarge)
+                Text(text = "Available plates (0 = not owned)", style = MaterialTheme.typography.labelLarge)
                 val plateRows = defaultPlates.chunked(2)
                 for (row in plateRows) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         for (plate in row) {
-                            val checked = plateSelections.value[plate] == true
+                            val qty = plateQuantities[plate] ?: 0
+                            var qtyField by remember(plate, weightUnit) {
+                                mutableStateOf(TextFieldValue(qty.toString()))
+                            }
+                            var qtyFocused by remember(plate, weightUnit) { mutableStateOf(false) }
+
+                            // Select all on focus so typing replaces the existing value.
+                            LaunchedEffect(qtyFocused) {
+                                if (qtyFocused) {
+                                    qtyField = qtyField.copy(selection = TextRange(0, qtyField.text.length))
+                                }
+                            }
+                            // Keep the field in sync when the map changes externally
+                            // (e.g. settings load), but never while the user is editing.
+                            LaunchedEffect(qty, qtyFocused) {
+                                if (!qtyFocused) {
+                                    val mapText = qty.toString()
+                                    if (qtyField.text != mapText) {
+                                        qtyField = TextFieldValue(mapText)
+                                    }
+                                }
+                            }
+
                             Row(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clickable {
-                                        plateSelections.value = plateSelections.value.toMutableMap().apply {
-                                            this[plate] = !checked
-                                        }
-                                    }
                                     .padding(vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Checkbox(
-                                    checked = checked,
-                                    onCheckedChange = { isChecked ->
-                                        plateSelections.value = plateSelections.value.toMutableMap().apply {
-                                            this[plate] = isChecked
-                                        }
-                                    }
+                                Text(
+                                    "${formatWeight(plate)} $unitLabel",
+                                    modifier = Modifier.weight(1f)
                                 )
-                                Text("${formatWeight(plate)} $unitLabel")
+                                OutlinedTextField(
+                                    value = qtyField,
+                                    onValueChange = { input ->
+                                        val filtered = input.text.filter { it.isDigit() }
+                                        qtyField = if (filtered == input.text) input else TextFieldValue(filtered)
+                                        val newQty = filtered.toIntOrNull()
+                                        if (newQty != null && newQty >= 0) {
+                                            plateQuantities = plateQuantities.toMutableMap().apply {
+                                                this[plate] = newQty
+                                            }
+                                        } else if (filtered.isEmpty()) {
+                                            plateQuantities = plateQuantities.toMutableMap().apply {
+                                                this[plate] = 0
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .width(72.dp)
+                                        .onFocusChanged { qtyFocused = it.isFocused },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    textStyle = MaterialTheme.typography.bodySmall
+                                )
                             }
                         }
                         if (row.size == 1) {
@@ -216,7 +279,7 @@ fun PlateCalculatorDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Plates per side", style = MaterialTheme.typography.labelLarge)
+                Text(text = if (singleSide) "Plates to add" else "Plates per side", style = MaterialTheme.typography.labelLarge)
                 Spacer(modifier = Modifier.height(4.dp))
                 if (target <= 0f) {
                     Text(

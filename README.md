@@ -148,3 +148,28 @@ app/src/main/java/com/strongest/app/
 
 This project is open source under the MIT License.
 
+---
+
+## Privacy Statement
+
+**Strongest** does not collect, store, transmit, or share any personal data.
+
+- **Local-only storage** — all data (workouts, exercises, routines, measurements, settings) is stored exclusively on your device using Room (local database) and DataStore (preferences).
+- **No internet access** — the app requires no internet permission. It never connects to remote servers, APIs, or cloud services.
+- **No analytics or crash reporting** — no third-party analytics, tracking, or telemetry SDKs are included.
+- **No ads** — the app contains no advertising SDKs.
+- **No user accounts** — there is no login, registration, or profile synced to a server.
+- **No data sharing** — the app does not share data with any third parties. Data export (XLSX) is user-initiated and saved locally or shared via Android's share sheet — the app itself never sends data externally.
+
+### Data Safety (Google Play)
+
+When publishing, your Google Play Data Safety section should declare:
+- **Data collected**: None
+- **Data shared**: None
+- **Data encrypted in transit**: Not applicable (no network communication)
+- **Data deletion**: Uninstall the app to remove all stored data
+
+### Your Control
+
+You can view, modify, or delete all data directly within the app. To completely remove all data, clear the app's storage in Android Settings or uninstall the application.
+

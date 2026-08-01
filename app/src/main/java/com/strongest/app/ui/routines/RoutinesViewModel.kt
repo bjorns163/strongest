@@ -122,7 +122,7 @@ class RoutinesViewModel @Inject constructor(
         return JSONObject().apply {
             put("version", 1)
             put("name", routine.name)
-            put("description", routine.description ?: "")
+            put("description", routine.description)
             put("exercises", exercisesArr)
         }.toString(2)
     }

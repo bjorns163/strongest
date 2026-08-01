@@ -170,7 +170,8 @@ data class ActiveWorkoutState(
     val sourceRoutineId: Long? = null,
     val sourceRoutineExists: Boolean = false,
     val hasStructuralChanges: Boolean = false,
-    val weightUnit: com.strongest.app.data.repository.WeightUnit = com.strongest.app.data.repository.WeightUnit.KG
+    val weightUnit: com.strongest.app.data.repository.WeightUnit = com.strongest.app.data.repository.WeightUnit.KG,
+    val workoutNotificationEnabled: Boolean = true
 )
 
 data class WorkoutExerciseUi(
@@ -270,6 +271,7 @@ class ActiveWorkoutViewModel @Inject constructor(
         // A fresh/resumed workout is not in the finishing state.
         isFinishing = false
         if (isServiceStarted) return
+        if (!_state.value.workoutNotificationEnabled) return
         WorkoutForegroundService.start(context)
         isServiceStarted = true
     }
@@ -389,7 +391,8 @@ class ActiveWorkoutViewModel @Inject constructor(
                         keepScreenOn = settings.keepScreenOn,
                         notificationSoundUri = settings.notificationSoundUri,
                         rpeTrackingEnabled = settings.rpeTrackingEnabled,
-                        weightUnit = settings.weightUnit
+                        weightUnit = settings.weightUnit,
+                        workoutNotificationEnabled = settings.workoutNotificationEnabled
                     )
                 }
             }
@@ -1201,20 +1204,28 @@ class ActiveWorkoutViewModel @Inject constructor(
         viewModelScope.launch {
             val routineId = _state.value.sourceRoutineId
             if (routineId != null) {
-                // Position-aligned with the routine's exercise list (only reached when there are
-                // no structural changes), so each workout exercise maps 1:1 to a routine exercise.
-                val setsByPosition = _state.value.workoutExercises.map { ex ->
-                    ex.sets.mapIndexed { idx, s ->
-                        RoutineSet(
-                            routineExerciseId = 0,
-                            setNumber = idx + 1,
-                            weight = s.weight,
-                            reps = s.reps,
-                            restSeconds = s.restSeconds
-                        )
+                val routineExerciseIds = repository.getRoutineWithExercisesAndSets(routineId)
+                    ?.exercises?.map { it.exerciseId }
+                val workoutExerciseIds = _state.value.workoutExercises.map { it.exerciseId }
+                if (routineExerciseIds != null && routineExerciseIds == workoutExerciseIds) {
+                    val setsByPosition = _state.value.workoutExercises.map { ex ->
+                        ex.sets.mapIndexed { idx, s ->
+                            RoutineSet(
+                                routineExerciseId = 0,
+                                setNumber = idx + 1,
+                                weight = s.weight,
+                                reps = s.reps,
+                                restSeconds = s.restSeconds
+                            )
+                        }
                     }
+                    repository.updateRoutineSetsOnly(routineId, setsByPosition)
+                } else {
+                    // Position-aligned set writes would land on the wrong exercises once the
+                    // workout no longer matches the routine 1:1; rebuild by identity instead.
+                    val (exercises, setsMap) = buildRoutineFromWorkout()
+                    repository.saveRoutineExercises(routineId, exercises, setsMap)
                 }
-                repository.updateRoutineSetsOnly(routineId, setsByPosition)
             }
             _state.update { it.copy(showRoutineSaveDialog = false) }
             doFinishWorkout()
@@ -1311,6 +1322,8 @@ class ActiveWorkoutViewModel @Inject constructor(
                 .map { PreviousSetInfo(it.weightKg, it.reps) }
             val defaultRest = _state.value.restTimerSeconds
             val lastSetRest = _state.value.lastSetRestSeconds
+            // Notes are per-exercise: refresh so the replaced exercise doesn't keep the old note.
+            val newNote = repository.getNote(newExerciseId)
 
             oldExercise.sets.forEach { set ->
                 set.setId?.let { id ->
@@ -1357,6 +1370,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                 muscleGroup = newExercise.muscleGroup,
                 equipment = newExercise.equipment,
                 classification = newExercise.classification,
+                noteText = newNote?.noteText ?: "",
                 sets = uiSets,
                 previousSets = previousSets
             )

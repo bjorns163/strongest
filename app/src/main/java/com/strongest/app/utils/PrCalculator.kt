@@ -8,6 +8,7 @@ data class WorkoutPrInfo(
     val kind: PrKind,
     val exerciseId: Long? = null,
     val exerciseName: String? = null,
+    val muscleGroup: String? = null,
     val weightKg: Float? = null,
     val reps: Int? = null,
     val oneRmKg: Float? = null,
@@ -58,6 +59,8 @@ fun computeWorkoutPrs(allRows: List<HistorySetRow>, workoutId: Long): List<Worko
 
     for ((exId, rows) in bestPerExerciseInWorkout) {
         val name = rows.firstOrNull()?.exerciseName
+        val muscleGroup = rows.firstOrNull()?.muscleGroup
+        val isCardio = muscleGroup == "CARDIO"
         var bestW = 0f
         var bestReps = 0
         var bestOrm = 0f
@@ -73,11 +76,11 @@ fun computeWorkoutPrs(allRows: List<HistorySetRow>, workoutId: Long): List<Worko
         }
         val globalMaxW = maxWeightByExercise[exId] ?: 0f
         if (bestW > 0f && bestW >= globalMaxW) {
-            prs.add(WorkoutPrInfo(PrKind.WEIGHT, exerciseId = exId, exerciseName = name, weightKg = bestW, reps = bestReps))
+            prs.add(WorkoutPrInfo(PrKind.WEIGHT, exerciseId = exId, exerciseName = name, muscleGroup = muscleGroup, weightKg = bestW, reps = bestReps))
         }
         val globalMaxOrm = maxOneRmByExercise[exId] ?: 0f
-        if (bestOrm > 0f && bestOrm >= globalMaxOrm) {
-            prs.add(WorkoutPrInfo(PrKind.ONE_RM, exerciseId = exId, exerciseName = name, oneRmKg = bestOrm))
+        if (bestOrm > 0f && bestOrm >= globalMaxOrm && !isCardio) {
+            prs.add(WorkoutPrInfo(PrKind.ONE_RM, exerciseId = exId, exerciseName = name, muscleGroup = muscleGroup, oneRmKg = bestOrm))
         }
     }
 

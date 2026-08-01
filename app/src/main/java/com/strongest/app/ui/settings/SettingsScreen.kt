@@ -1,5 +1,6 @@
 package com.strongest.app.ui.settings
 
+import com.strongest.app.BuildConfig
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
@@ -41,8 +42,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -340,6 +346,27 @@ fun SettingsScreen(
             }
 
             item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Notification bar during workout")
+                        Switch(
+                            checked = uiState.workoutNotificationEnabled,
+                            onCheckedChange = { viewModel.setWorkoutNotificationEnabled(it) }
+                        )
+                    }
+                    Text(
+                        text = "Shows your active workout progress, rest timer, and quick controls in the notification bar.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            item {
                 val soundPickerLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) { result ->
@@ -386,11 +413,11 @@ fun SettingsScreen(
                 val unit = uiState.weightUnit
                 val unitLabel = weightUnitLabel(unit)
                 val allPlates = if (unit == WeightUnit.KG) STANDARD_KG_PLATES else STANDARD_LBS_PLATES
-                val active = if (unit == WeightUnit.KG) uiState.availableKgPlates else uiState.availableLbsPlates
+                val plateQtys = if (unit == WeightUnit.KG) uiState.availableKgPlates else uiState.availableLbsPlates
 
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
-                        text = "Mark which plates you have available. The calculator will preselect these.",
+                        text = "Set how many of each plate you own (999 = unlimited). The calculator will respect these limits.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -398,36 +425,50 @@ fun SettingsScreen(
                     for (row in rows) {
                         Row(modifier = Modifier.fillMaxWidth()) {
                             for (plate in row) {
-                                val isChecked = active.any { kotlin.math.abs(it - plate) < 0.001f }
+                                val currentQty = plateQtys.entries.find { kotlin.math.abs(it.key - plate) < 0.001f }?.value ?: 0
+                                var editText by remember(plate, unit) { mutableStateOf(TextFieldValue(currentQty.toString())) }
+                                var editFocused by remember(plate, unit) { mutableStateOf(false) }
+
+                                // Select all on focus so typing replaces the existing value.
+                                LaunchedEffect(editFocused) {
+                                    if (editFocused) {
+                                        editText = editText.copy(selection = TextRange(0, editText.text.length))
+                                    }
+                                }
+
                                 Row(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable {
-                                            val current = active.toMutableSet()
-                                            if (isChecked) {
-                                                current.removeAll { kotlin.math.abs(it - plate) < 0.001f }
-                                            } else {
-                                                current.add(plate)
-                                            }
-                                            viewModel.setAvailablePlates(unit, current)
-                                        },
+                                        .padding(vertical = 2.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Checkbox(
-                                        checked = isChecked,
-                                        onCheckedChange = { wantChecked ->
-                                            val current = active.toMutableSet()
-                                            if (wantChecked) current.add(plate)
-                                            else current.removeAll { kotlin.math.abs(it - plate) < 0.001f }
-                                            viewModel.setAvailablePlates(unit, current)
-                                        }
+                                    Text(
+                                        text = when {
+                                            (plate % 1f) == 0f -> plate.toInt().toString()
+                                            ((plate * 10f) % 1f) == 0f -> String.format("%.1f", plate)
+                                            else -> String.format("%.2f", plate)
+                                        } + " $unitLabel",
+                                        modifier = Modifier.weight(1f)
                                     )
-                                    val plateText = when {
-                                        (plate % 1f) == 0f -> plate.toInt().toString()
-                                        ((plate * 10f) % 1f) == 0f -> String.format("%.1f", plate)
-                                        else -> String.format("%.2f", plate)
-                                    }
-                                    Text("$plateText $unitLabel")
+                                    OutlinedTextField(
+                                        value = editText,
+                                        onValueChange = { input ->
+                                            val filtered = input.text.filter { it.isDigit() }
+                                            editText = if (filtered == input.text) input else TextFieldValue(filtered)
+                                            val qty = filtered.toIntOrNull()
+                                            if (qty != null && qty >= 0) {
+                                                val updated = plateQtys.toMutableMap()
+                                                updated[plate] = qty
+                                                viewModel.setAvailablePlates(unit, updated)
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .width(72.dp)
+                                            .onFocusChanged { editFocused = it.isFocused },
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        textStyle = MaterialTheme.typography.bodySmall
+                                    )
                                 }
                             }
                             if (row.size == 1) {
@@ -672,7 +713,7 @@ fun SettingsScreen(
 
             item {
                 Text(
-                    text = "Strongest v1.0.0",
+                    text = "Strongest v${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )

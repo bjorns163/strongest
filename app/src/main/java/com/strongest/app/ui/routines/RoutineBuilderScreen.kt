@@ -67,7 +67,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.data.model.RoutineGroup
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
@@ -286,6 +286,7 @@ fun RoutineExerciseBlock(
     var showMenu by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
     var noteText by remember { mutableStateOf(exercise.noteText) }
+    val isCardio = exercise.muscleGroup == "CARDIO"
 
     LaunchedEffect(exercise.noteText) {
         noteText = exercise.noteText
@@ -427,8 +428,18 @@ fun RoutineExerciseBlock(
             ) {
                 Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
                 Text("Last", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
-                Text(weightUnitLabel(weightUnit), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                Text("Reps", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text(
+                    if (isCardio) "Level" else weightUnitLabel(weightUnit),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    if (isCardio) "Duration" else "Reps",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
+                )
                 Text("Rest", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
                 Text("", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f))
             }
@@ -438,6 +449,7 @@ fun RoutineExerciseBlock(
                     set = set,
                     weightUnit = weightUnit,
                     index = setIndex,
+                    isCardio = isCardio,
                     onUpdateSet = onUpdateSet,
                     onUpdateRest = { restSec -> onUpdateSetRest(setIndex, restSec) },
                     onDeleteSet = onDeleteSet
@@ -462,6 +474,7 @@ fun SwipeableRoutineSetRow(
     set: RoutineSetUi,
     weightUnit: WeightUnit,
     index: Int,
+    isCardio: Boolean = false,
     onUpdateSet: (Int, Float, Int) -> Unit,
     onUpdateRest: (Int) -> Unit,
     onDeleteSet: (Int) -> Unit

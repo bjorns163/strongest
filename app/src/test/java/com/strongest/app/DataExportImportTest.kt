@@ -114,8 +114,8 @@ class DataExportImportTest {
         keepScreenOn = true,
         notificationSoundUri = "content://settings/ringtone",
         rpeTrackingEnabled = true,
-        availableKgPlates = setOf(1.25f, 2.5f, 5f, 10f, 20f),
-        availableLbsPlates = setOf(2.5f, 5f, 10f),
+        availableKgPlates = mapOf(1.25f to 999, 2.5f to 999, 5f to 999, 10f to 999, 20f to 999),
+        availableLbsPlates = mapOf(2.5f to 999, 5f to 999, 10f to 999),
         oneRmFormula = OneRmFormula.EPLEY,
         recoveryHoursByMuscle = mapOf<MuscleGroup, Int>(
             MuscleGroup.CHEST to 48,
@@ -273,8 +273,8 @@ class DataExportImportTest {
             assertEquals(true, keepScreenOn)
             assertEquals("content://settings/ringtone", notificationSoundUri)
             assertEquals(true, rpeTrackingEnabled)
-            assertEquals(setOf(1.25f, 2.5f, 5f, 10f, 20f), availableKgPlates)
-            assertEquals(setOf(2.5f, 5f, 10f), availableLbsPlates)
+            assertEquals(setOf(1.25f, 2.5f, 5f, 10f, 20f), availableKgPlates.keys)
+            assertEquals(setOf(2.5f, 5f, 10f), availableLbsPlates.keys)
             assertEquals(OneRmFormula.EPLEY, oneRmFormula)
             assertEquals(2, recoveryHoursByMuscle.size)
             assertEquals(48, recoveryHoursByMuscle[MuscleGroup.CHEST])

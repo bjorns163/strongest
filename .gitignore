@@ -22,6 +22,8 @@ captures/
 *.aab
 output-metadata.json
 app/release/             # For standard Android Gradle setups
+app/release/**/*
+app/release/**
 # release/               # Add this instead if it sits at the root directory
 
 # Custom/Local tooling notes

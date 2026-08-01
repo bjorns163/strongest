@@ -322,13 +322,14 @@ fun ActiveWorkoutScreen(
             text = {
                 Column {
                     if (fromRoutine) {
-                        TextButton(
-                            onClick = { viewModel.updateRoutineSetsOnlyAndFinish() },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Update Sets/Reps/Weight Only", modifier = Modifier.fillMaxWidth())
-                        }
-                        if (state.hasStructuralChanges) {
+                        if (!state.hasStructuralChanges) {
+                            TextButton(
+                                onClick = { viewModel.updateRoutineSetsOnlyAndFinish() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Update Sets/Reps/Weight Only", modifier = Modifier.fillMaxWidth())
+                            }
+                        } else {
                             TextButton(
                                 onClick = { viewModel.updateRoutineFullAndFinish() },
                                 modifier = Modifier.fillMaxWidth()

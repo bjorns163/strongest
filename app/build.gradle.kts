@@ -13,8 +13,8 @@ android {
         applicationId = "com.strongest.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -58,6 +58,12 @@ android {
             excludes += "META-INF/DEPENDENCIES"
             excludes += "META-INF/LICENSE"
             excludes += "META-INF/NOTICE"
+        }
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
         }
     }
 }
@@ -111,6 +117,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.robolectric)
+    testImplementation(libs.test.core)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation("org.json:json:20260522")
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

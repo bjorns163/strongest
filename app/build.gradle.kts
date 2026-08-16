@@ -121,6 +121,7 @@ dependencies {
     testImplementation(libs.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation("org.json:json:20260814")
+    androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.compose.ui.test.junit4)

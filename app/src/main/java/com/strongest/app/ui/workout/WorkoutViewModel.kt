@@ -523,6 +523,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                     val saved = savedSets.getOrNull(setIdx)
                     val weight = saved?.weight ?: re.defaultWeight
                     val reps = saved?.reps ?: re.defaultReps
+                    val setType = saved?.setType ?: SetType.NORMAL
                     val restSec = if (setIdx == setCount - 1) {
                         _state.value.lastSetRestSeconds
                     } else {
@@ -531,7 +532,7 @@ class ActiveWorkoutViewModel @Inject constructor(
 
                     val setId = repository.logSet(
                         workoutExerciseId, setIdx + 1,
-                        weight, reps, null, SetType.NORMAL,
+                        weight, reps, null, setType,
                         restSeconds = restSec, completedAt = 0
                     )
                     SetUi(
@@ -539,7 +540,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                         setNumber = setIdx + 1,
                         weight = weight,
                         reps = reps,
-                        setType = SetType.NORMAL,
+                        setType = setType,
                         restSeconds = restSec,
                         previousSetInfo = previousSets.getOrNull(setIdx)
                     )
@@ -898,6 +899,27 @@ class ActiveWorkoutViewModel @Inject constructor(
         persistSet(workoutExerciseId, updatedSet)
     }
 
+    fun toggleWarmUp(workoutExerciseId: Long, setIndex: Int) {
+        val exerciseIndex = _state.value.workoutExercises.indexOfFirst { it.workoutExerciseId == workoutExerciseId }
+        if (exerciseIndex == -1) return
+
+        val exercise = _state.value.workoutExercises[exerciseIndex]
+        if (setIndex !in exercise.sets.indices) return
+
+        val updatedSets = exercise.sets.toMutableList()
+        val current = updatedSets[setIndex]
+        val toggled = current.copy(
+            setType = if (current.setType == SetType.WARM_UP) SetType.NORMAL else SetType.WARM_UP
+        )
+        updatedSets[setIndex] = toggled
+
+        val updatedExercises = _state.value.workoutExercises.toMutableList()
+        updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
+        _state.update { it.copy(workoutExercises = updatedExercises) }
+
+        persistSet(workoutExerciseId, toggled)
+    }
+
     fun logSet(workoutExerciseId: Long, setIndex: Int) {
         viewModelScope.launch {
             val exercise = _state.value.workoutExercises.find { it.workoutExerciseId == workoutExerciseId } ?: return@launch
@@ -1168,7 +1190,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                         }
                         for ((sIdx, ws) in we.sets.withIndex()) {
                             val rs = routineSets[sIdx]
-                            if (rs.weight != ws.weight || rs.reps != ws.reps) {
+                            if (rs.weight != ws.weight || rs.reps != ws.reps || rs.setType != ws.setType) {
                                 hasValueChanges = true
                                 break@outer
                             }
@@ -1215,7 +1237,8 @@ class ActiveWorkoutViewModel @Inject constructor(
                                 setNumber = idx + 1,
                                 weight = s.weight,
                                 reps = s.reps,
-                                restSeconds = s.restSeconds
+                                restSeconds = s.restSeconds,
+                                setType = s.setType
                             )
                         }
                     }
@@ -1291,7 +1314,8 @@ class ActiveWorkoutViewModel @Inject constructor(
                     setNumber = sIdx + 1,
                     weight = s.weight,
                     reps = s.reps,
-                    restSeconds = s.restSeconds
+                    restSeconds = s.restSeconds,
+                    setType = s.setType
                 )
             }
         }

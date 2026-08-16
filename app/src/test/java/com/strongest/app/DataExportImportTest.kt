@@ -57,7 +57,8 @@ class DataExportImportTest {
         setNumber = 1,
         weight = 80f,
         reps = 10,
-        restSeconds = 90
+        restSeconds = 90,
+        setType = SetType.WARM_UP
     )
 
     private val sampleExerciseNote = ExerciseNote(
@@ -212,6 +213,7 @@ class DataExportImportTest {
             assertEquals(80f, weight)
             assertEquals(10, reps)
             assertEquals(90, restSeconds)
+            assertEquals(SetType.WARM_UP, setType)
         }
 
         assertEquals(1, parsed.exerciseNotes.size)

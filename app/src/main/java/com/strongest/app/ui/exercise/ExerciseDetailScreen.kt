@@ -54,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -759,14 +760,26 @@ fun HistoryTab(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = if (isCardio) {
-                                        formatWeightForDisplay(entry.weightKg, weightUnit)
-                                    } else {
-                                        "${formatWeightForDisplay(entry.weightKg, weightUnit)} ${weightUnitLabel(weightUnit)}"
-                                    },
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (entry.setType == com.strongest.app.data.model.SetType.WARM_UP) {
+                                        Icon(
+                                            imageVector = Icons.Default.LocalFireDepartment,
+                                            contentDescription = "Warm-up set",
+                                            tint = Color(0xFFFF9800),
+                                            modifier = Modifier
+                                                .padding(end = 4.dp)
+                                                .size(14.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = if (isCardio) {
+                                            formatWeightForDisplay(entry.weightKg, weightUnit)
+                                        } else {
+                                            "${formatWeightForDisplay(entry.weightKg, weightUnit)} ${weightUnitLabel(weightUnit)}"
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
                                 Text(
                                     text = if (isCardio) {
                                         "\u00d7 ${entry.reps}"

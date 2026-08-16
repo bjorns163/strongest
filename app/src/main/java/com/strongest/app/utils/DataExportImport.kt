@@ -166,6 +166,7 @@ private fun RoutineSet.toJson(): JSONObject = JSONObject().apply {
     put("weight", weight.toDouble())
     put("reps", reps)
     put("restSeconds", restSeconds)
+    put("setType", setType.name)
 }
 
 private fun JSONObject.toRoutineSet(): RoutineSet = RoutineSet(
@@ -174,7 +175,12 @@ private fun JSONObject.toRoutineSet(): RoutineSet = RoutineSet(
     setNumber = optInt("setNumber", 1),
     weight = optDouble("weight", 0.0).toFloat(),
     reps = optInt("reps", 10),
-    restSeconds = optInt("restSeconds", 90)
+    restSeconds = optInt("restSeconds", 90),
+    setType = try {
+        SetType.valueOf(optString("setType", "NORMAL"))
+    } catch (_: Exception) {
+        SetType.NORMAL
+    }
 )
 
 private fun ExerciseNote.toJson(): JSONObject = JSONObject().apply {

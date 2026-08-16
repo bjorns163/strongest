@@ -10,6 +10,7 @@ import com.strongest.app.data.model.ExerciseNote
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.Routine
 import com.strongest.app.data.model.RoutineExercise
+import com.strongest.app.data.model.RoutineSet
 import com.strongest.app.data.model.SetLog
 import com.strongest.app.data.model.SetType
 import com.strongest.app.data.model.Workout
@@ -37,6 +38,7 @@ import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.anyMap
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
@@ -208,6 +210,92 @@ class ActiveWorkoutViewModelTest {
 
         verify(repository).updateRoutineSetsOnly(eq(7L), anyList())
         verify(repository, never()).saveRoutineExercises(anyLong(), anyList(), anyMap())
+    }
+
+    @Test
+    fun `toggling a set warm-up updates state and persists the set type`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+
+        seedWorkout(vm, pairs = listOf(1L to 10L))
+        advanceUntilIdle()
+        assertEquals(SetType.NORMAL, vm.state.value.workoutExercises.single().sets.single().setType)
+
+        vm.toggleWarmUp(10L, 0)
+        advanceUntilIdle()
+
+        assertEquals(SetType.WARM_UP, vm.state.value.workoutExercises.single().sets.single().setType)
+        verify(repository).updateSet(
+            SetLog(
+                id = 1000L,
+                workoutExerciseId = 10L,
+                setNumber = 1,
+                weightKg = 80f,
+                reps = 8,
+                rpe = null,
+                setType = SetType.WARM_UP,
+                restSeconds = 90,
+                completedAt = 0L
+            )
+        )
+    }
+
+    @Test
+    fun `toggling a set warm-up twice restores the normal type`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+
+        seedWorkout(vm, pairs = listOf(1L to 10L))
+        advanceUntilIdle()
+
+        vm.toggleWarmUp(10L, 0)
+        vm.toggleWarmUp(10L, 0)
+        advanceUntilIdle()
+
+        assertEquals(SetType.NORMAL, vm.state.value.workoutExercises.single().sets.single().setType)
+    }
+
+    @Test
+    fun `starting a workout from a routine propagates warm-up set types`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+
+        `when`(repository.startWorkout(eq(7L), eq("Routine 7"), anyString())).thenReturn(5L)
+        `when`(repository.getRoutineWithExercisesAndSets(7L)).thenReturn(
+            RoutineWithExercisesAndSets(
+                routine = Routine(id = 7L, name = "Routine 7"),
+                exercises = listOf(
+                    RoutineExercise(id = 70L, routineId = 7L, exerciseId = 1L, orderIndex = 0)
+                ),
+                sets = mapOf(
+                    70L to listOf(
+                        RoutineSet(
+                            id = 700L,
+                            routineExerciseId = 70L,
+                            setNumber = 1,
+                            weight = 80f,
+                            reps = 8,
+                            restSeconds = 90,
+                            setType = SetType.WARM_UP
+                        )
+                    )
+                )
+            )
+        )
+        `when`(repository.getExerciseById(1L)).thenReturn(exercise(1L, "Exercise 1"))
+        `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.addExerciseToWorkout(5L, 1L, 0)).thenReturn(10L)
+        `when`(repository.getNote(1L)).thenReturn(null)
+        `when`(repository.logSet(10L, 1, 80f, 8, null, SetType.WARM_UP, 150, 0L)).thenReturn(100L)
+
+        vm.startWorkoutFromRoutine(7L)
+        advanceUntilIdle()
+
+        verify(repository).logSet(10L, 1, 80f, 8, null, SetType.WARM_UP, 150, 0L)
+        assertEquals(SetType.WARM_UP, vm.state.value.workoutExercises.single().sets.single().setType)
     }
 
     @Test

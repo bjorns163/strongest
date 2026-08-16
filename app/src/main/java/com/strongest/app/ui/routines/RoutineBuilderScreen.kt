@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
@@ -59,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -69,6 +72,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.data.model.RoutineGroup
+import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
 import com.strongest.app.utils.displayToKg
@@ -222,6 +226,9 @@ fun RoutineBuilderScreen(
                         onUpdateSetRest = { setIndex, restSec ->
                             viewModel.updateSetRest(exercise.routineExerciseId, setIndex, restSec)
                         },
+                        onToggleWarmUp = { setIndex ->
+                            viewModel.toggleWarmUp(exercise.routineExerciseId, setIndex)
+                        },
                         onAddSet = { viewModel.addSet(exercise.routineExerciseId) },
                         onDeleteSet = { setIndex ->
                             viewModel.deleteSet(exercise.routineExerciseId, setIndex)
@@ -274,6 +281,7 @@ fun RoutineExerciseBlock(
     totalCount: Int,
     onUpdateSet: (Int, Float, Int) -> Unit,
     onUpdateSetRest: (Int, Int) -> Unit,
+    onToggleWarmUp: (Int) -> Unit,
     onAddSet: () -> Unit,
     onDeleteSet: (Int) -> Unit,
     onRemoveExercise: () -> Unit,
@@ -426,6 +434,14 @@ fun RoutineExerciseBlock(
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Box(modifier = Modifier.weight(0.3f), contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.LocalFireDepartment,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
                 Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
                 Text("Last", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
                 Text(
@@ -452,6 +468,7 @@ fun RoutineExerciseBlock(
                     isCardio = isCardio,
                     onUpdateSet = onUpdateSet,
                     onUpdateRest = { restSec -> onUpdateSetRest(setIndex, restSec) },
+                    onToggleWarmUp = { onToggleWarmUp(setIndex) },
                     onDeleteSet = onDeleteSet
                 )
             }
@@ -477,6 +494,7 @@ fun SwipeableRoutineSetRow(
     isCardio: Boolean = false,
     onUpdateSet: (Int, Float, Int) -> Unit,
     onUpdateRest: (Int) -> Unit,
+    onToggleWarmUp: () -> Unit,
     onDeleteSet: (Int) -> Unit
 ) {
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -508,10 +526,35 @@ fun SwipeableRoutineSetRow(
                         offsetX = 0f
                     }
                 )
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f))
+                .background(
+                    if (set.setType == SetType.WARM_UP) {
+                        Color(0xFFFF9800).copy(alpha = 0.12f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f)
+                    }
+                )
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val isWarmUp = set.setType == SetType.WARM_UP
+            Box(modifier = Modifier.weight(0.3f), contentAlignment = Alignment.Center) {
+                IconButton(
+                    onClick = onToggleWarmUp,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.LocalFireDepartment,
+                        contentDescription = if (isWarmUp) "Warm-up set" else "Mark as warm-up set",
+                        tint = if (isWarmUp) {
+                            Color(0xFFFF9800)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                        },
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
             Text(
                 text = "${index + 1}",
                 style = MaterialTheme.typography.bodyMedium,

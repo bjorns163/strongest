@@ -8,6 +8,7 @@ import com.strongest.app.data.model.Routine
 import com.strongest.app.data.model.RoutineExercise
 import com.strongest.app.data.model.RoutineGroup
 import com.strongest.app.data.model.RoutineSet
+import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,6 +37,7 @@ data class RoutineSetUi(
     val weight: Float = 0f,
     val reps: Int = 10,
     val restSeconds: Int = 90,
+    val setType: SetType = SetType.NORMAL,
     val previousSetInfo: com.strongest.app.ui.workout.PreviousSetInfo? = null
 )
 
@@ -102,6 +104,7 @@ class RoutineBuilderViewModel @Inject constructor(
                                 weight = s.weight,
                                 reps = s.reps,
                                 restSeconds = s.restSeconds,
+                                setType = s.setType,
                                 previousSetInfo = previousSetInfos.getOrNull(s.setNumber - 1)
                             )
                         }
@@ -197,6 +200,7 @@ class RoutineBuilderViewModel @Inject constructor(
             weight = lastSet?.weight ?: 0f,
             reps = lastSet?.reps ?: 10,
             restSeconds = lastSetRestSeconds,
+            setType = lastSet?.setType ?: SetType.NORMAL,
             previousSetInfo = exercise.previousSets.getOrNull(newSetNumber - 1)
         )
 
@@ -262,6 +266,23 @@ class RoutineBuilderViewModel @Inject constructor(
         for (i in (setIndex + 1) until lastIdx) {
             updatedSets[i] = updatedSets[i].copy(restSeconds = restSeconds)
         }
+
+        val updatedExercises = _state.value.exercises.toMutableList()
+        updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
+        _state.update { it.copy(exercises = updatedExercises) }
+    }
+
+    fun toggleWarmUp(routineExerciseId: Long, setIndex: Int) {
+        val exerciseIndex = _state.value.exercises.indexOfFirst { it.routineExerciseId == routineExerciseId }
+        if (exerciseIndex == -1) return
+
+        val exercise = _state.value.exercises[exerciseIndex]
+        if (setIndex !in exercise.sets.indices) return
+        val updatedSets = exercise.sets.toMutableList()
+        val current = updatedSets[setIndex]
+        updatedSets[setIndex] = current.copy(
+            setType = if (current.setType == SetType.WARM_UP) SetType.NORMAL else SetType.WARM_UP
+        )
 
         val updatedExercises = _state.value.exercises.toMutableList()
         updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
@@ -357,7 +378,8 @@ class RoutineBuilderViewModel @Inject constructor(
                         setNumber = rs.setNumber,
                         weight = rs.weight,
                         reps = rs.reps,
-                        restSeconds = rs.restSeconds
+                        restSeconds = rs.restSeconds,
+                        setType = rs.setType
                     )
                 }
                 routineSetsMap[re.routineExerciseId] = sets

@@ -23,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.data.db.LatestMeasurement
@@ -31,7 +32,6 @@ import com.strongest.app.data.model.MetricCategory
 import com.strongest.app.data.repository.WeightUnit
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 @Composable
 fun MeasurementsScreen(
@@ -98,7 +98,7 @@ private fun MetricRow(
     weightUnit: WeightUnit,
     onClick: () -> Unit
 ) {
-    val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
     Card(
         modifier = Modifier
             .fillMaxWidth()

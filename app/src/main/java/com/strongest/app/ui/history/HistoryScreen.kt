@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,7 +52,6 @@ import com.strongest.app.utils.rememberWeightUnit
 import com.strongest.app.utils.weightUnitLabel
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 @Composable
 fun HistoryScreen(
@@ -184,8 +184,8 @@ fun WorkoutHistoryCard(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy", LocalConfiguration.current.locales[0])
+    val timeFormat = SimpleDateFormat("HH:mm", LocalConfiguration.current.locales[0])
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {

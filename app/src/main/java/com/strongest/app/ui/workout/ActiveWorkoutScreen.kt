@@ -1233,8 +1233,8 @@ fun StartTimeEditor(
 ) {
     var showDate by remember { mutableStateOf(false) }
     var showTime by remember { mutableStateOf(false) }
-    val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
-    val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+    val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy", androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
+    val timeFormat = java.text.SimpleDateFormat("HH:mm", androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
     val date = java.util.Date(if (startTime > 0L) startTime else System.currentTimeMillis())
 
     if (showDate) {

@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -61,7 +62,6 @@ import com.strongest.app.utils.localDayStart
 import com.strongest.app.utils.weightUnitLabel
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 @Composable
 fun ProgressScreen(
@@ -389,7 +389,7 @@ private fun PerWorkoutChartCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("MMM d", LocalConfiguration.current.locales[0])
         val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
         val primary = MaterialTheme.colorScheme.primary.toArgb()
 
@@ -453,7 +453,7 @@ private fun PerWorkoutChartCard(
                     override fun getFormattedValue(value: Float): String {
                         val idx = value.toInt()
                         if (idx < 0 || idx >= slotCount) return ""
-                        return dateFormat.format(Date(startDay + idx * DAY_MS))
+                        return dateFormat.format(Date(localDayStart(startDay + idx * DAY_MS)))
                     }
                 }
                 chart.xAxis.axisMinimum = 0f
@@ -673,7 +673,7 @@ private fun PersonalRecordCard(
     pr: PersonalRecord,
     weightUnit: WeightUnit
 ) {
-    val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
     Card(
         modifier = Modifier
             .fillMaxWidth()

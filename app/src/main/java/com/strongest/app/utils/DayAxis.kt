@@ -26,6 +26,9 @@ fun daySlotCount(startDay: Long, lastDay: Long): Int =
  */
 fun dailyEntries(startDay: Long, lastDay: Long, valueForDay: (Long) -> Float?): List<Entry> =
     List(daySlotCount(startDay, lastDay)) { idx ->
-        val day = localDayStart(startDay) + idx * DAY_MS
+        // Snap each slot to its true local midnight: adding fixed 24h steps drifts across DST
+        // transitions (23h/25h days), which would make the slot keys mismatch the
+        // localDayStart() keys used for data lookup and silently empty the chart.
+        val day = localDayStart(startDay + idx * DAY_MS)
         valueForDay(day)?.let { Entry(idx.toFloat(), it) }
     }.filterNotNull()

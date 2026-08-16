@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -62,7 +63,6 @@ import com.strongest.app.utils.daySlotCount
 import com.strongest.app.utils.localDayStart
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 enum class MeasurementRange(val label: String, val days: Int?) {
     DAYS_7("7d", 7),
@@ -273,13 +273,13 @@ private fun ProgressChartCard(
         }
         val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
         val primary = MaterialTheme.colorScheme.primary.toArgb()
-        val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("MMM d", LocalConfiguration.current.locales[0])
 
         // The x-axis spans every calendar day in the range; days without a measurement simply
         // have no point, and the line connects across them.
         val lastDay = localDayStart(System.currentTimeMillis())
         val firstEntryDay = localDayStart(entries.minOf { it.timestamp })
-        val startDay = range.days?.let { lastDay - (it - 1) * DAY_MS } ?: firstEntryDay
+        val startDay = range.days?.let { localDayStart(lastDay - (it - 1) * DAY_MS) } ?: firstEntryDay
         if (startDay > lastDay) {
             MeasurementChartEmpty("No measurements in this range")
             return@Card
@@ -332,8 +332,8 @@ private fun ProgressChartCard(
                     chart.xAxis.valueFormatter = object : ValueFormatter() {
                         override fun getFormattedValue(value: Float): String {
                             val idx = value.toInt()
-                            if (idx < 0 || idx >= slotCount) return ""
-                            return dateFormat.format(Date(startDay + idx * DAY_MS))
+                        if (idx < 0 || idx >= slotCount) return ""
+                        return dateFormat.format(Date(localDayStart(startDay + idx * DAY_MS)))
                         }
                     }
                     chart.xAxis.axisMinimum = 0f
@@ -369,7 +369,7 @@ private fun HistoryRow(
     weightUnit: WeightUnit,
     onDelete: () -> Unit
 ) {
-    val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -429,7 +429,7 @@ private fun AddMeasurementDialog(
     val unit = metricUnitLabel(metric, weightUnit)
     val parsed = valueText.replace(',', '.').toFloatOrNull()
     val canSave = parsed != null && parsed > 0f
-    val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(

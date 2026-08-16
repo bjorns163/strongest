@@ -9,6 +9,7 @@ import androidx.room.Update
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.ExerciseNote
+import com.strongest.app.data.model.ExerciseSettings
 import com.strongest.app.data.model.MuscleGroup
 import kotlinx.coroutines.flow.Flow
 
@@ -70,4 +71,10 @@ interface ExerciseDao {
 
     @Query("SELECT * FROM exercise_notes")
     suspend fun getAllNotes(): List<ExerciseNote>
+
+    @Query("SELECT * FROM exercise_settings WHERE exerciseId = :exerciseId")
+    suspend fun getExerciseSettings(exerciseId: Long): ExerciseSettings?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertExerciseSettings(settings: ExerciseSettings)
 }

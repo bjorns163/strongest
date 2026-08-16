@@ -98,9 +98,11 @@ fun RoutineBuilderScreen(
     onBack: () -> Unit,
     onAddExercise: () -> Unit,
     onNavigateToReplacePicker: (() -> Unit)? = null,
-    onViewExerciseDetail: (Long) -> Unit = {},
+    onViewExerciseDetail: (exerciseId: Long, routineExerciseId: Long) -> Unit = { _, _ -> },
     routineId: Long? = null,
-    viewModel: RoutineBuilderViewModel = hiltViewModel()
+    viewModel: RoutineBuilderViewModel = hiltViewModel(),
+    warmUpSetsToAdd: com.strongest.app.ui.navigation.AddWarmUpSetsRequest? = null,
+    onWarmUpSetsConsumed: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val groups by viewModel.groups.collectAsState()
@@ -110,6 +112,15 @@ fun RoutineBuilderScreen(
         if (routineId != null) {
             viewModel.loadRoutine(routineId)
         }
+    }
+
+    LaunchedEffect(warmUpSetsToAdd) {
+        val request = warmUpSetsToAdd ?: return@LaunchedEffect
+        val routineExerciseId = request.routineExerciseId
+        if (routineExerciseId != null && request.sets.isNotEmpty()) {
+            viewModel.addWarmUpSets(routineExerciseId, request.sets)
+        }
+        onWarmUpSetsConsumed()
     }
 
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -252,7 +263,7 @@ fun RoutineBuilderScreen(
                                 scope.launch { listState.animateScrollToItem(index + 1) }
                             }
                         },
-                        onViewExercise = { onViewExerciseDetail(exercise.exerciseId) },
+                        onViewExercise = { onViewExerciseDetail(exercise.exerciseId, exercise.routineExerciseId) },
                         onSaveNote = { noteText -> viewModel.saveExerciseNote(exercise.exerciseId, noteText) }
                     )
                 }

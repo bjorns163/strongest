@@ -11,6 +11,7 @@ import com.strongest.app.data.model.RoutineSet
 import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.ui.navigation.WarmUpSetSpec
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -95,7 +96,7 @@ class RoutineBuilderViewModel @Inject constructor(
                     val previousSets = repository.getPreviousSessionSets(re.exerciseId)
                     val savedSets = full.sets[re.id] ?: emptyList()
                     val previousSetInfos = previousSets.map {
-                        com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps)
+                        com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps, it.setType)
                     }
                     val sets = if (savedSets.isNotEmpty()) {
                         savedSets.map { s ->
@@ -154,7 +155,7 @@ class RoutineBuilderViewModel @Inject constructor(
             val note = repository.getNote(exerciseId)
 
             val previousSetInfos = previousSets.map {
-                com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps)
+                com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps, it.setType)
             }
             val newExercise = RoutineExerciseUi(
                 exerciseId = exerciseId,
@@ -169,6 +170,7 @@ class RoutineBuilderViewModel @Inject constructor(
                         weight = prev?.weightKg ?: defaultWeight,
                         reps = prev?.reps ?: defaultReps,
                         restSeconds = if (i == defaultSetCount - 1) lastSetRestSeconds else defaultRestSeconds,
+                        setType = prev?.setType ?: SetType.NORMAL,
                         previousSetInfo = previousSetInfos.getOrNull(i)
                     )
                 },
@@ -211,6 +213,30 @@ class RoutineBuilderViewModel @Inject constructor(
         }
         updatedSets.add(newSet)
         updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
+        _state.update { it.copy(exercises = updatedExercises) }
+    }
+
+    fun addWarmUpSets(routineExerciseId: Long, warmUpSets: List<WarmUpSetSpec>) {
+        val exerciseIndex = _state.value.exercises.indexOfFirst { it.routineExerciseId == routineExerciseId }
+        if (exerciseIndex == -1) return
+
+        val exercise = _state.value.exercises[exerciseIndex]
+        val warmUpCount = warmUpSets.size
+        if (warmUpCount == 0) return
+
+        val newWarmUps = warmUpSets.mapIndexed { index, spec ->
+            RoutineSetUi(
+                setNumber = index + 1,
+                weight = spec.weightKg,
+                reps = spec.reps,
+                restSeconds = defaultRestSeconds,
+                setType = SetType.WARM_UP
+            )
+        }
+        val renumbered = exercise.sets.map { it.copy(setNumber = it.setNumber + warmUpCount) }
+
+        val updatedExercises = _state.value.exercises.toMutableList()
+        updatedExercises[exerciseIndex] = exercise.copy(sets = newWarmUps + renumbered)
         _state.update { it.copy(exercises = updatedExercises) }
     }
 
@@ -309,7 +335,7 @@ class RoutineBuilderViewModel @Inject constructor(
             val previousSets = repository.getPreviousSessionSets(newExerciseId)
 
             val previousSetInfos = previousSets.map {
-                com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps)
+                com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps, it.setType)
             }
             val setCount = if (previousSets.isNotEmpty()) previousSets.size else oldExercise.sets.size.coerceAtLeast(1)
             val newSets = List(setCount) { i ->
@@ -319,6 +345,7 @@ class RoutineBuilderViewModel @Inject constructor(
                     weight = prev?.weightKg ?: 0f,
                     reps = prev?.reps ?: 10,
                     restSeconds = if (i == setCount - 1) lastSetRestSeconds else defaultRestSeconds,
+                    setType = prev?.setType ?: SetType.NORMAL,
                     previousSetInfo = previousSetInfos.getOrNull(i)
                 )
             }

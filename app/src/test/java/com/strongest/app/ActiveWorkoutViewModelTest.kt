@@ -20,6 +20,7 @@ import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WorkoutRepository
 import com.strongest.app.data.repository.WorkoutWithDetails
 import com.strongest.app.data.repository.WorkoutExerciseWithSets
+import com.strongest.app.ui.navigation.WarmUpSetSpec
 import com.strongest.app.ui.workout.ActiveWorkoutViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -324,5 +325,53 @@ class ActiveWorkoutViewModelTest {
 
         verify(repository, never()).updateRoutineSetsOnly(anyLong(), anyList())
         verify(repository).saveRoutineExercises(eq(7L), anyList(), anyMap())
+    }
+
+    @Test
+    fun `adding warm-up sets prepends them and shifts existing set numbers`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+
+        seedWorkout(vm, pairs = listOf(1L to 10L))
+        advanceUntilIdle()
+        val seeded = vm.state.value.workoutExercises.single().sets.single()
+        assertEquals(SetType.NORMAL, seeded.setType)
+        assertEquals(1, seeded.setNumber)
+
+        `when`(repository.logSet(10L, 1, 40f, 8, null, SetType.WARM_UP, 90, 0L)).thenReturn(500L)
+        `when`(repository.logSet(10L, 2, 56f, 5, null, SetType.WARM_UP, 90, 0L)).thenReturn(501L)
+
+        vm.addWarmUpSets(
+            10L,
+            listOf(WarmUpSetSpec(40f, 8), WarmUpSetSpec(56f, 5))
+        )
+        advanceUntilIdle()
+
+        val sets = vm.state.value.workoutExercises.single().sets
+        assertEquals(3, sets.size)
+        assertEquals(listOf(1, 2, 3), sets.map { it.setNumber })
+        assertEquals(listOf(SetType.WARM_UP, SetType.WARM_UP, SetType.NORMAL), sets.map { it.setType })
+        assertEquals(listOf(500L, 501L, 1000L), sets.map { it.setId })
+        assertEquals(40f, sets[0].weight)
+        assertEquals(8, sets[0].reps)
+        assertEquals(56f, sets[1].weight)
+        assertEquals(5, sets[1].reps)
+        assertEquals(80f, sets[2].weight)
+        assertEquals(8, sets[2].reps)
+
+        verify(repository).updateSet(
+            SetLog(
+                id = 1000L,
+                workoutExerciseId = 10L,
+                setNumber = 3,
+                weightKg = 80f,
+                reps = 8,
+                rpe = null,
+                setType = SetType.NORMAL,
+                restSeconds = 90,
+                completedAt = 0L
+            )
+        )
     }
 }

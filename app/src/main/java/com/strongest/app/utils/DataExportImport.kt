@@ -286,8 +286,8 @@ private fun AppSettings.toJson(): JSONObject = JSONObject().apply {
     put(SET_KEEP_SCREEN_ON, keepScreenOn)
     put(SET_NOTIFICATION_SOUND_URI, notificationSoundUri ?: JSONObject.NULL)
     put(SET_RPE_TRACKING_ENABLED, rpeTrackingEnabled)
-    put(SET_AVAILABLE_KG_PLATES, JSONObject(availableKgPlates.mapValues { it.value.toString() }))
-    put(SET_AVAILABLE_LBS_PLATES, JSONObject(availableLbsPlates.mapValues { it.value.toString() }))
+    put(SET_AVAILABLE_KG_PLATES, JSONObject(availableKgPlates.mapKeys { it.key.toString() }.mapValues { it.value.toString() }))
+    put(SET_AVAILABLE_LBS_PLATES, JSONObject(availableLbsPlates.mapKeys { it.key.toString() }.mapValues { it.value.toString() }))
     put(SET_ONE_RM_FORMULA, oneRmFormula.name)
     put(
         SET_RECOVERY_HOURS_BY_MUSCLE,

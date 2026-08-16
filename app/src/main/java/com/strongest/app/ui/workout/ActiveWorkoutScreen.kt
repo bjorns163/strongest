@@ -122,11 +122,13 @@ fun ActiveWorkoutScreen(
     onBack: () -> Unit,
     onAddExercise: () -> Unit,
     onNavigateToReplacePicker: (() -> Unit)? = null,
-    onViewExerciseDetail: (Long) -> Unit = {},
+    onViewExerciseDetail: (exerciseId: Long, workoutExerciseId: Long?) -> Unit = { _, _ -> },
     viewModel: ActiveWorkoutViewModel = hiltViewModel(),
     initialWorkoutId: Long? = null,
     resumeWorkoutId: Long? = null,
-    initialRoutineId: Long? = null
+    initialRoutineId: Long? = null,
+    warmUpSetsToAdd: com.strongest.app.ui.navigation.AddWarmUpSetsRequest? = null,
+    onWarmUpSetsConsumed: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val prs by viewModel.workoutPrs.collectAsState()
@@ -155,6 +157,15 @@ fun ActiveWorkoutScreen(
                 viewModel.startNewWorkoutIfNeeded()
             }
         }
+    }
+
+    LaunchedEffect(warmUpSetsToAdd) {
+        val request = warmUpSetsToAdd ?: return@LaunchedEffect
+        val workoutExerciseId = request.workoutExerciseId
+        if (workoutExerciseId != null && request.sets.isNotEmpty()) {
+            viewModel.addWarmUpSets(workoutExerciseId, request.sets)
+        }
+        onWarmUpSetsConsumed()
     }
 
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -532,7 +543,7 @@ fun ActiveWorkoutScreen(
                                 scope.launch { listState.animateScrollToItem(index + 1) }
                             }
                         },
-                        onViewExercise = { onViewExerciseDetail(exercise.exerciseId) },
+                        onViewExercise = { onViewExerciseDetail(exercise.exerciseId, exercise.workoutExerciseId) },
                         onSaveNote = { noteText -> viewModel.saveExerciseNote(exercise.exerciseId, noteText) },
                         isViewMode = state.isViewMode
                     )

@@ -21,8 +21,11 @@ sealed class Screen(val route: String) {
         fun createRoute(id: Long) = "history/$id"
     }
     object Progress : Screen("progress")
-    object ExerciseDetail : Screen("exercise/{id}") {
-        fun createRoute(id: Long) = "exercise/$id"
+    object ExerciseDetail : Screen("exercise/{id}?workoutExerciseId={workoutExerciseId}&routineExerciseId={routineExerciseId}") {
+        fun createRoute(id: Long, workoutExerciseId: Long? = null, routineExerciseId: Long? = null) =
+            "exercise/$id" +
+                "?workoutExerciseId=${workoutExerciseId ?: -1}" +
+                "&routineExerciseId=${routineExerciseId ?: 0}"
     }
     object Measurements : Screen("measurements")
     object MeasurementDetail : Screen("measurements/{metric}") {

@@ -465,4 +465,12 @@ class WorkoutRepository @Inject constructor(
     suspend fun getNote(exerciseId: Long): ExerciseNote? = exerciseDao.getNote(exerciseId)
 
     suspend fun upsertNote(note: ExerciseNote) = exerciseDao.upsertNote(note)
+
+    suspend fun getExerciseSettings(exerciseId: Long): com.strongest.app.data.model.ExerciseSettings? =
+        exerciseDao.getExerciseSettings(exerciseId)
+
+    suspend fun saveWarmUpSetCount(exerciseId: Long, count: Int) =
+        exerciseDao.upsertExerciseSettings(
+            com.strongest.app.data.model.ExerciseSettings(exerciseId = exerciseId, warmUpSetCount = count)
+        )
 }

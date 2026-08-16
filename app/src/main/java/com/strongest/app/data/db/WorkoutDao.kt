@@ -196,7 +196,7 @@ interface WorkoutDao {
         FROM workouts w
         JOIN workout_exercises we ON w.id = we.workoutId
         JOIN sets s ON we.id = s.workoutExerciseId
-        WHERE w.isOngoing = 0 AND w.startTime >= :startDate
+        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND s.setType != 'WARM_UP'
         GROUP BY w.startTime
         ORDER BY w.startTime ASC
     """)
@@ -238,6 +238,7 @@ interface WorkoutDao {
         JOIN workout_exercises we ON s.workoutExerciseId = we.id
         JOIN workouts w ON we.workoutId = w.id
         WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND s.completedAt > 0
+          AND s.setType != 'WARM_UP'
         GROUP BY we.exerciseId, w.id
     """)
     suspend fun getExerciseWorkoutVolume(startDate: Long): List<ExerciseWorkoutVolume>
@@ -248,7 +249,7 @@ interface WorkoutDao {
         JOIN workout_exercises we ON s.workoutExerciseId = we.id
         JOIN exercises e ON we.exerciseId = e.id
         JOIN workouts w ON we.workoutId = w.id
-        WHERE w.isOngoing = 0 AND s.completedAt > 0
+        WHERE w.isOngoing = 0 AND s.completedAt > 0 AND s.setType != 'WARM_UP'
         GROUP BY e.muscleGroup
     """)
     suspend fun getMuscleLastTrained(): List<MuscleLastTrained>

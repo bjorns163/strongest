@@ -9,6 +9,7 @@ import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.AppSettings
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.ui.navigation.WarmUpSetSpec
 import com.strongest.app.ui.routines.RoutineBuilderViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -118,5 +119,35 @@ class RoutineBuilderViewModelTest {
             "Saved routine sets should include the warm-up set type",
             savedRoutineSets!!.values.flatten().any { it.setType == SetType.WARM_UP }
         )
+    }
+
+    @Test
+    fun `adding warm-up sets prepends them before existing sets`() = runTest(dispatcher) {
+        `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getNote(1L)).thenReturn(null)
+        val vm = RoutineBuilderViewModel(repository, settingsRepository)
+        advanceUntilIdle()
+
+        vm.addExercise(1L)
+        advanceUntilIdle()
+        val routineExerciseId = vm.state.value.exercises.single().routineExerciseId
+        assertEquals(listOf(1, 2, 3), vm.state.value.exercises.single().sets.map { it.setNumber })
+
+        vm.addWarmUpSets(
+            routineExerciseId,
+            listOf(WarmUpSetSpec(40f, 8), WarmUpSetSpec(56f, 5))
+        )
+
+        val sets = vm.state.value.exercises.single().sets
+        assertEquals(5, sets.size)
+        assertEquals(listOf(1, 2, 3, 4, 5), sets.map { it.setNumber })
+        assertEquals(
+            listOf(SetType.WARM_UP, SetType.WARM_UP, SetType.NORMAL, SetType.NORMAL, SetType.NORMAL),
+            sets.map { it.setType }
+        )
+        assertEquals(40f, sets[0].weight)
+        assertEquals(8, sets[0].reps)
+        assertEquals(56f, sets[1].weight)
+        assertEquals(5, sets[1].reps)
     }
 }

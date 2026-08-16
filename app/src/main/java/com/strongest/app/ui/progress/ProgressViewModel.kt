@@ -34,8 +34,8 @@ enum class ProgressRange(val days: Int, val label: String) {
 }
 
 enum class ProgressMetric(val label: String) {
-    WEIGHT("Weight"),
     SETS("Sets"),
+    WEIGHT("Weight"),
     WORKOUTS("Workouts")
 }
 
@@ -49,7 +49,7 @@ data class MuscleRecovery(
 data class ProgressUiState(
     val isLoading: Boolean = false,
     val range: ProgressRange = ProgressRange.DAYS_30,
-    val metric: ProgressMetric = ProgressMetric.WEIGHT,
+    val metric: ProgressMetric = ProgressMetric.SETS,
     val personalRecords: List<PersonalRecord> = emptyList(),
     val volumeByDay: List<VolumeByDate> = emptyList(),
     val workoutsPerDay: List<WorkoutsPerDay> = emptyList(),
@@ -134,8 +134,11 @@ class ProgressViewModel @Inject constructor(
     private fun loadRanged() {
         viewModelScope.launch {
             val rangeDays = _state.value.range.days
-            // Align the query to the same calendar-day boundaries the chart uses.
-            val startDate = localDayStart(System.currentTimeMillis()) - (rangeDays - 1) * 24L * 60 * 60 * 1000
+            // Align the query to the same calendar-day boundaries the chart uses. Snap the result
+            // back to local midnight: fixed 24h steps drift by 1h across DST transitions.
+            val startDate = localDayStart(
+                localDayStart(System.currentTimeMillis()) - (rangeDays - 1) * 24L * 60 * 60 * 1000
+            )
             val volume = repository.getVolumeByDate(startDate)
             val muscle = repository.getMuscleVolume(startDate)
             val perDay = repository.getWorkoutsPerDay(startDate)

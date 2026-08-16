@@ -35,7 +35,7 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 
 ### Routines
 - **Unlimited routines** with custom names and descriptions
-- **Routine groups** — organise routines into named groups
+- **Routine groups** — organize routines into named groups
 - **Build routines** from the full exercise library
 - **Launch a workout directly** from a routine
 

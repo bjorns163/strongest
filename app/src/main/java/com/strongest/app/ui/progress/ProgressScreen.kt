@@ -453,7 +453,7 @@ private fun PerWorkoutChartCard(
                     override fun getFormattedValue(value: Float): String {
                         val idx = value.toInt()
                         if (idx < 0 || idx >= slotCount) return ""
-                        return dateFormat.format(Date(startDay + idx * DAY_MS))
+                        return dateFormat.format(Date(localDayStart(startDay + idx * DAY_MS)))
                     }
                 }
                 chart.xAxis.axisMinimum = 0f

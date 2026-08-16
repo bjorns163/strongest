@@ -279,7 +279,7 @@ private fun ProgressChartCard(
         // have no point, and the line connects across them.
         val lastDay = localDayStart(System.currentTimeMillis())
         val firstEntryDay = localDayStart(entries.minOf { it.timestamp })
-        val startDay = range.days?.let { lastDay - (it - 1) * DAY_MS } ?: firstEntryDay
+        val startDay = range.days?.let { localDayStart(lastDay - (it - 1) * DAY_MS) } ?: firstEntryDay
         if (startDay > lastDay) {
             MeasurementChartEmpty("No measurements in this range")
             return@Card
@@ -332,8 +332,8 @@ private fun ProgressChartCard(
                     chart.xAxis.valueFormatter = object : ValueFormatter() {
                         override fun getFormattedValue(value: Float): String {
                             val idx = value.toInt()
-                            if (idx < 0 || idx >= slotCount) return ""
-                            return dateFormat.format(Date(startDay + idx * DAY_MS))
+                        if (idx < 0 || idx >= slotCount) return ""
+                        return dateFormat.format(Date(localDayStart(startDay + idx * DAY_MS)))
                         }
                     }
                     chart.xAxis.axisMinimum = 0f

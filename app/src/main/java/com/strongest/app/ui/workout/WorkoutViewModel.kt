@@ -1058,13 +1058,13 @@ class ActiveWorkoutViewModel @Inject constructor(
 
         timerJob = viewModelScope.launch {
             while (isActive) {
+                delay(1000)
                 val remaining = ((timerEndTime - System.currentTimeMillis()) / 1000).toInt()
                 if (remaining <= 0) {
                     _state.update { it.copy(isTimerRunning = false, timerRemainingSeconds = 0, activeTimerSetId = null) }
                     playTimerAlert()
                     break
                 }
-                delay(1000)
                 _state.update { it.copy(timerRemainingSeconds = remaining) }
             }
         }

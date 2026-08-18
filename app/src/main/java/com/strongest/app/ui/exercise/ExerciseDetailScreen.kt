@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -62,6 +64,8 @@ import com.strongest.app.data.model.ExerciseClassification
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.OneRmFormula
 import com.strongest.app.data.repository.WeightUnit
+import com.strongest.app.ui.navigation.AddWarmUpSetsRequest
+import com.strongest.app.ui.navigation.WarmUpSetSpec
 import com.strongest.app.utils.OneRepMaxCalculator
 import com.strongest.app.utils.SettingsEntryPoint
 import com.strongest.app.utils.formatWeightForDisplay
@@ -84,6 +88,9 @@ fun ExerciseDetailScreen(
     exerciseId: Long,
     onBack: () -> Unit,
     viewModel: ExerciseDetailViewModel = hiltViewModel(),
+    workoutExerciseId: Long? = null,
+    routineExerciseId: Long? = null,
+    onAddWarmUpSets: (AddWarmUpSetsRequest) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
     var showEditDialog by remember { mutableStateOf(value = false) }
@@ -146,6 +153,11 @@ fun ExerciseDetailScreen(
                 maxWeight = state.maxWeight,
                 noteText = state.noteText,
                 rpeTrackingEnabled = state.rpeTrackingEnabled,
+                warmUpSetCount = state.warmUpSetCount,
+                onWarmUpSetCountChange = viewModel::setWarmUpSetCount,
+                workoutExerciseId = workoutExerciseId,
+                routineExerciseId = routineExerciseId,
+                onAddWarmUpSets = onAddWarmUpSets,
                 onSaveNote = { viewModel.saveNote(it) },
                 modifier = Modifier.padding(padding)
             )
@@ -195,6 +207,11 @@ fun ExerciseDetailContent(
     rpeTrackingEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     onSaveNote: (String) -> Unit = {},
+    warmUpSetCount: Int = 3,
+    onWarmUpSetCountChange: (Int) -> Unit = {},
+    workoutExerciseId: Long? = null,
+    routineExerciseId: Long? = null,
+    onAddWarmUpSets: (AddWarmUpSetsRequest) -> Unit = {},
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val isCardio = exercise.muscleGroup == com.strongest.app.data.model.MuscleGroup.CARDIO
@@ -233,7 +250,26 @@ fun ExerciseDetailContent(
             "Details" -> DetailsTab(exercise = exercise, noteText = noteText, onSaveNote = onSaveNote)
             "History" -> HistoryTab(history, totalSets, totalWorkouts, maxWeight, rpeTrackingEnabled, isCardio = isCardio)
             "1RM" -> OneRmTab(initialWeightKg = initialWeightKg, initialReps = initialReps)
-            "Warm-up" -> WarmupTab(initialWeightKg = initialWeightKg, initialReps = initialReps)
+            "Warm-up" -> WarmupTab(
+                initialWeightKg = initialWeightKg,
+                initialReps = initialReps,
+                warmUpSetCount = warmUpSetCount,
+                onWarmUpSetCountChange = onWarmUpSetCountChange,
+                addWarmUpSetsLabel = when {
+                    workoutExerciseId != null -> "Add warm-up sets to workout"
+                    routineExerciseId != null -> "Add warm-up sets to routine"
+                    else -> "Add warm-up sets"
+                },
+                addWarmUpSetsAction = when {
+                    workoutExerciseId != null -> { sets ->
+                        onAddWarmUpSets(AddWarmUpSetsRequest(workoutExerciseId = workoutExerciseId, sets = sets))
+                    }
+                    routineExerciseId != null -> { sets ->
+                        onAddWarmUpSets(AddWarmUpSetsRequest(routineExerciseId = routineExerciseId, sets = sets))
+                    }
+                    else -> null
+                }
+            )
         }
     }
 }
@@ -759,14 +795,26 @@ fun HistoryTab(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = if (isCardio) {
-                                        formatWeightForDisplay(entry.weightKg, weightUnit)
-                                    } else {
-                                        "${formatWeightForDisplay(entry.weightKg, weightUnit)} ${weightUnitLabel(weightUnit)}"
-                                    },
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (entry.setType == com.strongest.app.data.model.SetType.WARM_UP) {
+                                        Icon(
+                                            imageVector = Icons.Default.LocalFireDepartment,
+                                            contentDescription = "Warm-up set",
+                                            tint = Color(0xFFFF9800),
+                                            modifier = Modifier
+                                                .padding(end = 4.dp)
+                                                .size(14.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = if (isCardio) {
+                                            formatWeightForDisplay(entry.weightKg, weightUnit)
+                                        } else {
+                                            "${formatWeightForDisplay(entry.weightKg, weightUnit)} ${weightUnitLabel(weightUnit)}"
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
                                 Text(
                                     text = if (isCardio) {
                                         "\u00d7 ${entry.reps}"
@@ -961,7 +1009,14 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
 }
 
 @Composable
-fun WarmupTab(initialWeightKg: Float, initialReps: Int) {
+fun WarmupTab(
+    initialWeightKg: Float,
+    initialReps: Int,
+    warmUpSetCount: Int = 3,
+    onWarmUpSetCountChange: (Int) -> Unit = {},
+    addWarmUpSetsAction: ((List<WarmUpSetSpec>) -> Unit)? = null,
+    addWarmUpSetsLabel: String = "Add warm-up sets"
+) {
     val weightUnit by rememberWeightUnit()
     val unitLabel = weightUnitLabel(weightUnit)
     val useKg = weightUnit == WeightUnit.KG
@@ -974,9 +1029,11 @@ fun WarmupTab(initialWeightKg: Float, initialReps: Int) {
     var repsText by remember(initialReps) {
         mutableStateOf(if (initialReps > 0) initialReps.toString() else "")
     }
+    var sliderCount by remember(warmUpSetCount) { mutableIntStateOf(warmUpSetCount.coerceIn(1, 4)) }
 
     val working = workingText.toFloatOrNull() ?: 0f
     val reps = repsText.toIntOrNull() ?: 0
+    val count = sliderCount
 
     Column(
         modifier = Modifier
@@ -1020,6 +1077,39 @@ fun WarmupTab(initialWeightKg: Float, initialReps: Int) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        Text(
+            text = "Number of warm-up sets",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "1",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Slider(
+                value = count.toFloat(),
+                onValueChange = { sliderCount = it.roundToInt().coerceIn(1, 4) },
+                onValueChangeFinished = { onWarmUpSetCountChange(sliderCount) },
+                valueRange = 1f..4f,
+                steps = 2,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "4",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            text = "$count warm-up set${if (count != 1) "s" else ""}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         if (working <= 0f || reps <= 0) {
             Text(
                 text = "Enter your working weight and reps to see warm-up suggestions.",
@@ -1030,12 +1120,12 @@ fun WarmupTab(initialWeightKg: Float, initialReps: Int) {
         }
 
         val increment = if (useKg) 2.5f else 5f
-        // Fixed primer rep counts (8/5/3) capped at the working reps so warm-ups never exceed it.
         val scheme = listOf(
             0.5f to minOf(8, reps),
             0.7f to minOf(5, reps),
-            0.85f to minOf(3, reps)
-        )
+            0.85f to minOf(3, reps),
+            0.95f to minOf(2, reps)
+        ).take(count)
         val sets = buildList {
             var lastWeight = 0f
             for ((pct, warmReps) in scheme) {
@@ -1077,6 +1167,26 @@ fun WarmupTab(initialWeightKg: Float, initialReps: Int) {
                     }
                     if (idx < sets.lastIndex) HorizontalDivider()
                 }
+            }
+        }
+
+        if (addWarmUpSetsAction != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    addWarmUpSetsAction(
+                        sets.filter { !it.third }.map { WarmUpSetSpec(it.first, it.second) }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocalFireDepartment,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(addWarmUpSetsLabel)
             }
         }
     }

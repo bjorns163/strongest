@@ -26,6 +26,7 @@ import com.strongest.app.data.model.SetType
 import com.strongest.app.data.model.WorkoutExercise
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.ui.navigation.WarmUpSetSpec
 import com.strongest.app.utils.ACTION_COMPLETE_SET
 import com.strongest.app.utils.ACTION_FINISH_WORKOUT
 import com.strongest.app.utils.ACTION_SKIP_REST
@@ -201,7 +202,8 @@ data class SetUi(
 
 data class PreviousSetInfo(
     val weight: Float,
-    val reps: Int
+    val reps: Int,
+    val setType: SetType = SetType.NORMAL
 )
 
 @HiltViewModel
@@ -512,7 +514,7 @@ class ActiveWorkoutViewModel @Inject constructor(
             for (re in routineExercises) {
                 val exercise = repository.getExerciseById(re.exerciseId)
                 val previousSets = repository.getPreviousSessionSets(re.exerciseId)
-                    .map { PreviousSetInfo(it.weightKg, it.reps) }
+                    .map { PreviousSetInfo(it.weightKg, it.reps, it.setType) }
                 val workoutExerciseId = repository.addExerciseToWorkout(workoutId, re.exerciseId, uiExercises.size)
                 val note = repository.getNote(re.exerciseId)
 
@@ -523,6 +525,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                     val saved = savedSets.getOrNull(setIdx)
                     val weight = saved?.weight ?: re.defaultWeight
                     val reps = saved?.reps ?: re.defaultReps
+                    val setType = saved?.setType ?: SetType.NORMAL
                     val restSec = if (setIdx == setCount - 1) {
                         _state.value.lastSetRestSeconds
                     } else {
@@ -531,7 +534,7 @@ class ActiveWorkoutViewModel @Inject constructor(
 
                     val setId = repository.logSet(
                         workoutExerciseId, setIdx + 1,
-                        weight, reps, null, SetType.NORMAL,
+                        weight, reps, null, setType,
                         restSeconds = restSec, completedAt = 0
                     )
                     SetUi(
@@ -539,7 +542,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                         setNumber = setIdx + 1,
                         weight = weight,
                         reps = reps,
-                        setType = SetType.NORMAL,
+                        setType = setType,
                         restSeconds = restSec,
                         previousSetInfo = previousSets.getOrNull(setIdx)
                     )
@@ -585,7 +588,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                 val exercise = repository.getExerciseById(exerciseWithSets.workoutExercise.exerciseId)
                 val previousSets = repository.getPreviousSessionSets(
                     exerciseWithSets.workoutExercise.exerciseId
-                ).map { PreviousSetInfo(it.weightKg, it.reps) }
+                ).map { PreviousSetInfo(it.weightKg, it.reps, it.setType) }
 
                 val note = repository.getNote(exerciseWithSets.workoutExercise.exerciseId)
 
@@ -632,7 +635,7 @@ class ActiveWorkoutViewModel @Inject constructor(
             val workoutExerciseId = repository.addExerciseToWorkout(workoutId, exerciseId, orderIndex)
             val exercise = repository.getExerciseById(exerciseId)
             val previousSets = repository.getPreviousSessionSets(exerciseId)
-                .map { PreviousSetInfo(it.weightKg, it.reps) }
+                .map { PreviousSetInfo(it.weightKg, it.reps, it.setType) }
             val defaultRest = _state.value.restTimerSeconds
             val lastSetRest = _state.value.lastSetRestSeconds
             val note = repository.getNote(exerciseId)
@@ -641,11 +644,12 @@ class ActiveWorkoutViewModel @Inject constructor(
             val uiSets = mutableListOf<SetUi>()
             for (setIdx in 0 until setCount) {
                 val rest = if (setIdx == setCount - 1) lastSetRest else defaultRest
+                val setType = previousSets.getOrNull(setIdx)?.setType ?: SetType.NORMAL
                 val setId = repository.logSet(
                     workoutExerciseId, setIdx + 1,
                     previousSets.getOrNull(setIdx)?.weight ?: 0f,
                     previousSets.getOrNull(setIdx)?.reps ?: 0,
-                    null, SetType.NORMAL, restSeconds = rest, completedAt = 0
+                    null, setType, restSeconds = rest, completedAt = 0
                 )
                 uiSets.add(
                     SetUi(
@@ -653,7 +657,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                         setNumber = setIdx + 1,
                         weight = previousSets.getOrNull(setIdx)?.weight ?: 0f,
                         reps = previousSets.getOrNull(setIdx)?.reps ?: 0,
-                        setType = SetType.NORMAL,
+                        setType = setType,
                         restSeconds = rest,
                         previousSetInfo = previousSets.getOrNull(setIdx)
                     )
@@ -691,18 +695,19 @@ class ActiveWorkoutViewModel @Inject constructor(
                 val workoutExerciseId = repository.addExerciseToWorkout(workoutId, exerciseId, orderIndex)
                 val exercise = repository.getExerciseById(exerciseId)
                 val previousSets = repository.getPreviousSessionSets(exerciseId)
-                    .map { PreviousSetInfo(it.weightKg, it.reps) }
+                    .map { PreviousSetInfo(it.weightKg, it.reps, it.setType) }
                 val note = repository.getNote(exerciseId)
 
                 val setCount = if (previousSets.isNotEmpty()) previousSets.size else 1
                 val uiSets = mutableListOf<SetUi>()
                 for (setIdx in 0 until setCount) {
                     val rest = if (setIdx == setCount - 1) lastSetRest else defaultRest
+                    val setType = previousSets.getOrNull(setIdx)?.setType ?: SetType.NORMAL
                     val setId = repository.logSet(
                         workoutExerciseId, setIdx + 1,
                         previousSets.getOrNull(setIdx)?.weight ?: 0f,
                         previousSets.getOrNull(setIdx)?.reps ?: 0,
-                        null, SetType.NORMAL, restSeconds = rest, completedAt = 0
+                        null, setType, restSeconds = rest, completedAt = 0
                     )
                     uiSets.add(
                         SetUi(
@@ -710,7 +715,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                             setNumber = setIdx + 1,
                             weight = previousSets.getOrNull(setIdx)?.weight ?: 0f,
                             reps = previousSets.getOrNull(setIdx)?.reps ?: 0,
-                            setType = SetType.NORMAL,
+                            setType = setType,
                             restSeconds = rest,
                             previousSetInfo = previousSets.getOrNull(setIdx)
                         )
@@ -801,6 +806,42 @@ class ActiveWorkoutViewModel @Inject constructor(
             updatedSets.add(newSet)
             val updatedExercises = _state.value.workoutExercises.toMutableList()
             updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
+            _state.update { it.copy(workoutExercises = updatedExercises) }
+        }
+    }
+
+    fun addWarmUpSets(workoutExerciseId: Long, warmUpSets: List<WarmUpSetSpec>) {
+        viewModelScope.launch {
+            val exerciseIndex = _state.value.workoutExercises.indexOfFirst { it.workoutExerciseId == workoutExerciseId }
+            if (exerciseIndex == -1) return@launch
+
+            val exercise = _state.value.workoutExercises[exerciseIndex]
+            val warmUpCount = warmUpSets.size
+            if (warmUpCount == 0) return@launch
+
+            val defaultRest = _state.value.restTimerSeconds
+
+            val newWarmUps = warmUpSets.mapIndexed { index, spec ->
+                val setId = repository.logSet(
+                    workoutExerciseId, index + 1,
+                    spec.weightKg, spec.reps, null, SetType.WARM_UP,
+                    restSeconds = defaultRest, completedAt = 0
+                )
+                SetUi(
+                    setId = setId,
+                    setNumber = index + 1,
+                    weight = spec.weightKg,
+                    reps = spec.reps,
+                    setType = SetType.WARM_UP,
+                    restSeconds = defaultRest
+                )
+            }
+
+            val renumbered = exercise.sets.map { it.copy(setNumber = it.setNumber + warmUpCount) }
+            renumbered.forEach { persistSet(workoutExerciseId, it) }
+
+            val updatedExercises = _state.value.workoutExercises.toMutableList()
+            updatedExercises[exerciseIndex] = exercise.copy(sets = newWarmUps + renumbered)
             _state.update { it.copy(workoutExercises = updatedExercises) }
         }
     }
@@ -896,6 +937,27 @@ class ActiveWorkoutViewModel @Inject constructor(
         _state.update { it.copy(workoutExercises = updatedExercises) }
 
         persistSet(workoutExerciseId, updatedSet)
+    }
+
+    fun toggleWarmUp(workoutExerciseId: Long, setIndex: Int) {
+        val exerciseIndex = _state.value.workoutExercises.indexOfFirst { it.workoutExerciseId == workoutExerciseId }
+        if (exerciseIndex == -1) return
+
+        val exercise = _state.value.workoutExercises[exerciseIndex]
+        if (setIndex !in exercise.sets.indices) return
+
+        val updatedSets = exercise.sets.toMutableList()
+        val current = updatedSets[setIndex]
+        val toggled = current.copy(
+            setType = if (current.setType == SetType.WARM_UP) SetType.NORMAL else SetType.WARM_UP
+        )
+        updatedSets[setIndex] = toggled
+
+        val updatedExercises = _state.value.workoutExercises.toMutableList()
+        updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
+        _state.update { it.copy(workoutExercises = updatedExercises) }
+
+        persistSet(workoutExerciseId, toggled)
     }
 
     fun logSet(workoutExerciseId: Long, setIndex: Int) {
@@ -1168,7 +1230,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                         }
                         for ((sIdx, ws) in we.sets.withIndex()) {
                             val rs = routineSets[sIdx]
-                            if (rs.weight != ws.weight || rs.reps != ws.reps) {
+                            if (rs.weight != ws.weight || rs.reps != ws.reps || rs.setType != ws.setType) {
                                 hasValueChanges = true
                                 break@outer
                             }
@@ -1215,7 +1277,8 @@ class ActiveWorkoutViewModel @Inject constructor(
                                 setNumber = idx + 1,
                                 weight = s.weight,
                                 reps = s.reps,
-                                restSeconds = s.restSeconds
+                                restSeconds = s.restSeconds,
+                                setType = s.setType
                             )
                         }
                     }
@@ -1291,7 +1354,8 @@ class ActiveWorkoutViewModel @Inject constructor(
                     setNumber = sIdx + 1,
                     weight = s.weight,
                     reps = s.reps,
-                    restSeconds = s.restSeconds
+                    restSeconds = s.restSeconds,
+                    setType = s.setType
                 )
             }
         }
@@ -1319,7 +1383,7 @@ class ActiveWorkoutViewModel @Inject constructor(
             val oldExercise = _state.value.workoutExercises[exerciseIndex]
             val newExercise = repository.getExerciseById(newExerciseId) ?: return@launch
             val previousSets = repository.getPreviousSessionSets(newExerciseId)
-                .map { PreviousSetInfo(it.weightKg, it.reps) }
+                .map { PreviousSetInfo(it.weightKg, it.reps, it.setType) }
             val defaultRest = _state.value.restTimerSeconds
             val lastSetRest = _state.value.lastSetRestSeconds
             // Notes are per-exercise: refresh so the replaced exercise doesn't keep the old note.
@@ -1344,11 +1408,12 @@ class ActiveWorkoutViewModel @Inject constructor(
             val uiSets = mutableListOf<SetUi>()
             for (setIdx in 0 until setCount) {
                 val rest = if (setIdx == setCount - 1) lastSetRest else defaultRest
+                val setType = previousSets.getOrNull(setIdx)?.setType ?: SetType.NORMAL
                 val setId = repository.logSet(
                     workoutExerciseId, setIdx + 1,
                     previousSets.getOrNull(setIdx)?.weight ?: 0f,
                     previousSets.getOrNull(setIdx)?.reps ?: 0,
-                    null, SetType.NORMAL, restSeconds = rest, completedAt = 0
+                    null, setType, restSeconds = rest, completedAt = 0
                 )
                 uiSets.add(
                     SetUi(
@@ -1356,7 +1421,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                         setNumber = setIdx + 1,
                         weight = previousSets.getOrNull(setIdx)?.weight ?: 0f,
                         reps = previousSets.getOrNull(setIdx)?.reps ?: 0,
-                        setType = SetType.NORMAL,
+                        setType = setType,
                         restSeconds = rest,
                         previousSetInfo = previousSets.getOrNull(setIdx)
                     )

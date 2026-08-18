@@ -29,6 +29,8 @@ import com.strongest.app.ui.routines.RoutinesScreen
 import com.strongest.app.ui.settings.SettingsScreen
 import com.strongest.app.ui.workout.WorkoutScreen
 
+private const val WARM_UP_SETS_KEY = "warm_up_sets_request"
+
 @Composable
 fun AppNavigation(
     navController: NavHostController = rememberNavController(),
@@ -51,32 +53,56 @@ fun AppNavigation(
                     onRoutineSelect = { navController.navigate(Screen.ActiveWorkoutFromRoutine.createRoute(it)) }
                 )
             }
-            composable(Screen.ActiveWorkout.route) {
+            composable(Screen.ActiveWorkout.route) { backStackEntry ->
+                val warmUpSetsToAdd =
+                    backStackEntry.savedStateHandle.get<AddWarmUpSetsRequest>(WARM_UP_SETS_KEY)
                 com.strongest.app.ui.workout.ActiveWorkoutScreen(
                     onBack = { navController.popBackStack() },
                     onAddExercise = { navController.navigate(Screen.ExercisePicker.route) },
                     onNavigateToReplacePicker = { navController.navigate(Screen.ExercisePicker.route) },
-                    onViewExerciseDetail = { navController.navigate(Screen.ExerciseDetail.createRoute(it)) }
+                    onViewExerciseDetail = { exerciseId, workoutExerciseId ->
+                        navController.navigate(
+                            Screen.ExerciseDetail.createRoute(exerciseId, workoutExerciseId = workoutExerciseId)
+                        )
+                    },
+                    warmUpSetsToAdd = warmUpSetsToAdd,
+                    onWarmUpSetsConsumed = { backStackEntry.savedStateHandle.set(WARM_UP_SETS_KEY, null) }
                 )
             }
             composable(Screen.ActiveWorkoutResume.route) { backStackEntry ->
                 val workoutId = backStackEntry.arguments?.getString("id")?.toLongOrNull()
+                val warmUpSetsToAdd =
+                    backStackEntry.savedStateHandle.get<AddWarmUpSetsRequest>(WARM_UP_SETS_KEY)
                 com.strongest.app.ui.workout.ActiveWorkoutScreen(
                     onBack = { navController.popBackStack() },
                     onAddExercise = { navController.navigate(Screen.ExercisePicker.route) },
                     onNavigateToReplacePicker = { navController.navigate(Screen.ExercisePicker.route) },
-                    onViewExerciseDetail = { navController.navigate(Screen.ExerciseDetail.createRoute(it)) },
-                    resumeWorkoutId = workoutId
+                    onViewExerciseDetail = { exerciseId, workoutExerciseId ->
+                        navController.navigate(
+                            Screen.ExerciseDetail.createRoute(exerciseId, workoutExerciseId = workoutExerciseId)
+                        )
+                    },
+                    resumeWorkoutId = workoutId,
+                    warmUpSetsToAdd = warmUpSetsToAdd,
+                    onWarmUpSetsConsumed = { backStackEntry.savedStateHandle.set(WARM_UP_SETS_KEY, null) }
                 )
             }
             composable(Screen.ActiveWorkoutFromRoutine.route) { backStackEntry ->
                 val routineId = backStackEntry.arguments?.getString("routineId")?.toLongOrNull()
+                val warmUpSetsToAdd =
+                    backStackEntry.savedStateHandle.get<AddWarmUpSetsRequest>(WARM_UP_SETS_KEY)
                 com.strongest.app.ui.workout.ActiveWorkoutScreen(
                     onBack = { navController.popBackStack() },
                     onAddExercise = { navController.navigate(Screen.ExercisePicker.route) },
                     onNavigateToReplacePicker = { navController.navigate(Screen.ExercisePicker.route) },
-                    onViewExerciseDetail = { navController.navigate(Screen.ExerciseDetail.createRoute(it)) },
-                    initialRoutineId = routineId
+                    onViewExerciseDetail = { exerciseId, workoutExerciseId ->
+                        navController.navigate(
+                            Screen.ExerciseDetail.createRoute(exerciseId, workoutExerciseId = workoutExerciseId)
+                        )
+                    },
+                    initialRoutineId = routineId,
+                    warmUpSetsToAdd = warmUpSetsToAdd,
+                    onWarmUpSetsConsumed = { backStackEntry.savedStateHandle.set(WARM_UP_SETS_KEY, null) }
                 )
             }
             composable(Screen.ExercisePicker.route) {
@@ -93,22 +119,38 @@ fun AppNavigation(
                     onRoutineClick = { navController.navigate(Screen.RoutineBuilderWithId.createRoute(it)) }
                 )
             }
-            composable(Screen.RoutineBuilder.route) {
+            composable(Screen.RoutineBuilder.route) { backStackEntry ->
+                val warmUpSetsToAdd =
+                    backStackEntry.savedStateHandle.get<AddWarmUpSetsRequest>(WARM_UP_SETS_KEY)
                 com.strongest.app.ui.routines.RoutineBuilderScreen(
                     onBack = { navController.popBackStack() },
                     onAddExercise = { navController.navigate(Screen.ExercisePickerForRoutine.route) },
                     onNavigateToReplacePicker = { navController.navigate(Screen.ExercisePickerForRoutine.route) },
-                    onViewExerciseDetail = { navController.navigate(Screen.ExerciseDetail.createRoute(it)) }
+                    onViewExerciseDetail = { exerciseId, routineExerciseId ->
+                        navController.navigate(
+                            Screen.ExerciseDetail.createRoute(exerciseId, routineExerciseId = routineExerciseId)
+                        )
+                    },
+                    warmUpSetsToAdd = warmUpSetsToAdd,
+                    onWarmUpSetsConsumed = { backStackEntry.savedStateHandle.set(WARM_UP_SETS_KEY, null) }
                 )
             }
             composable(Screen.RoutineBuilderWithId.route) { backStackEntry ->
                 val routineId = backStackEntry.arguments?.getString("id")?.toLongOrNull()
+                val warmUpSetsToAdd =
+                    backStackEntry.savedStateHandle.get<AddWarmUpSetsRequest>(WARM_UP_SETS_KEY)
                 com.strongest.app.ui.routines.RoutineBuilderScreen(
                     onBack = { navController.popBackStack() },
                     onAddExercise = { navController.navigate(Screen.ExercisePickerForRoutine.route) },
                     onNavigateToReplacePicker = { navController.navigate(Screen.ExercisePickerForRoutine.route) },
-                    onViewExerciseDetail = { navController.navigate(Screen.ExerciseDetail.createRoute(it)) },
-                    routineId = routineId
+                    onViewExerciseDetail = { exerciseId, routineExerciseId ->
+                        navController.navigate(
+                            Screen.ExerciseDetail.createRoute(exerciseId, routineExerciseId = routineExerciseId)
+                        )
+                    },
+                    routineId = routineId,
+                    warmUpSetsToAdd = warmUpSetsToAdd,
+                    onWarmUpSetsConsumed = { backStackEntry.savedStateHandle.set(WARM_UP_SETS_KEY, null) }
                 )
             }
             composable(Screen.ExercisePickerForRoutine.route) {
@@ -129,7 +171,9 @@ fun AppNavigation(
                     com.strongest.app.ui.workout.ActiveWorkoutScreen(
                         onBack = { navController.popBackStack() },
                         onAddExercise = {},
-                        onViewExerciseDetail = { navController.navigate(Screen.ExerciseDetail.createRoute(it)) },
+                        onViewExerciseDetail = { exerciseId, _ ->
+                            navController.navigate(Screen.ExerciseDetail.createRoute(exerciseId))
+                        },
                         initialWorkoutId = workoutId
                     )
                 }
@@ -164,10 +208,21 @@ fun AppNavigation(
             }
             composable(Screen.ExerciseDetail.route) { backStackEntry ->
                 val exerciseId = backStackEntry.arguments?.getString("id")?.toLongOrNull()
+                val workoutExerciseId = backStackEntry.arguments
+                    ?.getString("workoutExerciseId")?.toLongOrNull()?.takeIf { it >= 0 }
+                val routineExerciseId = backStackEntry.arguments
+                    ?.getString("routineExerciseId")?.toLongOrNull()?.takeIf { it != 0L }
                 if (exerciseId != null) {
                     com.strongest.app.ui.exercise.ExerciseDetailScreen(
                         exerciseId = exerciseId,
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        workoutExerciseId = workoutExerciseId,
+                        routineExerciseId = routineExerciseId,
+                        onAddWarmUpSets = { request ->
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle?.set(WARM_UP_SETS_KEY, request)
+                            navController.popBackStack()
+                        }
                     )
                 }
             }

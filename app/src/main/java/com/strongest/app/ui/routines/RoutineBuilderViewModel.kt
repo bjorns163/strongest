@@ -8,8 +8,10 @@ import com.strongest.app.data.model.Routine
 import com.strongest.app.data.model.RoutineExercise
 import com.strongest.app.data.model.RoutineGroup
 import com.strongest.app.data.model.RoutineSet
+import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.ui.navigation.WarmUpSetSpec
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,6 +38,7 @@ data class RoutineSetUi(
     val weight: Float = 0f,
     val reps: Int = 10,
     val restSeconds: Int = 90,
+    val setType: SetType = SetType.NORMAL,
     val previousSetInfo: com.strongest.app.ui.workout.PreviousSetInfo? = null
 )
 
@@ -93,7 +96,7 @@ class RoutineBuilderViewModel @Inject constructor(
                     val previousSets = repository.getPreviousSessionSets(re.exerciseId)
                     val savedSets = full.sets[re.id] ?: emptyList()
                     val previousSetInfos = previousSets.map {
-                        com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps)
+                        com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps, it.setType)
                     }
                     val sets = if (savedSets.isNotEmpty()) {
                         savedSets.map { s ->
@@ -102,6 +105,7 @@ class RoutineBuilderViewModel @Inject constructor(
                                 weight = s.weight,
                                 reps = s.reps,
                                 restSeconds = s.restSeconds,
+                                setType = s.setType,
                                 previousSetInfo = previousSetInfos.getOrNull(s.setNumber - 1)
                             )
                         }
@@ -151,7 +155,7 @@ class RoutineBuilderViewModel @Inject constructor(
             val note = repository.getNote(exerciseId)
 
             val previousSetInfos = previousSets.map {
-                com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps)
+                com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps, it.setType)
             }
             val newExercise = RoutineExerciseUi(
                 exerciseId = exerciseId,
@@ -166,6 +170,7 @@ class RoutineBuilderViewModel @Inject constructor(
                         weight = prev?.weightKg ?: defaultWeight,
                         reps = prev?.reps ?: defaultReps,
                         restSeconds = if (i == defaultSetCount - 1) lastSetRestSeconds else defaultRestSeconds,
+                        setType = prev?.setType ?: SetType.NORMAL,
                         previousSetInfo = previousSetInfos.getOrNull(i)
                     )
                 },
@@ -197,6 +202,7 @@ class RoutineBuilderViewModel @Inject constructor(
             weight = lastSet?.weight ?: 0f,
             reps = lastSet?.reps ?: 10,
             restSeconds = lastSetRestSeconds,
+            setType = lastSet?.setType ?: SetType.NORMAL,
             previousSetInfo = exercise.previousSets.getOrNull(newSetNumber - 1)
         )
 
@@ -207,6 +213,30 @@ class RoutineBuilderViewModel @Inject constructor(
         }
         updatedSets.add(newSet)
         updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
+        _state.update { it.copy(exercises = updatedExercises) }
+    }
+
+    fun addWarmUpSets(routineExerciseId: Long, warmUpSets: List<WarmUpSetSpec>) {
+        val exerciseIndex = _state.value.exercises.indexOfFirst { it.routineExerciseId == routineExerciseId }
+        if (exerciseIndex == -1) return
+
+        val exercise = _state.value.exercises[exerciseIndex]
+        val warmUpCount = warmUpSets.size
+        if (warmUpCount == 0) return
+
+        val newWarmUps = warmUpSets.mapIndexed { index, spec ->
+            RoutineSetUi(
+                setNumber = index + 1,
+                weight = spec.weightKg,
+                reps = spec.reps,
+                restSeconds = defaultRestSeconds,
+                setType = SetType.WARM_UP
+            )
+        }
+        val renumbered = exercise.sets.map { it.copy(setNumber = it.setNumber + warmUpCount) }
+
+        val updatedExercises = _state.value.exercises.toMutableList()
+        updatedExercises[exerciseIndex] = exercise.copy(sets = newWarmUps + renumbered)
         _state.update { it.copy(exercises = updatedExercises) }
     }
 
@@ -268,6 +298,23 @@ class RoutineBuilderViewModel @Inject constructor(
         _state.update { it.copy(exercises = updatedExercises) }
     }
 
+    fun toggleWarmUp(routineExerciseId: Long, setIndex: Int) {
+        val exerciseIndex = _state.value.exercises.indexOfFirst { it.routineExerciseId == routineExerciseId }
+        if (exerciseIndex == -1) return
+
+        val exercise = _state.value.exercises[exerciseIndex]
+        if (setIndex !in exercise.sets.indices) return
+        val updatedSets = exercise.sets.toMutableList()
+        val current = updatedSets[setIndex]
+        updatedSets[setIndex] = current.copy(
+            setType = if (current.setType == SetType.WARM_UP) SetType.NORMAL else SetType.WARM_UP
+        )
+
+        val updatedExercises = _state.value.exercises.toMutableList()
+        updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
+        _state.update { it.copy(exercises = updatedExercises) }
+    }
+
     fun reorderExercise(fromIndex: Int, toIndex: Int) {
         if (fromIndex == toIndex) return
         val exercises = _state.value.exercises.toMutableList()
@@ -288,7 +335,7 @@ class RoutineBuilderViewModel @Inject constructor(
             val previousSets = repository.getPreviousSessionSets(newExerciseId)
 
             val previousSetInfos = previousSets.map {
-                com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps)
+                com.strongest.app.ui.workout.PreviousSetInfo(it.weightKg, it.reps, it.setType)
             }
             val setCount = if (previousSets.isNotEmpty()) previousSets.size else oldExercise.sets.size.coerceAtLeast(1)
             val newSets = List(setCount) { i ->
@@ -298,6 +345,7 @@ class RoutineBuilderViewModel @Inject constructor(
                     weight = prev?.weightKg ?: 0f,
                     reps = prev?.reps ?: 10,
                     restSeconds = if (i == setCount - 1) lastSetRestSeconds else defaultRestSeconds,
+                    setType = prev?.setType ?: SetType.NORMAL,
                     previousSetInfo = previousSetInfos.getOrNull(i)
                 )
             }
@@ -357,7 +405,8 @@ class RoutineBuilderViewModel @Inject constructor(
                         setNumber = rs.setNumber,
                         weight = rs.weight,
                         reps = rs.reps,
-                        restSeconds = rs.restSeconds
+                        restSeconds = rs.restSeconds,
+                        setType = rs.setType
                     )
                 }
                 routineSetsMap[re.routineExerciseId] = sets

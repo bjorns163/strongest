@@ -69,5 +69,6 @@ data class RoutineSet(
     val setNumber: Int,
     val weight: Float = 0f,
     val reps: Int = 10,
-    val restSeconds: Int = 90
+    val restSeconds: Int = 90,
+    val setType: SetType = SetType.NORMAL
 )

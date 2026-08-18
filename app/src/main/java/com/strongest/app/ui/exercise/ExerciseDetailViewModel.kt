@@ -26,7 +26,8 @@ data class ExerciseDetailState(
     val totalWorkouts: Int = 0,
     val maxWeight: Float = 0f,
     val noteText: String = "",
-    val rpeTrackingEnabled: Boolean = false
+    val rpeTrackingEnabled: Boolean = false,
+    val warmUpSetCount: Int = 3
 )
 
 @HiltViewModel
@@ -52,6 +53,7 @@ class ExerciseDetailViewModel @Inject constructor(
             val exercise = repository.getExerciseById(exerciseId)
             val history = repository.getExerciseHistory(exerciseId)
             val note = repository.getNote(exerciseId)
+            val settings = repository.getExerciseSettings(exerciseId)
 
             val totalSets = history.size
             val totalWorkouts = history.groupBy { it.workoutDate }.size
@@ -68,9 +70,18 @@ class ExerciseDetailViewModel @Inject constructor(
                     totalSets = totalSets,
                     totalWorkouts = totalWorkouts,
                     maxWeight = maxWeight,
-                    noteText = note?.noteText ?: ""
+                    noteText = note?.noteText ?: "",
+                    warmUpSetCount = settings?.warmUpSetCount ?: 3
                 )
             }
+        }
+    }
+
+    fun setWarmUpSetCount(count: Int) {
+        _state.update { it.copy(warmUpSetCount = count) }
+        val exerciseId = _state.value.exercise?.id ?: return
+        viewModelScope.launch {
+            repository.saveWarmUpSetCount(exerciseId, count)
         }
     }
 

@@ -1363,6 +1363,8 @@ class ActiveWorkoutViewModel @Inject constructor(
     }
 
     private fun doFinishWorkout() {
+        // Block publishNotificationState() from re-publishing while we tear down.
+        isFinishing = true
         cancelRestTimer()
         stopServiceAndClearNotification()
         unregisterWorkoutActionsReceiver()

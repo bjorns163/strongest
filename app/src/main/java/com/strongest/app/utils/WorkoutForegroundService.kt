@@ -21,7 +21,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-private const val CHANNEL_ID = "workout_active_channel"
+private const val CHANNEL_ID = "workout_active_channel_v2"
 private const val CHANNEL_NAME = "Active Workout"
 private const val NOTIFICATION_ID = 2001
 
@@ -43,12 +43,13 @@ class WorkoutForegroundService : Service() {
         val channel = NotificationChannel(
             CHANNEL_ID,
             CHANNEL_NAME,
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
             description = "Persistent notification during an active workout"
             setShowBadge(false)
             setSound(null, null)
             enableVibration(false)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
         notificationManager.createNotificationChannel(channel)
     }
@@ -84,6 +85,7 @@ class WorkoutForegroundService : Service() {
     override fun onDestroy() {
         scope.cancel()
         collectorJob = null
+        notificationManager.cancel(NOTIFICATION_ID)
         super.onDestroy()
     }
 
@@ -102,7 +104,7 @@ class WorkoutForegroundService : Service() {
             .setSmallIcon(R.drawable.ic_dumbbell)
             .setContentIntent(openAppPending)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setOnlyAlertOnce(true)
             .setSilent(true)

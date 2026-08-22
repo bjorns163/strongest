@@ -55,7 +55,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -800,7 +799,7 @@ fun HistoryTab(
                                         Icon(
                                             imageVector = Icons.Default.LocalFireDepartment,
                                             contentDescription = "Warm-up set",
-                                            tint = Color(0xFFFF9800),
+                                            tint = MaterialTheme.colorScheme.tertiary,
                                             modifier = Modifier
                                                 .padding(end = 4.dp)
                                                 .size(14.dp)

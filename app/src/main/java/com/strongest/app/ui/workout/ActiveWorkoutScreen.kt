@@ -75,7 +75,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -90,6 +89,7 @@ import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
+import com.strongest.app.ui.theme.LocalSuccessColor
 import com.strongest.app.utils.displayToKg
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
@@ -818,7 +818,7 @@ fun ExerciseBlock(
                 Text(
                     text = exercise.noteText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 2.dp)
                 )
             }
@@ -1029,8 +1029,8 @@ fun SwipeableSetRow(
                 )
                 .background(
                     when {
-                        set.isCompleted -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                        set.setType == SetType.WARM_UP -> Color(0xFFFF9800).copy(alpha = 0.12f)
+                        set.isCompleted -> LocalSuccessColor.current.copy(alpha = 0.3f)
+                        set.setType == SetType.WARM_UP -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
                         else -> MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f)
                     }
                 )
@@ -1044,7 +1044,7 @@ fun SwipeableSetRow(
                         Icon(
                             Icons.Default.LocalFireDepartment,
                             "Warm-up set",
-                            tint = Color(0xFFFF9800),
+                            tint = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1057,7 +1057,7 @@ fun SwipeableSetRow(
                             Icons.Default.LocalFireDepartment,
                             contentDescription = if (isWarmUp) "Warm-up set" else "Mark as warm-up set",
                             tint = if (isWarmUp) {
-                                Color(0xFFFF9800)
+                                MaterialTheme.colorScheme.tertiary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
                             },

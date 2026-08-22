@@ -61,7 +61,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -434,7 +433,7 @@ fun RoutineExerciseBlock(
                 Text(
                     text = exercise.noteText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 2.dp)
                 )
             }
@@ -539,7 +538,7 @@ fun SwipeableRoutineSetRow(
                 )
                 .background(
                     if (set.setType == SetType.WARM_UP) {
-                        Color(0xFFFF9800).copy(alpha = 0.12f)
+                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
                     } else {
                         MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f)
                     }
@@ -557,7 +556,7 @@ fun SwipeableRoutineSetRow(
                         Icons.Default.LocalFireDepartment,
                         contentDescription = if (isWarmUp) "Warm-up set" else "Mark as warm-up set",
                         tint = if (isWarmUp) {
-                            Color(0xFFFF9800)
+                            MaterialTheme.colorScheme.tertiary
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
                         },

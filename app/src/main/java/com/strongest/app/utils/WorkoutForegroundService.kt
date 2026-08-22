@@ -110,7 +110,8 @@ class WorkoutForegroundService : Service() {
             .setSilent(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setShowWhen(true)
-
+            .setRequestPromotedOngoing(true)
+        
         if (state != null && state.workoutStartTime > 0L) {
             builder.setWhen(state.workoutStartTime).setUsesChronometer(true)
         } else {
@@ -171,6 +172,7 @@ class WorkoutForegroundService : Service() {
                         "+${state.adjustmentSeconds}s",
                         broadcastPending(REQ_PLUS, ACTION_TIMER_ADD)
                     )
+                builder.setShortCriticalText(timeText)
             }
             is WorkoutNotificationState.AllDone -> {
                 builder.setContentTitle(state.workoutName)

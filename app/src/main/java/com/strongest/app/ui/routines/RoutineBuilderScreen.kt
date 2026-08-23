@@ -167,7 +167,7 @@ fun RoutineBuilderScreen(
                     )
                     Row {
                         TextButton(onClick = onBack) {
-                            Text("Cancel")
+                            Text("Cancel", color = MaterialTheme.colorScheme.error)
                         }
                         Spacer(modifier = Modifier.padding(horizontal = 4.dp))
                         Button(

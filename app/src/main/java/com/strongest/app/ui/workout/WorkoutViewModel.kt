@@ -407,6 +407,8 @@ class ActiveWorkoutViewModel @Inject constructor(
     override fun onCleared() {
         timerJob?.cancel()
         unregisterWorkoutActionsReceiver()
+        // Workout stays ongoing/resumable in DB; only kill its notification.
+        stopServiceAndClearNotification()
         super.onCleared()
     }
 

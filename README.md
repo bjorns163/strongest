@@ -38,6 +38,7 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 - **Routine groups** — organize routines into named groups
 - **Build routines** from the full exercise library
 - **Launch a workout directly** from a routine
+- **Share a routine** as JSON and import one back — warm-up, failure and drop sets included ([format](docs/export-import-format.md#routine-share-format))
 
 ### Progress & History
 - **Workout history** — browse all past workouts
@@ -60,6 +61,7 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 - **Recovery hours** — per-muscle-group recovery windows shown on the Progress tab
 - **Profile** — gender, birth year, and caliper method for accurate body fat calculations
 - **XLSX export** — select workouts in History and share them as an Excel file
+- **Full backup export/import** — write your whole database (exercises, routines with warm-up sets, history, measurements, settings) to a JSON file and restore it; see [Export / Import Formats](docs/export-import-format.md)
 
 ### General
 - **Material 3** design
@@ -90,6 +92,7 @@ app/src/main/java/com/strongest/app/
 │   ├── model/           # Data classes (Exercise, Workout, Set, Routine, …)
 │   └── repository/      # WorkoutRepository, SettingsRepository, seed data
 ├── di/                  # Hilt modules
+├── utils/               # Export/import formats (backup + routine share)
 └── ui/
     ├── exercise/        # Exercise library, detail, picker, custom exercise dialog
     ├── history/         # Workout history

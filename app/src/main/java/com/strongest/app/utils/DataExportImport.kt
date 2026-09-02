@@ -5,6 +5,7 @@ import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.ExerciseClassification
 import com.strongest.app.data.model.ExerciseNote
+import com.strongest.app.data.model.ExerciseSettings
 import com.strongest.app.data.model.MeasurementEntry
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.Routine
@@ -33,6 +34,7 @@ data class ExportData(
     val routineExercises: List<RoutineExercise> = emptyList(),
     val routineSets: List<RoutineSet> = emptyList(),
     val exerciseNotes: List<ExerciseNote> = emptyList(),
+    val exerciseSettings: List<ExerciseSettings> = emptyList(),
     val workouts: List<Workout> = emptyList(),
     val workoutExercises: List<WorkoutExercise> = emptyList(),
     val sets: List<SetLog> = emptyList(),
@@ -49,6 +51,7 @@ private const val KEY_ROUTINES = "routines"
 private const val KEY_ROUTINE_EXERCISES = "routineExercises"
 private const val KEY_ROUTINE_SETS = "routineSets"
 private const val KEY_EXERCISE_NOTES = "exerciseNotes"
+private const val KEY_EXERCISE_SETTINGS = "exerciseSettings"
 private const val KEY_WORKOUTS = "workouts"
 private const val KEY_WORKOUT_EXERCISES = "workoutExercises"
 private const val KEY_SETS = "sets"
@@ -63,6 +66,7 @@ private const val SET_LAST_SET_REST_SECONDS = "lastSetRestSeconds"
 private const val SET_KEEP_SCREEN_ON = "keepScreenOn"
 private const val SET_NOTIFICATION_SOUND_URI = "notificationSoundUri"
 private const val SET_RPE_TRACKING_ENABLED = "rpeTrackingEnabled"
+private const val SET_WORKOUT_NOTIFICATION_ENABLED = "workoutNotificationEnabled"
 private const val SET_AVAILABLE_KG_PLATES = "availableKgPlates"
 private const val SET_AVAILABLE_LBS_PLATES = "availableLbsPlates"
 private const val SET_ONE_RM_FORMULA = "oneRmFormula"
@@ -195,6 +199,16 @@ private fun JSONObject.toExerciseNote(): ExerciseNote = ExerciseNote(
     updatedAt = optLong("updatedAt", System.currentTimeMillis())
 )
 
+private fun ExerciseSettings.toJson(): JSONObject = JSONObject().apply {
+    put("exerciseId", exerciseId)
+    put("warmUpSetCount", warmUpSetCount)
+}
+
+private fun JSONObject.toExerciseSettings(): ExerciseSettings = ExerciseSettings(
+    exerciseId = getLong("exerciseId"),
+    warmUpSetCount = optInt("warmUpSetCount", 3)
+)
+
 private fun Workout.toJson(): JSONObject = JSONObject().apply {
     put("id", id)
     put("routineId", routineId ?: JSONObject.NULL)
@@ -286,6 +300,7 @@ private fun AppSettings.toJson(): JSONObject = JSONObject().apply {
     put(SET_KEEP_SCREEN_ON, keepScreenOn)
     put(SET_NOTIFICATION_SOUND_URI, notificationSoundUri ?: JSONObject.NULL)
     put(SET_RPE_TRACKING_ENABLED, rpeTrackingEnabled)
+    put(SET_WORKOUT_NOTIFICATION_ENABLED, workoutNotificationEnabled)
     put(SET_AVAILABLE_KG_PLATES, JSONObject(availableKgPlates.mapKeys { it.key.toString() }.mapValues { it.value.toString() }))
     put(SET_AVAILABLE_LBS_PLATES, JSONObject(availableLbsPlates.mapKeys { it.key.toString() }.mapValues { it.value.toString() }))
     put(SET_ONE_RM_FORMULA, oneRmFormula.name)
@@ -316,6 +331,7 @@ private fun JSONObject.toAppSettings(): AppSettings = AppSettings(
     notificationSoundUri = if (isNull(SET_NOTIFICATION_SOUND_URI)) null
     else optString(SET_NOTIFICATION_SOUND_URI),
     rpeTrackingEnabled = optBoolean(SET_RPE_TRACKING_ENABLED, false),
+    workoutNotificationEnabled = optBoolean(SET_WORKOUT_NOTIFICATION_ENABLED, true),
     availableKgPlates = optJSONObject(SET_AVAILABLE_KG_PLATES)?.let { obj ->
         obj.keys().asSequence().mapNotNull { key ->
             val w = key.toFloatOrNull()
@@ -365,6 +381,7 @@ fun ExportData.toJson(): String = JSONObject().apply {
     put(KEY_ROUTINE_EXERCISES, JSONArray(routineExercises.map { it.toJson() }))
     put(KEY_ROUTINE_SETS, JSONArray(routineSets.map { it.toJson() }))
     put(KEY_EXERCISE_NOTES, JSONArray(exerciseNotes.map { it.toJson() }))
+    put(KEY_EXERCISE_SETTINGS, JSONArray(exerciseSettings.map { it.toJson() }))
     put(KEY_WORKOUTS, JSONArray(workouts.map { it.toJson() }))
     put(KEY_WORKOUT_EXERCISES, JSONArray(workoutExercises.map { it.toJson() }))
     put(KEY_SETS, JSONArray(sets.map { it.toJson() }))
@@ -395,6 +412,9 @@ fun String.parseExportData(): ExportData? = try {
         } ?: emptyList(),
         exerciseNotes = root.optJSONArray(KEY_EXERCISE_NOTES)?.let { arr ->
             (0 until arr.length()).map { arr.getJSONObject(it).toExerciseNote() }
+        } ?: emptyList(),
+        exerciseSettings = root.optJSONArray(KEY_EXERCISE_SETTINGS)?.let { arr ->
+            (0 until arr.length()).map { arr.getJSONObject(it).toExerciseSettings() }
         } ?: emptyList(),
         workouts = root.optJSONArray(KEY_WORKOUTS)?.let { arr ->
             (0 until arr.length()).map { arr.getJSONObject(it).toWorkout() }

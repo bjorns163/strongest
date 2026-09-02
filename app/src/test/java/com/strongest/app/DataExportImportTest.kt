@@ -106,6 +106,11 @@ class DataExportImportTest {
         notes = "Morning weight"
     )
 
+    private val sampleExerciseSettings = ExerciseSettings(
+        exerciseId = 42,
+        warmUpSetCount = 2
+    )
+
     private val sampleSettings = AppSettings(
         themeMode = com.strongest.app.ThemeMode.DARK,
         weightUnit = WeightUnit.KG,
@@ -139,6 +144,7 @@ class DataExportImportTest {
             routineExercises = listOf(sampleRoutineExercise),
             routineSets = listOf(sampleRoutineSet),
             exerciseNotes = listOf(sampleExerciseNote),
+            exerciseSettings = listOf(sampleExerciseSettings),
             workouts = listOf(sampleWorkout),
             workoutExercises = listOf(sampleWorkoutExercise),
             sets = listOf(sampleSet),
@@ -221,6 +227,12 @@ class DataExportImportTest {
             assertEquals(42L, exerciseId)
             assertEquals("Focus on form", noteText)
             assertEquals(3000L, updatedAt)
+        }
+
+        assertEquals(1, parsed.exerciseSettings.size)
+        with(parsed.exerciseSettings[0]) {
+            assertEquals(42L, exerciseId)
+            assertEquals(2, warmUpSetCount)
         }
 
         assertEquals(1, parsed.workouts.size)

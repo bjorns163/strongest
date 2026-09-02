@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "exportedAt": 1735689600000,
+  "source": "com.strongest.app",
+  "exercises": [
+    {
+      "id": 42,
+      "name": "Bench Press",
+      "muscleGroup": "CHEST",
+      "equipment": "BARBELL",
+      "description": "Lie on a flat bench and press",
+      "instructions": "1. Set up\n2. Lower to chest\n3. Press",
+      "secondaryMuscles": ["SHOULDERS", "TRICEPS"],
+      "imageUrl": "",
+      "isCustom": false,
+      "classification": "COMPOUND"
+    },
+    {
+      "id": 77,
+      "name": "Barbell Row",
+      "muscleGroup": "BACK",
+      "equipment": "BARBELL",
+      "description": "",
+      "instructions": "",
+      "secondaryMuscles": ["BICEPS"],
+      "imageUrl": "",
+      "isCustom": true,
+      "classification": "COMPOUND"
+    }
+  ],
+  "routineGroups": [
+    {
+      "id": 10,
+      "name": "Strength Block",
+      "orderIndex": 0,
+      "createdAt": 1735689600000,
+      "updatedAt": 1735689600000
+    }
+  ],
+  "routines": [
+    {
+      "id": 1,
+      "name": "Monday Push/Pull",
+      "description": "Heavy compounds",
+      "groupId": 10,
+      "createdAt": 1735689600000,
+      "updatedAt": 1735689600000
+    }
+  ],
+  "routineExercises": [
+    {
+      "id": 7,
+      "routineId": 1,
+      "exerciseId": 42,
+      "orderIndex": 0,
+      "defaultSets": 4,
+      "defaultReps": 8,
+      "defaultWeight": 80,
+      "restSeconds": 120
+    },
+    {
+      "id": 8,
+      "routineId": 1,
+      "exerciseId": 77,
+      "orderIndex": 1,
+      "defaultSets": 3,
+      "defaultReps": 10,
+      "defaultWeight": 60,
+      "restSeconds": 90
+    }
+  ],
+  "routineSets": [
+    { "id": 1, "routineExerciseId": 7, "setNumber": 1, "weight": 40, "reps": 10, "restSeconds": 60, "setType": "WARM_UP" },
+    { "id": 2, "routineExerciseId": 7, "setNumber": 2, "weight": 60, "reps": 5, "restSeconds": 60, "setType": "WARM_UP" },
+    { "id": 3, "routineExerciseId": 7, "setNumber": 3, "weight": 80, "reps": 8, "restSeconds": 120, "setType": "NORMAL" },
+    { "id": 4, "routineExerciseId": 7, "setNumber": 4, "weight": 80, "reps": 8, "restSeconds": 120, "setType": "NORMAL" },
+    { "id": 5, "routineExerciseId": 8, "setNumber": 1, "weight": 40, "reps": 10, "restSeconds": 60, "setType": "WARM_UP" },
+    { "id": 6, "routineExerciseId": 8, "setNumber": 2, "weight": 60, "reps": 10, "restSeconds": 90, "setType": "NORMAL" },
+    { "id": 7, "routineExerciseId": 8, "setNumber": 3, "weight": 60, "reps": 10, "restSeconds": 90, "setType": "FAILURE" }
+  ],
+  "exerciseNotes": [
+    {
+      "exerciseId": 42,
+      "noteText": "Keep elbows at 45 degrees",
+      "updatedAt": 1735689600000
+    }
+  ],
+  "exerciseSettings": [
+    {
+      "exerciseId": 42,
+      "warmUpSetCount": 2
+    }
+  ],
+  "workouts": [
+    {
+      "id": 50,
+      "routineId": 1,
+      "routineName": "Monday Push/Pull",
+      "workoutName": null,
+      "startTime": 1735776000000,
+      "endTime": 1735779600000,
+      "notes": "Felt strong",
+      "isOngoing": false
+    }
+  ],
+  "workoutExercises": [
+    {
+      "id": 60,
+      "workoutId": 50,
+      "exerciseId": 42,
+      "orderIndex": 0,
+      "notes": ""
+    }
+  ],
+  "sets": [
+    {
+      "id": 70,
+      "workoutExerciseId": 60,
+      "setNumber": 1,
+      "weightKg": 40,
+      "reps": 10,
+      "rpe": null,
+      "setType": "WARM_UP",
+      "restSeconds": 60,
+      "completedAt": 1735776300000
+    },
+    {
+      "id": 71,
+      "workoutExerciseId": 60,
+      "setNumber": 2,
+      "weightKg": 80,
+      "reps": 8,
+      "rpe": 8.5,
+      "setType": "NORMAL",
+      "restSeconds": 120,
+      "completedAt": 1735776900000
+    }
+  ],
+  "measurementEntries": [
+    {
+      "id": 80,
+      "metric": "WEIGHT",
+      "value": 85,
+      "timestamp": 1735689600000,
+      "notes": "Morning weight"
+    }
+  ],
+  "settings": {
+    "themeMode": "DARK",
+    "weightUnit": "KG",
+    "defaultRestSeconds": 90,
+    "timerAdjustmentSeconds": 30,
+    "lastSetRestSeconds": 150,
+    "keepScreenOn": true,
+    "notificationSoundUri": null,
+    "rpeTrackingEnabled": true,
+    "workoutNotificationEnabled": true,
+    "availableKgPlates": {
+      "1.25": "999",
+      "2.5": "999",
+      "5.0": "999",
+      "10.0": "999",
+      "20.0": "999"
+    },
+    "availableLbsPlates": {
+      "2.5": "999",
+      "5.0": "999",
+      "10.0": "999",
+      "45.0": "999"
+    },
+    "oneRmFormula": "EPLEY",
+    "recoveryHoursByMuscle": {
+      "CHEST": "48",
+      "BACK": "48",
+      "QUADS": "72"
+    },
+    "userSex": "MALE",
+    "birthYear": 1990,
+    "caliperMode": "THREE_SITE"
+  }
+}

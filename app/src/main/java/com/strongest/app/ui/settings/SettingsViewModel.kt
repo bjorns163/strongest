@@ -263,6 +263,7 @@ class SettingsViewModel @Inject constructor(
             routineExercises = routineDao.getAllRoutineExercisesList(),
             routineSets = routineDao.getAllRoutineSetsList(),
             exerciseNotes = exerciseDao.getAllNotes(),
+            exerciseSettings = exerciseDao.getAllExerciseSettings(),
             workouts = workoutDao.getAllWorkoutsList(),
             workoutExercises = workoutDao.getAllWorkoutExercises(),
             sets = workoutDao.getAllSets(),
@@ -281,6 +282,7 @@ class SettingsViewModel @Inject constructor(
         db.execSQL("PRAGMA foreign_keys = OFF")
         try {
             db.execSQL("DELETE FROM exercise_notes")
+            db.execSQL("DELETE FROM exercise_settings")
             db.execSQL("DELETE FROM measurement_entries")
             db.execSQL("DELETE FROM routine_sets")
             db.execSQL("DELETE FROM routine_exercises")
@@ -308,6 +310,9 @@ class SettingsViewModel @Inject constructor(
             }
             for (note in data.exerciseNotes) {
                 exerciseDao.upsertNote(note)
+            }
+            for (settings in data.exerciseSettings) {
+                exerciseDao.upsertExerciseSettings(settings)
             }
             for (workout in data.workouts) {
                 workoutDao.insertWorkout(workout)

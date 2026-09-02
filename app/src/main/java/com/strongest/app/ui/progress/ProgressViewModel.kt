@@ -72,6 +72,11 @@ class ProgressViewModel @Inject constructor(
         .map { it.weightUnit }
         .stateIn(viewModelScope, SharingStarted.Lazily, WeightUnit.KG)
 
+    /** Which body to draw on the heatmap; unset profiles get the male figure. */
+    val bodyFigure: StateFlow<BodyFigure> = settingsRepository.settingsFlow
+        .map { it.userSex.toBodyFigure() }
+        .stateIn(viewModelScope, SharingStarted.Lazily, BodyFigure.MALE)
+
     init {
         loadAll()
     }

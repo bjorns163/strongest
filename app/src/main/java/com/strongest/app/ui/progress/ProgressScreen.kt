@@ -70,6 +70,7 @@ fun ProgressScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val weightUnit by viewModel.weightUnit.collectAsState()
+    val bodyFigure by viewModel.bodyFigure.collectAsState()
 
     Scaffold { padding ->
         LazyColumn(
@@ -161,6 +162,7 @@ fun ProgressScreen(
                     metric = state.metric,
                     muscle = state.muscleVolume,
                     weightUnit = weightUnit,
+                    figure = bodyFigure,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -625,6 +627,7 @@ private fun BodyHeatmapCard(
     metric: ProgressMetric,
     muscle: List<MuscleVolume>,
     weightUnit: WeightUnit,
+    figure: BodyFigure,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -645,6 +648,7 @@ private fun BodyHeatmapCard(
             .toMap()
         BodyHeatmap(
             muscleValues = values,
+            figure = figure,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp)

@@ -31,7 +31,7 @@ import com.strongest.app.data.model.WorkoutExercise
         SetLog::class,
         MeasurementEntry::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -58,6 +58,17 @@ abstract class StrongestDatabase : RoomDatabase() {
                     "CREATE TABLE IF NOT EXISTS exercise_settings (" +
                         "exerciseId INTEGER NOT NULL PRIMARY KEY, " +
                         "warmUpSetCount INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        /** Remembers how the plate calculator is set up per exercise. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE exercise_settings ADD COLUMN barWeightKg REAL")
+                db.execSQL(
+                    "ALTER TABLE exercise_settings " +
+                        "ADD COLUMN plateSingleSide INTEGER NOT NULL DEFAULT 0"
                 )
             }
         }

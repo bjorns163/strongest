@@ -155,12 +155,15 @@ The planned sets of a routine. A warm-up set is an ordinary entry with
 
 ## exerciseSettings
 
-Per-exercise preferences. Currently only the warm-up calculator's set count.
+Per-exercise preferences: the warm-up calculator's set count, and how the exercise is
+loaded so the plate calculator opens ready to use.
 
 | Key | Type | Default | Notes |
 |---|---|---|---|
 | `exerciseId` | long | required | Primary key. |
 | `warmUpSetCount` | int | `3` | How many warm-up sets the calculator generates (1–4). |
+| `barWeightKg` | float (kg) or `null` | `null` | Bar last used for this exercise. `null` means never chosen; `0` means **no bar** (a machine or loadable dumbbell). |
+| `plateSingleSide` | bool | `false` | `true` when the exercise loads from one side only, so plates are not counted in pairs. |
 
 ## workouts
 

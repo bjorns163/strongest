@@ -13,6 +13,7 @@ import com.strongest.app.data.db.WorkoutDao
 import com.strongest.app.data.db.WorkoutsPerDay
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.ExerciseNote
+import com.strongest.app.data.model.ExerciseSettings
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.Routine
 import com.strongest.app.data.model.RoutineExercise
@@ -466,11 +467,25 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun upsertNote(note: ExerciseNote) = exerciseDao.upsertNote(note)
 
-    suspend fun getExerciseSettings(exerciseId: Long): com.strongest.app.data.model.ExerciseSettings? =
+    suspend fun getExerciseSettings(exerciseId: Long): ExerciseSettings? =
         exerciseDao.getExerciseSettings(exerciseId)
 
+    /** Upserts one field of an exercise's settings without dropping the others. */
+    private suspend fun updateExerciseSettings(
+        exerciseId: Long,
+        change: (ExerciseSettings) -> ExerciseSettings
+    ) {
+        val current = exerciseDao.getExerciseSettings(exerciseId)
+            ?: ExerciseSettings(exerciseId = exerciseId)
+        exerciseDao.upsertExerciseSettings(change(current))
+    }
+
     suspend fun saveWarmUpSetCount(exerciseId: Long, count: Int) =
-        exerciseDao.upsertExerciseSettings(
-            com.strongest.app.data.model.ExerciseSettings(exerciseId = exerciseId, warmUpSetCount = count)
-        )
+        updateExerciseSettings(exerciseId) { it.copy(warmUpSetCount = count) }
+
+    /** Remembers how this exercise is loaded, so the plate calculator opens ready to use. */
+    suspend fun savePlatePreferences(exerciseId: Long, barWeightKg: Float, singleSide: Boolean) =
+        updateExerciseSettings(exerciseId) {
+            it.copy(barWeightKg = barWeightKg, plateSingleSide = singleSide)
+        }
 }

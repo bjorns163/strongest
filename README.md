@@ -28,7 +28,7 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 - **RPE rating** (optional, toggle in Settings) — rates each set 1–10 with a brief description; auto-prompts after tapping the check button
 - **Previous session data** shown inline while logging so you can beat your last performance
 - **Rest timer** — auto-starts after completing a set
-- **Plate calculator** — accessible from the 3-dot menu on any exercise; shows plates needed per side for target weight; supports kg and lbs; respects your available plates from Settings
+- **Plate calculator** — accessible from the 3-dot menu on any exercise; pick your bar and load plates onto it to see the running total, with the target weight and the gap to it shown alongside; "Fill to target" loads the plates that reach a weight in one tap; **remembers the bar and single-side setting per exercise**, so a machine stays set up the way you left it; supports kg and lbs; respects your available plates from Settings
 - **Reorder exercises** and sets
 - **Delete exercises** and sets
 - **Finish or discard** workout
@@ -56,7 +56,7 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 - **Keep screen on** — prevent screen sleep during active workouts
 - **RPE tracking** — turn on/off; when on, a pop-up appears after each completed set
 - **Timer notification sound** — pick a custom sound for rest timer alerts
-- **Plate calculator defaults** — select which plates are available in your gym (separate presets for kg and lbs); 2-column grid layout
+- **Plate calculator defaults** — set how many of each plate your gym has (separate presets for kg and lbs); 2-column grid layout
 - **1RM formula** — choose Epley, Brzycki, or show both
 - **Recovery hours** — per-muscle-group recovery windows shown on the Progress tab
 - **Profile** — gender, birth year, and caliper method for accurate body fat calculations

@@ -6,6 +6,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.strongest.app.data.repository.SettingsRepository
+import com.strongest.app.data.repository.WorkoutRepository
 import com.strongest.app.data.repository.WeightUnit
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -36,6 +37,13 @@ fun formatWeightForDisplay(kg: Float, unit: WeightUnit): String {
 @InstallIn(SingletonComponent::class)
 interface SettingsEntryPoint {
     fun settingsRepository(): SettingsRepository
+}
+
+/** Lets dialogs that are not backed by a ViewModel reach per-exercise preferences. */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface WorkoutRepositoryEntryPoint {
+    fun workoutRepository(): WorkoutRepository
 }
 
 @Composable

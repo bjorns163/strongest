@@ -202,11 +202,15 @@ private fun JSONObject.toExerciseNote(): ExerciseNote = ExerciseNote(
 private fun ExerciseSettings.toJson(): JSONObject = JSONObject().apply {
     put("exerciseId", exerciseId)
     put("warmUpSetCount", warmUpSetCount)
+    put("barWeightKg", barWeightKg?.toDouble() ?: JSONObject.NULL)
+    put("plateSingleSide", plateSingleSide)
 }
 
 private fun JSONObject.toExerciseSettings(): ExerciseSettings = ExerciseSettings(
     exerciseId = getLong("exerciseId"),
-    warmUpSetCount = optInt("warmUpSetCount", 3)
+    warmUpSetCount = optInt("warmUpSetCount", 3),
+    barWeightKg = if (isNull("barWeightKg")) null else optDouble("barWeightKg").toFloat(),
+    plateSingleSide = optBoolean("plateSingleSide", false)
 )
 
 private fun Workout.toJson(): JSONObject = JSONObject().apply {

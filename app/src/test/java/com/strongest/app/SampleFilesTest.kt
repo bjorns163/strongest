@@ -46,13 +46,18 @@ class SampleFilesTest {
         assertEquals(2, data.routineExercises.size)
         assertEquals(7, data.routineSets.size)
         assertEquals(1, data.exerciseNotes.size)
-        assertEquals(1, data.exerciseSettings.size)
+        assertEquals(2, data.exerciseSettings.size)
         assertEquals(1, data.workouts.size)
         assertEquals(1, data.workoutExercises.size)
         assertEquals(2, data.sets.size)
         assertEquals(1, data.measurementEntries.size)
 
-        assertEquals(2, data.exerciseSettings.single().warmUpSetCount)
+        assertEquals(2, data.exerciseSettings.first().warmUpSetCount)
+        // The machine entry: no bar, loaded from one side.
+        with(data.exerciseSettings.single { it.exerciseId == 77L }) {
+            assertEquals(0f, barWeightKg)
+            assertTrue(plateSingleSide)
+        }
         assertTrue(data.routineSets.any { it.setType == SetType.WARM_UP })
         assertTrue(data.sets.any { it.setType == SetType.WARM_UP })
     }

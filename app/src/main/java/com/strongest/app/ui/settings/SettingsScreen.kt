@@ -417,7 +417,7 @@ fun SettingsScreen(
 
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
-                        text = "Set how many of each plate you own (999 = unlimited). The calculator will respect these limits.",
+                        text = "Set how many of each plate your gym has (999 = unlimited). The calculator only lets you load plates you actually have — for a barbell, a pair at a time.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -667,7 +667,8 @@ fun ExerciseBlock(
         PlateCalculatorDialog(
             weightUnit = weightUnit,
             initialTargetWeight = kgToDisplay(initial, weightUnit),
-            onDismiss = { showPlateCalc = false }
+            onDismiss = { showPlateCalc = false },
+            exerciseId = exercise.exerciseId
         )
     }
 

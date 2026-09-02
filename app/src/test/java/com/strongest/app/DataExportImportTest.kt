@@ -108,7 +108,9 @@ class DataExportImportTest {
 
     private val sampleExerciseSettings = ExerciseSettings(
         exerciseId = 42,
-        warmUpSetCount = 2
+        warmUpSetCount = 2,
+        barWeightKg = 0f,
+        plateSingleSide = true
     )
 
     private val sampleSettings = AppSettings(
@@ -233,6 +235,8 @@ class DataExportImportTest {
         with(parsed.exerciseSettings[0]) {
             assertEquals(42L, exerciseId)
             assertEquals(2, warmUpSetCount)
+            assertEquals(0f, barWeightKg)
+            assertTrue(plateSingleSide)
         }
 
         assertEquals(1, parsed.workouts.size)

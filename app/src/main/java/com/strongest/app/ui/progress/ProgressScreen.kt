@@ -1,5 +1,7 @@
 package com.strongest.app.ui.progress
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +26,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
@@ -33,10 +38,15 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.github.mikephil.charting.charts.HorizontalBarChart
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.charts.RadarChart
+import com.github.mikephil.charting.components.Legend
+import com.github.mikephil.charting.components.LegendEntry
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.data.RadarData
@@ -105,6 +115,26 @@ fun ProgressScreen(
                         onSelect = { viewModel.setMetric(it) },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
+                    Text(
+                        text = if (state.selectedMuscle == null) "Focus a muscle"
+                        else "Focused on ${muscleLabel(state.selectedMuscle!!.name)} — tap again to clear",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                    )
+                    LazyRow(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(FILTERABLE_MUSCLE_GROUPS.size) { idx ->
+                            val mg = FILTERABLE_MUSCLE_GROUPS[idx]
+                            FilterChip(
+                                selected = state.selectedMuscle == mg,
+                                onClick = { viewModel.selectMuscle(mg) },
+                                label = { Text(muscleLabel(mg.name)) }
+                            )
+                        }
+                    }
                 }
             }
 
@@ -126,6 +156,8 @@ fun ProgressScreen(
             item {
                 RecoveryCard(
                     recovering = state.recoveringMuscles,
+                    selected = state.selectedMuscle,
+                    onSelect = { viewModel.selectMuscle(it) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -138,6 +170,8 @@ fun ProgressScreen(
                     metric = state.metric,
                     weightUnit = weightUnit,
                     muscle = state.muscleVolume,
+                    selected = state.selectedMuscle,
+                    onSelect = { viewModel.selectMuscle(it) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -150,6 +184,7 @@ fun ProgressScreen(
                     metric = state.metric,
                     weightUnit = weightUnit,
                     muscle = state.muscleVolume,
+                    selected = state.selectedMuscle,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -163,6 +198,8 @@ fun ProgressScreen(
                     muscle = state.muscleVolume,
                     weightUnit = weightUnit,
                     figure = bodyFigure,
+                    selected = state.selectedMuscle,
+                    onSelect = { viewModel.selectMuscle(it) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -170,36 +207,6 @@ fun ProgressScreen(
             }
 
             item { SectionHeader("Personal Records") }
-            item {
-                Text(
-                    text = "Muscle Group",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-            item {
-                LazyRow(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    item {
-                        FilterChip(
-                            selected = state.prMuscleFilter == null,
-                            onClick = { viewModel.setPrMuscleFilter(null) },
-                            label = { Text("All") }
-                        )
-                    }
-                    items(FILTERABLE_MUSCLE_GROUPS.size) { idx ->
-                        val mg = FILTERABLE_MUSCLE_GROUPS[idx]
-                        FilterChip(
-                            selected = state.prMuscleFilter == mg,
-                            onClick = { viewModel.setPrMuscleFilter(mg) },
-                            label = { Text(mg.name.lowercase().replaceFirstChar { it.uppercase() }) }
-                        )
-                    }
-                }
-            }
             item {
                 Text(
                     text = "Equipment",
@@ -232,7 +239,7 @@ fun ProgressScreen(
             }
 
             val filteredPrs = state.personalRecords.filter { pr ->
-                val muscleMatch = state.prMuscleFilter?.let { it.name == pr.muscleGroup } ?: true
+                val muscleMatch = state.selectedMuscle?.let { it.name == pr.muscleGroup } ?: true
                 val equipMatch = state.prEquipmentFilter?.let { it.name == pr.equipment } ?: true
                 muscleMatch && equipMatch
             }
@@ -282,6 +289,8 @@ private fun SectionHeader(text: String) {
 @Composable
 private fun RecoveryCard(
     recovering: List<MuscleRecovery>,
+    selected: MuscleGroup?,
+    onSelect: (MuscleGroup) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -304,17 +313,26 @@ private fun RecoveryCard(
                 )
             } else {
                 recovering.forEach { item ->
-                    val name = item.muscleGroup.name.lowercase()
-                        .replaceFirstChar { it.uppercase() }
-                        .replace("_", " ")
+                    val name = muscleLabel(item.muscleGroup.name)
+                    val isFocused = selected == item.muscleGroup
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (isFocused) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                                else Color.Transparent
+                            )
+                            .clickable { onSelect(item.muscleGroup) }
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = name, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal
+                        )
                         Text(
                             text = "${item.hoursRemaining}h left",
                             style = MaterialTheme.typography.bodyMedium,
@@ -473,6 +491,8 @@ private fun MuscleChartCard(
     metric: ProgressMetric,
     weightUnit: WeightUnit,
     muscle: List<MuscleVolume>,
+    selected: MuscleGroup?,
+    onSelect: (MuscleGroup) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -488,9 +508,13 @@ private fun MuscleChartCard(
 
         val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
         val primary = MaterialTheme.colorScheme.primary.toArgb()
+        val muted = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f).toArgb()
 
         val sorted = muscle.sortedByDescending { metricValue(it, metric, weightUnit) }
-        val labels = sorted.map { it.muscleGroup.lowercase().replaceFirstChar { c -> c.uppercase() } }
+        val labels = sorted.map { muscleLabel(it.muscleGroup) }
+        val barColors = sorted.map { mv ->
+            if (selected == null || selected.name == mv.muscleGroup) primary else muted
+        }
         val entries = sorted.mapIndexed { idx, mv ->
             BarEntry(idx.toFloat(), metricValue(mv, metric, weightUnit))
         }
@@ -520,11 +544,15 @@ private fun MuscleChartCard(
                     xAxis.granularity = 1f
                     setNoDataTextColor(onSurface)
                     setFitBars(true)
+                    isHighlightPerTapEnabled = true
+                    // Off, or scrolling the page over the chart selects whatever bar
+                    // the finger passes.
+                    isHighlightPerDragEnabled = false
                 }
             },
             update = { chart ->
                 val dataSet = BarDataSet(entries, dsLabel).apply {
-                    color = primary
+                    colors = barColors
                     valueTextColor = onSurface
                     valueFormatter = object : ValueFormatter() {
                         override fun getFormattedValue(value: Float): String {
@@ -535,6 +563,25 @@ private fun MuscleChartCard(
                 chart.data = BarData(dataSet).apply { barWidth = 0.6f }
                 chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
                 chart.xAxis.labelCount = labels.size
+                // One swatch, like the other charts: the per-bar colours are a
+                // highlight, and left alone the legend prints an entry per colour.
+                chart.legend.setCustom(
+                    listOf(
+                        LegendEntry(dsLabel, Legend.LegendForm.SQUARE, Float.NaN, Float.NaN, null, primary)
+                    )
+                )
+                // Tapping a bar focuses that muscle across the whole tab.
+                chart.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
+                    override fun onValueSelected(e: Entry?, h: Highlight?) {
+                        val idx = e?.x?.toInt() ?: return
+                        sorted.getOrNull(idx)?.let { mv ->
+                            runCatching { MuscleGroup.valueOf(mv.muscleGroup) }.getOrNull()?.let(onSelect)
+                        }
+                        chart.highlightValues(null)
+                    }
+
+                    override fun onNothingSelected() = Unit
+                })
                 chart.notifyDataSetChanged()
                 chart.invalidate()
             }
@@ -547,6 +594,7 @@ private fun MuscleRadarCard(
     metric: ProgressMetric,
     weightUnit: WeightUnit,
     muscle: List<MuscleVolume>,
+    selected: MuscleGroup?,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -566,9 +614,8 @@ private fun MuscleRadarCard(
 
         // Sort by muscle name for a stable web shape across refreshes.
         val sorted = muscle.sortedBy { it.muscleGroup }
-        val labels = sorted.map {
-            it.muscleGroup.lowercase().replaceFirstChar { c -> c.uppercase() }.replace("_", " ")
-        }
+        val labels = sorted.map { muscleLabel(it.muscleGroup) }
+        val selectedIndex = sorted.indexOfFirst { selected != null && it.muscleGroup == selected.name }
         val entries = sorted.map { RadarEntry(metricValue(it, metric, weightUnit)) }
         val dsLabel = when (metric) {
             ProgressMetric.WEIGHT -> "Volume (${weightUnitLabel(weightUnit)})"
@@ -593,6 +640,11 @@ private fun MuscleRadarCard(
                     setNoDataTextColor(onSurface)
                     yAxis.setDrawLabels(false)
                     yAxis.axisMinimum = 0f
+                    // The focused muscle is marked from the tab's selection, not by
+                    // touching the web. Rotation off too: it swallowed the vertical
+                    // drag, so the page would not scroll from here.
+                    isHighlightPerTapEnabled = false
+                    isRotationEnabled = false
                     xAxis.textColor = onSurface
                     xAxis.textSize = 10f
                 }
@@ -605,15 +657,33 @@ private fun MuscleRadarCard(
                     fillAlpha = 90
                     lineWidth = 2f
                     setDrawValues(false)
+                    setDrawHighlightCircleEnabled(true)
+                    setDrawHighlightIndicators(true)
+                    highlightCircleFillColor = primary
+                    highlightCircleStrokeColor = onSurface
+                    highlightCircleStrokeWidth = 2f
+                    highlightCircleInnerRadius = 0f
+                    highlightCircleOuterRadius = 6f
+                    highLightColor = primary
                 }
                 chart.data = RadarData(dataSet)
                 chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
                 chart.notifyDataSetChanged()
+                // Mark the focused muscle's spoke.
+                if (selectedIndex >= 0) {
+                    chart.highlightValues(arrayOf(Highlight(selectedIndex.toFloat(), 0, 0)))
+                } else {
+                    chart.highlightValues(null)
+                }
                 chart.invalidate()
             }
         )
     }
 }
+
+/** "LOWER_BACK" -> "Lower back". */
+private fun muscleLabel(raw: String): String =
+    raw.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " ")
 
 private fun metricValue(mv: MuscleVolume, metric: ProgressMetric, weightUnit: WeightUnit): Float =
     when (metric) {
@@ -628,6 +698,8 @@ private fun BodyHeatmapCard(
     muscle: List<MuscleVolume>,
     weightUnit: WeightUnit,
     figure: BodyFigure,
+    selected: MuscleGroup?,
+    onSelect: (MuscleGroup) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -649,6 +721,8 @@ private fun BodyHeatmapCard(
         BodyHeatmap(
             muscleValues = values,
             figure = figure,
+            selected = selected,
+            onSelect = onSelect,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp)

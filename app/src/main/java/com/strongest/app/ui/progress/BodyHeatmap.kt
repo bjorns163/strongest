@@ -23,7 +23,12 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.strongest.app.data.model.MuscleGroup
 import kotlin.math.sqrt
@@ -51,10 +56,13 @@ private fun heatColor(t: Float, cold: Color): Color {
 fun BodyHeatmap(
     muscleValues: Map<MuscleGroup, Float>,
     modifier: Modifier = Modifier,
-    figure: BodyFigure = BodyFigure.MALE
+    figure: BodyFigure = BodyFigure.MALE,
+    selected: MuscleGroup? = null,
+    onSelect: (MuscleGroup) -> Unit = {}
 ) {
     val bodyColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val outlineColor = MaterialTheme.colorScheme.outline
+    val markerColor = MaterialTheme.colorScheme.onSurface
     val titleColor = MaterialTheme.colorScheme.onSurfaceVariant
     val maxValue = muscleValues.values.maxOrNull()?.coerceAtLeast(1f) ?: 1f
 
@@ -85,8 +93,29 @@ fun BodyHeatmap(
                         style = MaterialTheme.typography.labelMedium,
                         color = titleColor
                     )
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        drawAnatomy(figure, view, bodyColor, outlineColor, ::colorFor)
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(figure, view) {
+                                // A tap only — not a scroll that happened to end here.
+                                // waitForUpOrCancellation alone is not enough: when the
+                                // list cannot scroll, nothing consumes the drag and a
+                                // swipe would land as a tap.
+                                awaitEachGesture {
+                                    val down = awaitFirstDown()
+                                    val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+                                    if ((up.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                                        return@awaitEachGesture
+                                    }
+                                    hitTestMuscle(
+                                        figure, view,
+                                        size.width.toFloat(), size.height.toFloat(),
+                                        up.position
+                                    )?.let(onSelect)
+                                }
+                            }
+                    ) {
+                        drawAnatomy(figure, view, bodyColor, outlineColor, markerColor, selected, ::colorFor)
                     }
                 }
             }
@@ -106,6 +135,8 @@ private fun DrawScope.drawAnatomy(
     view: BodyView,
     bodyColor: Color,
     outlineColor: Color,
+    markerColor: Color,
+    selected: MuscleGroup?,
     colorFor: (MuscleGroup) -> Color
 ) {
     // The drawing is 200x380; fit it to the canvas without distorting the figure.
@@ -122,8 +153,18 @@ private fun DrawScope.drawAnatomy(
         drawPath(anatomy.body, color = bodyColor)
         clipPath(anatomy.body) {
             for ((group, path) in anatomy.muscles) {
-                drawPath(path, color = colorFor(group))
+                val focused = selected == group
+                val fill = colorFor(group)
+                // Muscles other than the focused one step back so the marked one reads.
+                drawPath(path, color = if (selected == null || focused) fill else fill.copy(alpha = 0.35f))
                 drawPath(path, color = outlineColor, style = stroke)
+            }
+            // Ring the focused muscle last, so nothing draws over the marker.
+            if (selected != null) {
+                val marker = Stroke(width = stroke.width * 2.2f)
+                for ((group, path) in anatomy.muscles) {
+                    if (group == selected) drawPath(path, color = markerColor, style = marker)
+                }
             }
         }
         drawPath(anatomy.body, color = outlineColor, style = Stroke(width = stroke.width * 1.4f))
@@ -157,4 +198,37 @@ private fun HeatmapLegend(coldColor: Color, modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+/**
+ * Which muscle a tap landed on. The drawing is fitted the same way [drawAnatomy] fits
+ * it, and the smallest matching region wins so a small muscle drawn over a large one
+ * (an ab segment over the torso) is still reachable.
+ */
+private fun hitTestMuscle(
+    figure: BodyFigure,
+    view: BodyView,
+    width: Float,
+    height: Float,
+    tap: Offset
+): MuscleGroup? {
+    val scale = minOf(width / 200f, height / 380f)
+    val drawW = 200f * scale
+    val drawH = 380f * scale
+    val local = Offset(tap.x - (width - drawW) / 2f, tap.y - (height - drawH) / 2f)
+    if (local.x < 0f || local.y < 0f || local.x > drawW || local.y > drawH) return null
+
+    val anatomy = buildAnatomy(figure, view, drawW, drawH)
+    var best: MuscleGroup? = null
+    var bestArea = Float.MAX_VALUE
+    for ((group, path) in anatomy.muscles) {
+        val b = path.getBounds()
+        if (!b.contains(local)) continue
+        val area = b.width * b.height
+        if (area < bestArea) {
+            bestArea = area
+            best = group
+        }
+    }
+    return best
 }

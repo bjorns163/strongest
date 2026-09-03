@@ -55,7 +55,8 @@ data class ProgressUiState(
     val workoutsPerDay: List<WorkoutsPerDay> = emptyList(),
     val muscleVolume: List<MuscleVolume> = emptyList(),
     val recoveringMuscles: List<MuscleRecovery> = emptyList(),
-    val prMuscleFilter: MuscleGroup? = null,
+    /** The muscle the whole tab is focused on: highlighted in every chart, and the PR filter. */
+    val selectedMuscle: MuscleGroup? = null,
     val prEquipmentFilter: Equipment? = null
 )
 
@@ -92,8 +93,9 @@ class ProgressViewModel @Inject constructor(
         _state.update { it.copy(metric = metric) }
     }
 
-    fun setPrMuscleFilter(group: MuscleGroup?) {
-        _state.update { it.copy(prMuscleFilter = group) }
+    /** Focus the tab on a muscle; selecting the current one clears the focus. */
+    fun selectMuscle(group: MuscleGroup?) {
+        _state.update { it.copy(selectedMuscle = if (it.selectedMuscle == group) null else group) }
     }
 
     fun setPrEquipmentFilter(equipment: Equipment?) {

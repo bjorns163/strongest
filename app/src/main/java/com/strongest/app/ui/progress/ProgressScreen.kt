@@ -115,11 +115,20 @@ fun ProgressScreen(
                         onSelect = { viewModel.setMetric(it) },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
+                    // Carries the focused muscle's exact value, which the radar and the
+                    // heatmap cannot show themselves.
+                    val focused = state.selectedMuscle
+                    val focusedValue = focused?.let { mg ->
+                        state.muscleVolume.firstOrNull { it.muscleGroup == mg.name }
+                            ?.let { formatMetricValue(metricValue(it, state.metric, weightUnit), state.metric, weightUnit) }
+                            ?: "nothing in range"
+                    }
                     Text(
-                        text = if (state.selectedMuscle == null) "Focus a muscle"
-                        else "Focused on ${muscleLabel(state.selectedMuscle!!.name)} — tap again to clear",
+                        text = if (focused == null) "Focus a muscle"
+                        else "${muscleLabel(focused.name)}  ·  $focusedValue — tap again to clear",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (focused == null) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
                     )
                     LazyRow(
@@ -185,6 +194,7 @@ fun ProgressScreen(
                     weightUnit = weightUnit,
                     muscle = state.muscleVolume,
                     selected = state.selectedMuscle,
+                    onSelect = { viewModel.selectMuscle(it) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -412,6 +422,8 @@ private fun PerWorkoutChartCard(
         val dateFormat = SimpleDateFormat("MMM d", LocalConfiguration.current.locales[0])
         val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
         val primary = MaterialTheme.colorScheme.primary.toArgb()
+        val markerBg = MaterialTheme.colorScheme.surfaceContainerHighest.toArgb()
+        val markerStroke = MaterialTheme.colorScheme.outline.toArgb()
 
         // The x-axis spans every calendar day in the selected range; days without data simply
         // have no point, and the line connects across them.
@@ -457,6 +469,8 @@ private fun PerWorkoutChartCard(
                     setNoDataTextColor(onSurface)
                     setTouchEnabled(true)
                     setScaleEnabled(true)
+                    isHighlightPerTapEnabled = true
+                    isHighlightPerDragEnabled = false
                 }
             },
             update = { chart ->
@@ -479,6 +493,11 @@ private fun PerWorkoutChartCard(
                 chart.xAxis.axisMinimum = 0f
                 chart.xAxis.axisMaximum = (slotCount - 1).coerceAtLeast(1).toFloat()
                 chart.xAxis.labelCount = 6
+                // Tap a point to read its exact value.
+                chart.marker = ChartMarkerView(chart.context, onSurface, markerBg, markerStroke) { entry, _ ->
+                    val day = localDayStart(startDay + entry.x.toLong() * DAY_MS)
+                    "${dateFormat.format(Date(day))}  ·  ${formatMetricValue(entry.y, metric, weightUnit)}"
+                }.apply { chartView = chart }
                 chart.notifyDataSetChanged()
                 chart.invalidate()
             }
@@ -509,6 +528,8 @@ private fun MuscleChartCard(
         val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
         val primary = MaterialTheme.colorScheme.primary.toArgb()
         val muted = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f).toArgb()
+        val markerBg = MaterialTheme.colorScheme.surfaceContainerHighest.toArgb()
+        val markerStroke = MaterialTheme.colorScheme.outline.toArgb()
 
         val sorted = muscle.sortedByDescending { metricValue(it, metric, weightUnit) }
         val labels = sorted.map { muscleLabel(it.muscleGroup) }
@@ -553,10 +574,16 @@ private fun MuscleChartCard(
             update = { chart ->
                 val dataSet = BarDataSet(entries, dsLabel).apply {
                     colors = barColors
+                    // The bar itself shows the focus; the tooltip carries the value.
+                    highLightAlpha = 0
                     valueTextColor = onSurface
                     valueFormatter = object : ValueFormatter() {
-                        override fun getFormattedValue(value: Float): String {
-                            return if (value >= 1000) String.format("%.1fk", value / 1000) else value.toInt().toString()
+                        // Sets can be fractional, because a secondary muscle counts as
+                        // part of a set; truncating here disagreed with the tooltip.
+                        override fun getFormattedValue(value: Float): String = when {
+                            value >= 1000 -> String.format("%.1fk", value / 1000)
+                            value % 1f == 0f -> value.toInt().toString()
+                            else -> String.format("%.1f", value)
                         }
                     }
                 }
@@ -570,6 +597,10 @@ private fun MuscleChartCard(
                         LegendEntry(dsLabel, Legend.LegendForm.SQUARE, Float.NaN, Float.NaN, null, primary)
                     )
                 )
+                chart.marker = ChartMarkerView(chart.context, onSurface, markerBg, markerStroke) { entry, _ ->
+                    val name = labels.getOrNull(entry.x.toInt()).orEmpty()
+                    "$name  ·  ${formatMetricValue(entry.y, metric, weightUnit)}"
+                }.apply { chartView = chart }
                 // Tapping a bar focuses that muscle across the whole tab.
                 chart.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
                     override fun onValueSelected(e: Entry?, h: Highlight?) {
@@ -577,7 +608,6 @@ private fun MuscleChartCard(
                         sorted.getOrNull(idx)?.let { mv ->
                             runCatching { MuscleGroup.valueOf(mv.muscleGroup) }.getOrNull()?.let(onSelect)
                         }
-                        chart.highlightValues(null)
                     }
 
                     override fun onNothingSelected() = Unit
@@ -595,6 +625,7 @@ private fun MuscleRadarCard(
     weightUnit: WeightUnit,
     muscle: List<MuscleVolume>,
     selected: MuscleGroup?,
+    onSelect: (MuscleGroup) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -611,6 +642,8 @@ private fun MuscleRadarCard(
 
         val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
         val primary = MaterialTheme.colorScheme.primary.toArgb()
+        val markerBg = MaterialTheme.colorScheme.surfaceContainerHighest.toArgb()
+        val markerStroke = MaterialTheme.colorScheme.outline.toArgb()
 
         // Sort by muscle name for a stable web shape across refreshes.
         val sorted = muscle.sortedBy { it.muscleGroup }
@@ -640,11 +673,11 @@ private fun MuscleRadarCard(
                     setNoDataTextColor(onSurface)
                     yAxis.setDrawLabels(false)
                     yAxis.axisMinimum = 0f
-                    // The focused muscle is marked from the tab's selection, not by
-                    // touching the web. Rotation off too: it swallowed the vertical
-                    // drag, so the page would not scroll from here.
-                    isHighlightPerTapEnabled = false
-                    isRotationEnabled = false
+                    // Tap a spoke to read its value and focus that muscle; drag to turn
+                    // the web. Turning it does mean a drag started inside the web rotates
+                    // rather than scrolling the page.
+                    isHighlightPerTapEnabled = true
+                    isRotationEnabled = true
                     xAxis.textColor = onSurface
                     xAxis.textSize = 10f
                 }
@@ -668,6 +701,20 @@ private fun MuscleRadarCard(
                 }
                 chart.data = RadarData(dataSet)
                 chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
+                chart.marker = ChartMarkerView(chart.context, onSurface, markerBg, markerStroke) { entry, highlight ->
+                    val name = labels.getOrNull(highlight?.x?.toInt() ?: -1).orEmpty()
+                    "$name  ·  ${formatMetricValue(entry.y, metric, weightUnit)}"
+                }.apply { chartView = chart }
+                chart.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
+                    override fun onValueSelected(e: Entry?, h: Highlight?) {
+                        val idx = h?.x?.toInt() ?: return
+                        sorted.getOrNull(idx)?.let { mv ->
+                            runCatching { MuscleGroup.valueOf(mv.muscleGroup) }.getOrNull()?.let(onSelect)
+                        }
+                    }
+
+                    override fun onNothingSelected() = Unit
+                })
                 chart.notifyDataSetChanged()
                 // Mark the focused muscle's spoke.
                 if (selectedIndex >= 0) {
@@ -678,6 +725,16 @@ private fun MuscleRadarCard(
                 chart.invalidate()
             }
         )
+    }
+}
+
+/** The exact value, with its unit, for a tooltip or caption. */
+private fun formatMetricValue(value: Float, metric: ProgressMetric, weightUnit: WeightUnit): String {
+    val rounded = if (value % 1f == 0f) value.toInt().toString() else String.format("%.1f", value)
+    return when (metric) {
+        ProgressMetric.WEIGHT -> "$rounded ${weightUnitLabel(weightUnit)}"
+        ProgressMetric.SETS -> if (value == 1f) "1 set" else "$rounded sets"
+        ProgressMetric.WORKOUTS -> if (value == 1f) "1 workout" else "$rounded workouts"
     }
 }
 

@@ -35,6 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.github.mikephil.charting.charts.HorizontalBarChart
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.charts.RadarChart
@@ -82,6 +84,14 @@ fun ProgressScreen(
     val state by viewModel.state.collectAsState()
     val weightUnit by viewModel.weightUnit.collectAsState()
     val bodyFigure by viewModel.bodyFigure.collectAsState()
+
+    // The tab's data is loaded on demand, not observed, and this ViewModel survives tab switches.
+    // Without this, recovery and personal records keep the values they had when the tab was first
+    // opened — a workout finished afterwards only showed up once the app was restarted. (The
+    // charts appeared to update because touching the range selector reloads them via loadRanged.)
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refresh()
+    }
 
     Scaffold { padding ->
         LazyColumn(

@@ -30,7 +30,8 @@ object AppModule {
             .addMigrations(
                 StrongestDatabase.MIGRATION_1_2,
                 StrongestDatabase.MIGRATION_2_3,
-                StrongestDatabase.MIGRATION_3_4
+                StrongestDatabase.MIGRATION_3_4,
+                StrongestDatabase.MIGRATION_4_5
             )
             .build()
     }

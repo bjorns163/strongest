@@ -3,9 +3,9 @@ package com.strongest.app.utils
 import com.strongest.app.data.model.BodyMetric
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
-import com.strongest.app.data.model.ExerciseClassification
 import com.strongest.app.data.model.ExerciseNote
 import com.strongest.app.data.model.ExerciseSettings
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.MeasurementEntry
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.Routine
@@ -85,7 +85,7 @@ private fun Exercise.toJson(): JSONObject = JSONObject().apply {
     put("secondaryMuscles", JSONArray(secondaryMuscles.map { it.name }))
     put("imageUrl", imageUrl)
     put("isCustom", isCustom)
-    put("classification", classification.name)
+    put("type", type.name)
 }
 
 private fun JSONObject.toExercise(): Exercise = Exercise(
@@ -100,12 +100,21 @@ private fun JSONObject.toExercise(): Exercise = Exercise(
     } ?: emptyList(),
     imageUrl = optString("imageUrl", ""),
     isCustom = optBoolean("isCustom", false),
-    classification = try {
-        ExerciseClassification.valueOf(optString("classification", "ISOLATION"))
-    } catch (_: Exception) {
-        ExerciseClassification.ISOLATION
-    }
+    type = enumOrNull<ExerciseType>(optString("type"))
+        ?: legacyType(optString("classification"))
 )
+
+private inline fun <reified T : Enum<T>> enumOrNull(value: String?): T? =
+    if (value.isNullOrBlank()) null else runCatching { enumValueOf<T>(value) }.getOrNull()
+
+/** Exports written before `type` carried a single "classification" value. */
+private fun legacyType(classification: String): ExerciseType =
+    if (classification == "COMPOUND" || classification == "ACCESSORY") {
+        ExerciseType.COMPOUND
+    } else {
+        ExerciseType.ISOLATION
+    }
+
 
 private fun RoutineGroup.toJson(): JSONObject = JSONObject().apply {
     put("id", id)

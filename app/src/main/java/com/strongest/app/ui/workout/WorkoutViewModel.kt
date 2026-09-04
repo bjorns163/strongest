@@ -14,7 +14,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
-import com.strongest.app.data.model.ExerciseClassification
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.ExerciseNote
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.Routine
@@ -181,7 +181,7 @@ data class WorkoutExerciseUi(
     val exerciseName: String,
     val muscleGroup: MuscleGroup = MuscleGroup.OTHER,
     val equipment: Equipment = Equipment.NONE,
-    val classification: ExerciseClassification = ExerciseClassification.ISOLATION,
+    val type: ExerciseType = ExerciseType.ISOLATION,
     val sets: List<SetUi>,
     val previousSets: List<PreviousSetInfo> = emptyList(),
     val noteText: String = ""
@@ -556,7 +556,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                         exerciseName = exercise?.name ?: "Unknown",
                         muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                         equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
-                        classification = exercise?.classification ?: com.strongest.app.data.model.ExerciseClassification.ISOLATION,
+                        type = exercise?.type ?: ExerciseType.ISOLATION,
                         noteText = note?.noteText ?: "",
                         sets = uiSets,
                         previousSets = previousSets
@@ -606,7 +606,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                     exerciseName = exercise?.name ?: "Unknown",
                     muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                     equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
-                    classification = exercise?.classification ?: com.strongest.app.data.model.ExerciseClassification.ISOLATION,
+                    type = exercise?.type ?: ExerciseType.ISOLATION,
                     noteText = note?.noteText ?: "",
                     sets = setsToShow.map { set ->
                         val prevInfo = previousSets.getOrNull(set.setNumber - 1)
@@ -672,7 +672,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                 exerciseName = exercise?.name ?: "Unknown",
                 muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                 equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
-                classification = exercise?.classification ?: com.strongest.app.data.model.ExerciseClassification.ISOLATION,
+                type = exercise?.type ?: ExerciseType.ISOLATION,
                 noteText = note?.noteText ?: "",
                 sets = uiSets,
                 previousSets = previousSets
@@ -731,7 +731,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                         exerciseName = exercise?.name ?: "Unknown",
                         muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                         equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
-                        classification = exercise?.classification ?: com.strongest.app.data.model.ExerciseClassification.ISOLATION,
+                        type = exercise?.type ?: ExerciseType.ISOLATION,
                         noteText = note?.noteText ?: "",
                         sets = uiSets,
                         previousSets = previousSets
@@ -1438,7 +1438,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                 exerciseName = newExercise.name,
                 muscleGroup = newExercise.muscleGroup,
                 equipment = newExercise.equipment,
-                classification = newExercise.classification,
+                type = newExercise.type,
                 noteText = newNote?.noteText ?: "",
                 sets = uiSets,
                 previousSets = previousSets

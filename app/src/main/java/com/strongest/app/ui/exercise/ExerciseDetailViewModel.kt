@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.strongest.app.data.db.ExerciseHistoryEntry
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
-import com.strongest.app.data.model.ExerciseClassification
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.ExerciseNote
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.SettingsRepository
@@ -89,7 +89,7 @@ class ExerciseDetailViewModel @Inject constructor(
         name: String,
         muscleGroup: MuscleGroup,
         equipment: Equipment,
-        classification: ExerciseClassification,
+        type: ExerciseType,
         instructions: String
     ) {
         val exercise = _state.value.exercise ?: return
@@ -98,7 +98,7 @@ class ExerciseDetailViewModel @Inject constructor(
                 name = name.trim(),
                 muscleGroup = muscleGroup,
                 equipment = equipment,
-                classification = classification,
+                type = type,
                 instructions = instructions.trim()
             )
             repository.updateExercise(updated)

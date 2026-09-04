@@ -5,7 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.strongest.app.data.db.RoutineWithExercisesAndSets
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
-import com.strongest.app.data.model.ExerciseClassification
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.ExerciseNote
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.Routine
@@ -78,7 +78,7 @@ class ActiveWorkoutViewModelTest {
         name = name,
         muscleGroup = MuscleGroup.CHEST,
         equipment = Equipment.BARBELL,
-        classification = ExerciseClassification.COMPOUND
+        type = ExerciseType.COMPOUND
     )
 
     /** Stubs an ongoing workout (pairs of exerciseId to workoutExerciseId) and loads it into the ViewModel. */

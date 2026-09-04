@@ -59,7 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.data.model.Equipment
-import com.strongest.app.data.model.ExerciseClassification
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.OneRmFormula
 import com.strongest.app.data.repository.WeightUnit
@@ -167,8 +167,8 @@ fun ExerciseDetailScreen(
         EditExerciseDialog(
             exercise = state.exercise!!,
             onDismiss = { showEditDialog = false },
-        ) { name, muscleGroup, equipment, classification, instructions ->
-            viewModel.updateExercise(name, muscleGroup, equipment, classification, instructions)
+        ) { name, muscleGroup, equipment, type, instructions ->
+            viewModel.updateExercise(name, muscleGroup, equipment, type, instructions)
             showEditDialog = false
         }
     }
@@ -327,7 +327,7 @@ fun DetailsTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = exercise.classification.label(),
+                        text = exercise.type.label(),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -497,16 +497,15 @@ fun DetailsTab(
 fun EditExerciseDialog(
     exercise: com.strongest.app.data.model.Exercise,
     onDismiss: () -> Unit,
-    onSave: (String, MuscleGroup, Equipment, ExerciseClassification, String) -> Unit
+    onSave: (String, MuscleGroup, Equipment, ExerciseType, String) -> Unit
 ) {
     var name by remember { mutableStateOf(exercise.name) }
     var selectedMuscleGroup by remember { mutableStateOf(exercise.muscleGroup) }
     var selectedEquipment by remember { mutableStateOf(exercise.equipment) }
-    var selectedClassification by remember { mutableStateOf(exercise.classification) }
+    var selectedType by remember { mutableStateOf(exercise.type) }
     var instructions by remember { mutableStateOf(exercise.instructions) }
     var muscleExpanded by remember { mutableStateOf(false) }
     var equipmentExpanded by remember { mutableStateOf(false) }
-    var classificationExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -584,34 +583,10 @@ fun EditExerciseDialog(
                     }
                 }
 
-                ExposedDropdownMenuBox(
-                    expanded = classificationExpanded,
-                    onExpandedChange = { classificationExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = selectedClassification.label(),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Classification") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = classificationExpanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = classificationExpanded,
-                        onDismissRequest = { classificationExpanded = false }
-                    ) {
-                        ExerciseClassification.entries.forEach { c ->
-                            DropdownMenuItem(
-                                text = { Text(c.label()) },
-                                onClick = {
-                                    selectedClassification = c
-                                    classificationExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
+                ExerciseTypeField(
+                    type = selectedType,
+                    onTypeChange = { selectedType = it }
+                )
 
                 OutlinedTextField(
                     value = instructions,
@@ -627,7 +602,13 @@ fun EditExerciseDialog(
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onSave(name.trim(), selectedMuscleGroup, selectedEquipment, selectedClassification, instructions.trim())
+                        onSave(
+                            name.trim(),
+                            selectedMuscleGroup,
+                            selectedEquipment,
+                            selectedType,
+                            instructions.trim()
+                        )
                     }
                 },
                 enabled = name.isNotBlank()

@@ -400,8 +400,6 @@ class WorkoutRepository @Inject constructor(
         val count = exerciseDao.getExerciseCount()
         if (count == 0) {
             exerciseDao.insertExercises(exerciseSeedData)
-            // Fresh installs already have classifications baked into the seed data.
-            settingsRepository.markExerciseClassificationBackfillDone()
             settingsRepository.setExerciseSeedVersion(EXERCISE_SEED_VERSION)
         } else {
             // Insert any seed exercises whose IDs aren't in the DB yet (newly added entries).
@@ -410,10 +408,6 @@ class WorkoutRepository @Inject constructor(
             val newExercises = exerciseSeedData.filter { it.id !in existingIds }
             if (newExercises.isNotEmpty()) {
                 exerciseDao.insertExercises(newExercises)
-            }
-            if (!settingsRepository.isExerciseClassificationBackfillDone()) {
-                backfillExerciseClassifications()
-                settingsRepository.markExerciseClassificationBackfillDone()
             }
             // Re-sync built-in exercise definitions when the seed data version was bumped, so edits
             // to names/descriptions/instructions reach existing installs without a reinstall.
@@ -426,7 +420,7 @@ class WorkoutRepository @Inject constructor(
 
     /**
      * Updates the definition fields (name, muscle group, equipment, description, instructions,
-     * classification) of built-in exercises to match the current seed data. Custom exercises and
+     * type) of built-in exercises to match the current seed data. Custom exercises and
      * all user data (workout history, sets, notes, routines) are left untouched, since those live
      * in separate tables keyed by exerciseId.
      */
@@ -443,23 +437,12 @@ class WorkoutRepository @Inject constructor(
                 description = seed.description,
                 instructions = seed.instructions,
                 secondaryMuscles = seed.secondaryMuscles,
-                classification = seed.classification
+                type = seed.type
             )
             if (merged != current) updates.add(merged)
         }
         if (updates.isNotEmpty()) {
             exerciseDao.updateExercises(updates)
-        }
-    }
-
-    private suspend fun backfillExerciseClassifications() {
-        val all = exerciseDao.getAllExercisesList()
-        for (ex in all) {
-            if (ex.isCustom) continue
-            val computed = com.strongest.app.data.model.classifyExercise(ex.name, ex.equipment, ex.muscleGroup)
-            if (ex.classification != computed) {
-                exerciseDao.updateExercise(ex.copy(classification = computed))
-            }
         }
     }
 

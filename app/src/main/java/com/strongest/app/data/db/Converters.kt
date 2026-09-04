@@ -3,7 +3,7 @@ package com.strongest.app.data.db
 import androidx.room.TypeConverter
 import com.strongest.app.data.model.BodyMetric
 import com.strongest.app.data.model.Equipment
-import com.strongest.app.data.model.ExerciseClassification
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.SetType
 
@@ -41,9 +41,10 @@ class Converters {
     fun toBodyMetric(value: String): BodyMetric = BodyMetric.valueOf(value)
 
     @TypeConverter
-    fun fromExerciseClassification(value: ExerciseClassification): String = value.name
+    fun fromExerciseType(value: ExerciseType): String = value.name
 
     @TypeConverter
-    fun toExerciseClassification(value: String): ExerciseClassification =
-        try { ExerciseClassification.valueOf(value) } catch (e: Exception) { ExerciseClassification.ISOLATION }
+    fun toExerciseType(value: String): ExerciseType =
+        try { ExerciseType.valueOf(value) } catch (e: Exception) { ExerciseType.ISOLATION }
+
 }

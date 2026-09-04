@@ -1512,5 +1512,5 @@ fun RpePickerDialog(
 internal fun exerciseSubtitle(exercise: WorkoutExerciseUi): String {
     val muscle = exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() }
     val equipment = exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() }
-    return "$muscle • $equipment • ${exercise.classification.label()}"
+    return "$muscle • $equipment • ${exercise.type.label()}"
 }

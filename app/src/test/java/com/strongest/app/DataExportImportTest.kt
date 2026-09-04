@@ -20,7 +20,7 @@ class DataExportImportTest {
         secondaryMuscles = listOf(MuscleGroup.SHOULDERS, MuscleGroup.TRICEPS),
         imageUrl = "https://example.com/bench.png",
         isCustom = true,
-        classification = ExerciseClassification.COMPOUND
+        type = ExerciseType.COMPOUND
     )
 
     private val sampleRoutineGroup = RoutineGroup(
@@ -179,7 +179,7 @@ class DataExportImportTest {
             assertEquals(MuscleGroup.TRICEPS, secondaryMuscles[1])
             assertEquals("https://example.com/bench.png", imageUrl)
             assertTrue(isCustom)
-            assertEquals(ExerciseClassification.COMPOUND, classification)
+            assertEquals(ExerciseType.COMPOUND, type)
         }
 
         assertEquals(1, parsed.routineGroups.size)
@@ -391,7 +391,7 @@ class DataExportImportTest {
             secondaryMuscles = emptyList(),
             imageUrl = "",
             isCustom = false,
-            classification = ExerciseClassification.ISOLATION
+            type = ExerciseType.ISOLATION
         )
 
         val note = ExerciseNote(
@@ -454,7 +454,7 @@ class DataExportImportTest {
         assertEquals("Test", parsed!!.exercises[0].name)
         assertEquals("", parsed.exercises[0].description)
         assertEquals("", parsed.exercises[0].instructions)
-        assertEquals(ExerciseClassification.ISOLATION, parsed.exercises[0].classification)
+        assertEquals(ExerciseType.ISOLATION, parsed.exercises[0].type)
         assertEquals("", parsed.measurementEntries[0].notes)
         assertEquals(90, parsed.settings.defaultRestSeconds)
     }
@@ -472,7 +472,7 @@ class DataExportImportTest {
                 secondaryMuscles = emptyList(),
                 imageUrl = "",
                 isCustom = false,
-                classification = ExerciseClassification.ISOLATION
+                type = ExerciseType.ISOLATION
             )
         }
 

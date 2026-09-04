@@ -81,6 +81,87 @@ class ActiveWorkoutViewModelTest {
         type = ExerciseType.COMPOUND
     )
 
+    /**
+     * Regression: deleting a set renumbered only the UI state, so the DB kept the pre-delete
+     * numbers (1, 3, 4). Those resurfaced on reload, misaligned the previous-session hints
+     * (looked up by setNumber) and carried the gaps into exports.
+     */
+    @Test
+    fun `deleting a set persists the renumbering of the sets after it`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+
+        seedWorkoutWithThreeSets(vm)
+        advanceUntilIdle()
+        assertEquals(listOf(1, 2, 3), vm.state.value.workoutExercises.single().sets.map { it.setNumber })
+
+        // Drop the middle set.
+        vm.deleteSet(workoutExerciseId = 10L, setIndex = 1)
+        advanceUntilIdle()
+
+        val sets = vm.state.value.workoutExercises.single().sets
+        assertEquals(listOf(1000L, 1002L), sets.map { it.setId })
+        assertEquals(listOf(1, 2), sets.map { it.setNumber })
+
+        // The delete call itself is not argument-matched: deleteSet builds its SetLog without a
+        // completedAt, so that field defaults to "now" and cannot be predicted. The renumbering
+        // below is what this test is guarding anyway.
+        // ...and the set that followed it is written back as set 2, not left as set 3.
+        verify(repository).updateSet(
+            SetLog(
+                id = 1002L,
+                workoutExerciseId = 10L,
+                setNumber = 2,
+                weightKg = 100f,
+                reps = 4,
+                rpe = null,
+                setType = SetType.NORMAL,
+                restSeconds = 150,
+                completedAt = 0L
+            )
+        )
+    }
+
+    /** Stubs one ongoing exercise carrying three sets, so a middle delete has a tail to renumber. */
+    private suspend fun seedWorkoutWithThreeSets(vm: ActiveWorkoutViewModel, workoutId: Long = 5L) {
+        val workout = Workout(
+            id = workoutId,
+            routineId = null,
+            routineName = null,
+            workoutName = "Workout",
+            startTime = 1000L,
+            endTime = null,
+            isOngoing = true
+        )
+        `when`(repository.getWorkoutById(workoutId)).thenReturn(workout)
+        `when`(repository.getWorkoutWithDetails(workoutId)).thenReturn(
+            WorkoutWithDetails(
+                workout = workout,
+                exercises = listOf(
+                    WorkoutExerciseWithSets(
+                        workoutExercise = WorkoutExercise(
+                            id = 10L,
+                            workoutId = workoutId,
+                            exerciseId = 1L,
+                            orderIndex = 0
+                        ),
+                        sets = listOf(
+                            SetLog(1000L, 10L, 1, 80f, 8, null, SetType.NORMAL, 90, 0L),
+                            SetLog(1001L, 10L, 2, 90f, 6, null, SetType.NORMAL, 90, 0L),
+                            SetLog(1002L, 10L, 3, 100f, 4, null, SetType.NORMAL, 150, 0L)
+                        )
+                    )
+                )
+            )
+        )
+        `when`(repository.getExerciseById(1L)).thenReturn(exercise(1L, "Exercise 1"))
+        `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getNote(1L)).thenReturn(null)
+
+        vm.loadWorkout(workoutId)
+    }
+
     /** Stubs an ongoing workout (pairs of exerciseId to workoutExerciseId) and loads it into the ViewModel. */
     private suspend fun seedWorkout(
         vm: ActiveWorkoutViewModel,

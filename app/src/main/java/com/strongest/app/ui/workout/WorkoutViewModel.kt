@@ -849,22 +849,24 @@ class ActiveWorkoutViewModel @Inject constructor(
     }
 
     private fun persistSet(workoutExerciseId: Long, set: SetUi) {
+        viewModelScope.launch { persistSetNow(workoutExerciseId, set) }
+    }
+
+    private suspend fun persistSetNow(workoutExerciseId: Long, set: SetUi) {
         val id = set.setId ?: return
-        viewModelScope.launch {
-            repository.updateSet(
-                com.strongest.app.data.model.SetLog(
-                    id = id,
-                    workoutExerciseId = workoutExerciseId,
-                    setNumber = set.setNumber,
-                    weightKg = set.weight,
-                    reps = set.reps,
-                    rpe = set.rpe,
-                    setType = set.setType,
-                    restSeconds = set.restSeconds,
-                    completedAt = set.completedAt
-                )
+        repository.updateSet(
+            com.strongest.app.data.model.SetLog(
+                id = id,
+                workoutExerciseId = workoutExerciseId,
+                setNumber = set.setNumber,
+                weightKg = set.weight,
+                reps = set.reps,
+                rpe = set.rpe,
+                setType = set.setType,
+                restSeconds = set.restSeconds,
+                completedAt = set.completedAt
             )
-        }
+        )
     }
 
     fun updateSet(workoutExerciseId: Long, setIndex: Int, weight: Float, reps: Int) {
@@ -1037,6 +1039,13 @@ class ActiveWorkoutViewModel @Inject constructor(
                 val lastIdx = renumberedSets.lastIndex
                 renumberedSets[lastIdx] = renumberedSets[lastIdx].copy(restSeconds = _state.value.lastSetRestSeconds)
             }
+
+            // Write the new numbering back. Without this the DB keeps the pre-delete numbers
+            // (1, 3, 4), which resurface when the workout is reloaded, misalign the
+            // previous-session hints (looked up by setNumber) and carry the gaps into exports.
+            // Every set is rewritten rather than just the shifted tail: the last set's rest time
+            // may also have changed, and a handful of rows is not worth the bookkeeping.
+            renumberedSets.forEach { persistSetNow(workoutExerciseId, it) }
 
             val updatedExercises = _state.value.workoutExercises.toMutableList()
             val exerciseIndex = updatedExercises.indexOfFirst { it.workoutExerciseId == workoutExerciseId }

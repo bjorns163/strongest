@@ -827,20 +827,40 @@ class ActiveWorkoutViewModel @Inject constructor(
             if (exerciseIndex == -1) return@launch
 
             val exercise = _state.value.workoutExercises[exerciseIndex]
-            val warmUpCount = warmUpSets.size
-            if (warmUpCount == 0) return@launch
+            if (warmUpSets.isEmpty()) return@launch
 
             val defaultRest = _state.value.restTimerSeconds
 
+            // Adding from the calculator replaces the warm-ups this exercise already has instead
+            // of stacking a second batch on top of them. Completed warm-ups are work the user
+            // actually did, so those stay; only the untouched ones are swapped out.
+            val (existingWarmUps, workingSets) = exercise.sets.partition { it.setType == SetType.WARM_UP }
+            val keptWarmUps = existingWarmUps.filter { it.isCompleted }
+            for (stale in existingWarmUps.filter { !it.isCompleted }) {
+                val staleId = stale.setId ?: continue
+                repository.deleteSet(
+                    SetLog(
+                        id = staleId,
+                        workoutExerciseId = workoutExerciseId,
+                        setNumber = stale.setNumber,
+                        weightKg = stale.weight,
+                        reps = stale.reps,
+                        setType = stale.setType
+                    )
+                )
+            }
+
+            val firstNewNumber = keptWarmUps.size + 1
             val newWarmUps = warmUpSets.mapIndexed { index, spec ->
+                val setNumber = firstNewNumber + index
                 val setId = repository.logSet(
-                    workoutExerciseId, index + 1,
+                    workoutExerciseId, setNumber,
                     spec.weightKg, spec.reps, null, SetType.WARM_UP,
                     restSeconds = defaultRest, completedAt = 0
                 )
                 SetUi(
                     setId = setId,
-                    setNumber = index + 1,
+                    setNumber = setNumber,
                     weight = spec.weightKg,
                     reps = spec.reps,
                     setType = SetType.WARM_UP,
@@ -848,11 +868,12 @@ class ActiveWorkoutViewModel @Inject constructor(
                 )
             }
 
-            val renumbered = exercise.sets.map { it.copy(setNumber = it.setNumber + warmUpCount) }
-            renumbered.forEach { persistSet(workoutExerciseId, it) }
+            val combined = (keptWarmUps + newWarmUps + workingSets)
+                .mapIndexed { idx, set -> set.copy(setNumber = idx + 1) }
+            combined.forEach { persistSetNow(workoutExerciseId, it) }
 
             val updatedExercises = _state.value.workoutExercises.toMutableList()
-            updatedExercises[exerciseIndex] = exercise.copy(sets = newWarmUps + renumbered)
+            updatedExercises[exerciseIndex] = exercise.copy(sets = combined)
             _state.update { it.copy(workoutExercises = updatedExercises) }
         }
     }

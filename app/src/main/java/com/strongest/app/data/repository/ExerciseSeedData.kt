@@ -4935,5 +4935,35 @@ val exerciseSeedData: List<Exercise> = listOf(
         "Adjust the machine to your body. The knees should be facing forward and resting near the bottom of the padding. Place your forearms on the upper padding and grip the handles. Next, make sure that you have the arm of the machine under your knee. Brace your core, keep your body still, and start to press your leg backwards and upwards by activating the glute. Push the leg as far up as you can without rotating in the hips, then return to the starting position. Do all reps on one side first, and then switch to the other leg.",
         secondaryMuscles = listOf(MuscleGroup.HAMSTRINGS),
         type = ExerciseType.ISOLATION
+    ),
+    Exercise(
+        518,
+        "Cable Shoulder Press",
+        MuscleGroup.SHOULDERS,
+        Equipment.CABLE,
+        "Overhead shoulder press performed using low cable pulleys for constant tension.",
+        "Attach D-handles to two low cable pulleys. Sit or stand between the cables and pull the handles to shoulder height with palms facing forward. Press overhead until your arms are fully extended, then slowly lower back down to shoulder height under control.",
+        secondaryMuscles = listOf(MuscleGroup.TRICEPS),
+        type = ExerciseType.COMPOUND
+    ),
+    Exercise(
+        519,
+        "Seated Machine Tricep Pushdown",
+        MuscleGroup.TRICEPS,
+        Equipment.MACHINE,
+        "Seated triceps pushdown using a machine to isolate the arms along a guided path.",
+        "Sit with your back against the pad, feet flat on the floor, and grip the handles. Brace your core and press the handles down until your arms are fully extended. Pause briefly at the bottom, then slowly return to the starting position under control.",
+        secondaryMuscles = listOf(),
+        type = ExerciseType.ISOLATION
+    ),
+    Exercise(
+        520,
+        "Plate-Loaded Seated Tricep Pushdown",
+        MuscleGroup.TRICEPS,
+        Equipment.MACHINE, // Or Equipment.PLATE_LOADED if present in your enum
+        "Seated triceps pushdown using a plate-loaded leverage machine for customizable resistance.",
+        "Sit securely with your back against the pad and grip the handles. Brace your core and drive the handles down using your triceps until your arms are fully extended. Pause briefly at the bottom, then slowly return to the starting position under control.",
+        secondaryMuscles = listOf(),
+        type = ExerciseType.ISOLATION
     )
 )

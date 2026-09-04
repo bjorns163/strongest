@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.RingtoneManager
 import android.net.Uri
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import androidx.core.content.ContextCompat
@@ -231,6 +232,14 @@ class ActiveWorkoutViewModel @Inject constructor(
     // True once the user has committed to finishing; stops the state collector from re-publishing
     // the ongoing-workout notification while a post-workout (e.g. routine-save) dialog is shown.
     private var isFinishing = false
+    /**
+     * When the current rest ends, on the [SystemClock.elapsedRealtime] timebase.
+     *
+     * Deliberately not wall-clock: an NTP correction or a manual clock change would
+     * otherwise jump the countdown mid-rest, ending it early or stretching it. Unlike
+     * uptimeMillis, elapsedRealtime keeps counting through deep sleep, so the rest still
+     * runs out while the screen is off.
+     */
     private var timerEndTime: Long = 0
     private val persistOrderMutex = Mutex()
 
@@ -372,7 +381,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     fun adjustTimer(seconds: Int) {
         viewModelScope.launch {
             timerEndTime += (seconds * 1000L)
-            val remaining = ((timerEndTime - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+            val remaining = ((timerEndTime - SystemClock.elapsedRealtime()) / 1000).toInt().coerceAtLeast(0)
             _state.update {
                 it.copy(
                     timerRemainingSeconds = remaining,
@@ -1057,7 +1066,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     fun startRestTimer(setId: Long?, durationSeconds: Int) {
         timerJob?.cancel()
         ensureWorkoutActionsReceiverRegistered()
-        timerEndTime = System.currentTimeMillis() + (durationSeconds * 1000L)
+        timerEndTime = SystemClock.elapsedRealtime() + (durationSeconds * 1000L)
         _state.update {
             it.copy(
                 activeTimerSetId = setId,
@@ -1070,7 +1079,7 @@ class ActiveWorkoutViewModel @Inject constructor(
         timerJob = viewModelScope.launch {
             while (isActive) {
                 delay(1000)
-                val remaining = ((timerEndTime - System.currentTimeMillis()) / 1000).toInt()
+                val remaining = ((timerEndTime - SystemClock.elapsedRealtime()) / 1000).toInt()
                 if (remaining <= 0) {
                     _state.update { it.copy(isTimerRunning = false, timerRemainingSeconds = 0, activeTimerSetId = null) }
                     playTimerAlert()

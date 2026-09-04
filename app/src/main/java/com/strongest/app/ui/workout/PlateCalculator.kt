@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import com.strongest.app.data.repository.WeightUnit
+import java.util.Locale
+import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.utils.SettingsEntryPoint
 import com.strongest.app.utils.WorkoutRepositoryEntryPoint
 import com.strongest.app.utils.displayToKg
@@ -95,7 +97,8 @@ fun calculatePlates(target: Float, bar: Float, availablePlates: Map<Float, Int>,
 private fun formatWeight(value: Float): String {
     val rounded = (value * 100f).roundToInt() / 100f
     return if (rounded % 1f == 0f) rounded.toInt().toString() else {
-        if ((rounded * 10f) % 1f == 0f) String.format("%.1f", rounded) else String.format("%.2f", rounded)
+        if ((rounded * 10f) % 1f == 0f) String.format(Locale.getDefault(), "%.1f", rounded)
+        else String.format(Locale.getDefault(), "%.2f", rounded)
     }
 }
 
@@ -299,7 +302,7 @@ fun PlateCalculatorDialog(
         }
     }
 
-    val target = targetText.text.toFloatOrNull() ?: 0f
+    val target = parseDecimalInput(targetText.text) ?: 0f
     val availablePlates = ownedPlates.filterValues { it > 0 }
     val total = load.total
     val difference = total - target

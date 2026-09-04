@@ -70,6 +70,7 @@ import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.localDayStart
 import com.strongest.app.utils.weightUnitLabel
+import java.util.Locale
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -581,9 +582,9 @@ private fun MuscleChartCard(
                         // Sets can be fractional, because a secondary muscle counts as
                         // part of a set; truncating here disagreed with the tooltip.
                         override fun getFormattedValue(value: Float): String = when {
-                            value >= 1000 -> String.format("%.1fk", value / 1000)
+                            value >= 1000 -> String.format(Locale.getDefault(), "%.1fk", value / 1000)
                             value % 1f == 0f -> value.toInt().toString()
-                            else -> String.format("%.1f", value)
+                            else -> String.format(Locale.getDefault(), "%.1f", value)
                         }
                     }
                 }
@@ -730,7 +731,8 @@ private fun MuscleRadarCard(
 
 /** The exact value, with its unit, for a tooltip or caption. */
 private fun formatMetricValue(value: Float, metric: ProgressMetric, weightUnit: WeightUnit): String {
-    val rounded = if (value % 1f == 0f) value.toInt().toString() else String.format("%.1f", value)
+    val rounded = if (value % 1f == 0f) value.toInt().toString()
+    else String.format(Locale.getDefault(), "%.1f", value)
     return when (metric) {
         ProgressMetric.WEIGHT -> "$rounded ${weightUnitLabel(weightUnit)}"
         ProgressMetric.SETS -> if (value == 1f) "1 set" else "$rounded sets"

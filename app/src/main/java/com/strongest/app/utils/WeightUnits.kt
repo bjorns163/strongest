@@ -13,6 +13,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlin.math.roundToInt
+import java.util.Locale
 
 private const val KG_PER_LB = 0.45359237f
 
@@ -30,7 +31,8 @@ fun weightUnitLabel(unit: WeightUnit): String = when (unit) {
 fun formatWeightForDisplay(kg: Float, unit: WeightUnit): String {
     val v = kgToDisplay(kg, unit)
     val rounded = (v * 10f).roundToInt() / 10f
-    return if (rounded % 1f == 0f) rounded.toInt().toString() else String.format("%.1f", rounded)
+    return if (rounded % 1f == 0f) rounded.toInt().toString()
+    else String.format(Locale.getDefault(), "%.1f", rounded)
 }
 
 @EntryPoint

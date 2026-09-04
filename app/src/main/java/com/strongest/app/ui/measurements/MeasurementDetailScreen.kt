@@ -56,6 +56,7 @@ import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.strongest.app.data.model.BodyMetric
 import com.strongest.app.data.model.MeasurementEntry
+import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.utils.DAY_MS
 import com.strongest.app.utils.dailyEntries
@@ -427,7 +428,7 @@ private fun AddMeasurementDialog(
     var customDate by remember { mutableStateOf<Long?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     val unit = metricUnitLabel(metric, weightUnit)
-    val parsed = valueText.replace(',', '.').toFloatOrNull()
+    val parsed = parseDecimalInput(valueText)
     val canSave = parsed != null && parsed > 0f
     val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
 

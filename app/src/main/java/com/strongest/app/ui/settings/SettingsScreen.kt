@@ -61,6 +61,7 @@ import com.strongest.app.data.repository.Sex
 import com.strongest.app.data.repository.defaultRecoveryHours
 import com.strongest.app.data.repository.exerciseSeedData
 import com.strongest.app.data.repository.WeightUnit
+import java.util.Locale
 import com.strongest.app.ui.workout.STANDARD_KG_PLATES
 import com.strongest.app.ui.workout.STANDARD_LBS_PLATES
 import com.strongest.app.utils.weightUnitLabel
@@ -443,11 +444,7 @@ fun SettingsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = when {
-                                            (plate % 1f) == 0f -> plate.toInt().toString()
-                                            ((plate * 10f) % 1f) == 0f -> String.format("%.1f", plate)
-                                            else -> String.format("%.2f", plate)
-                                        } + " $unitLabel",
+                                        text = formatPlateLabel(plate) + " $unitLabel",
                                         modifier = Modifier.weight(1f)
                                     )
                                     OutlinedTextField(
@@ -955,4 +952,16 @@ fun SettingSection(title: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     )
+}
+
+/**
+ * Formats a plate weight for display, trimming trailing zeros (2.5 not 2.50).
+ *
+ * Kept out of the composable body: reading the default locale inside one is not observable by
+ * Compose, so lint rejects it there.
+ */
+private fun formatPlateLabel(plate: Float): String = when {
+    (plate % 1f) == 0f -> plate.toInt().toString()
+    ((plate * 10f) % 1f) == 0f -> String.format(Locale.getDefault(), "%.1f", plate)
+    else -> String.format(Locale.getDefault(), "%.2f", plate)
 }

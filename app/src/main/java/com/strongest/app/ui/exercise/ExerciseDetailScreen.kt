@@ -65,6 +65,7 @@ import com.strongest.app.data.repository.OneRmFormula
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.navigation.AddWarmUpSetsRequest
 import com.strongest.app.ui.navigation.WarmUpSetSpec
+import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.utils.OneRepMaxCalculator
 import com.strongest.app.utils.SettingsEntryPoint
 import com.strongest.app.utils.formatWeightForDisplay
@@ -852,7 +853,7 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
         mutableStateOf(if (initialReps > 0) initialReps.toString() else "")
     }
 
-    val weight = weightText.toFloatOrNull() ?: 0f
+    val weight = parseDecimalInput(weightText) ?: 0f
     val reps = repsText.toIntOrNull() ?: 0
 
     Column(
@@ -1011,7 +1012,7 @@ fun WarmupTab(
     }
     var sliderCount by remember(warmUpSetCount) { mutableIntStateOf(warmUpSetCount.coerceIn(1, 4)) }
 
-    val working = workingText.toFloatOrNull() ?: 0f
+    val working = parseDecimalInput(workingText) ?: 0f
     val reps = repsText.toIntOrNull() ?: 0
     val count = sliderCount
 

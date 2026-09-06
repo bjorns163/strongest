@@ -2456,11 +2456,11 @@ val exerciseSeedData: List<Exercise> = listOf(
     ),
     Exercise(
         255,
-        "Machine Hip Thrust",
+        "Smith Machine Hip Thrust",
         MuscleGroup.GLUTES,
-        Equipment.MACHINE,
-        "Machine-based hip thrust for the glutes.",
-        "Sit in the hip thrust machine and position the pad across your hips. Plant your feet firmly on the platform. Thrust your hips up against the resistance. Squeeze your glutes at the top then lower under control.",
+        Equipment.SMITH_MACHINE,
+        "Hip thrust performed using a Smith machine to target the glutes along a fixed vertical track.",
+        "Place a bench behind you and position the Smith machine bar across your hips, using a pad for comfort. Plant your feet flat on the floor shoulder-width apart. Unrack the bar and drive through your heels to extend your hips fully, squeezing your glutes at the top. Lower your hips under control until near the floor before starting the next rep.",
         secondaryMuscles = listOf(MuscleGroup.HAMSTRINGS),
         type = ExerciseType.COMPOUND
     ),
@@ -2697,7 +2697,7 @@ val exerciseSeedData: List<Exercise> = listOf(
     ),
     Exercise(
         281,
-        "Seated Triceps pushdown",
+        "Seated Tricep pushdown",
         MuscleGroup.TRICEPS,
         Equipment.MACHINE,
         "A seated machine exercise that targets the triceps using a vertical downward pushing motion.",
@@ -3251,11 +3251,11 @@ val exerciseSeedData: List<Exercise> = listOf(
     ),
     Exercise(
         339,
-        "Bar Pullover",
+        "Barbell Decline Pullover",
         MuscleGroup.CHEST,
         Equipment.BARBELL,
-        "Straight-bar pullover targeting the chest and lats.",
-        "Lie on a bench holding the bar above your chest with straight arms. Keep a slight bend in your elbows. Lower the bar in an arc back behind your head. Pull it back over your chest using your chest and lats.",
+        "Straight-bar pullover performed on a decline bench to target the lower chest and lats.",
+        "Lie on a decline bench with your feet secured, holding the bar above your chest with a slight bend in your elbows. Lower the bar in an arc behind your head until you feel a deep stretch in your chest and lats. Pull the bar back up to the starting position using your lower chest and lats.",
         secondaryMuscles = listOf(MuscleGroup.BACK, MuscleGroup.TRICEPS),
         type = ExerciseType.ISOLATION
     ),
@@ -4948,13 +4948,13 @@ val exerciseSeedData: List<Exercise> = listOf(
     ),
     Exercise(
         519,
-        "Seated Machine Tricep Pushdown",
-        MuscleGroup.TRICEPS,
-        Equipment.MACHINE,
-        "Seated triceps pushdown using a machine to isolate the arms along a guided path.",
-        "Sit with your back against the pad, feet flat on the floor, and grip the handles. Brace your core and press the handles down until your arms are fully extended. Pause briefly at the bottom, then slowly return to the starting position under control.",
-        secondaryMuscles = listOf(),
-        type = ExerciseType.ISOLATION
+        "Smith Single Arm Bent Over Row",
+        MuscleGroup.BACK,
+        Equipment.SMITH_MACHINE,
+        "Single-arm row using a Smith machine to target the lats and upper back along a fixed path.",
+        "Stand sideways or facing the Smith machine bar, hinge at your hips with a flat back, and grip the bar with one hand. Unrack the weight and pull the bar up toward your hip, squeezing your back at the top. Lower the bar back down under control under full stretch.",
+        secondaryMuscles = listOf(MuscleGroup.BICEPS, MuscleGroup.SHOULDERS),
+        type = ExerciseType.COMPOUND
     ),
     Exercise(
         520,
@@ -4964,6 +4964,16 @@ val exerciseSeedData: List<Exercise> = listOf(
         "Seated triceps pushdown using a plate-loaded leverage machine for customizable resistance.",
         "Sit securely with your back against the pad and grip the handles. Brace your core and drive the handles down using your triceps until your arms are fully extended. Pause briefly at the bottom, then slowly return to the starting position under control.",
         secondaryMuscles = listOf(),
+        type = ExerciseType.ISOLATION
+    ),
+    Exercise(
+        521,
+        "Hip Thrust Machine",
+        MuscleGroup.GLUTES,
+        Equipment.MACHINE,
+        "Plate-loaded or pin-selected machine movement to isolate and drive hypertrophy in the glutes.",
+        "Sit on the machine with the padded belt or lever resting across your hips and feet flat on the footplate, shoulder-width apart. Drive through your heels to extend your hips fully toward the ceiling, squeezing your glutes hard at the top. Lower the weight under control until your hips return to the starting position.",
+        secondaryMuscles = listOf(MuscleGroup.HAMSTRINGS),
         type = ExerciseType.ISOLATION
     )
 )

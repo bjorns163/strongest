@@ -93,6 +93,7 @@ import com.strongest.app.ui.theme.LocalSuccessColor
 import com.strongest.app.utils.displayToKg
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
+import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.utils.rememberWeightUnit
 import com.strongest.app.utils.weightUnitLabel
 import dagger.hilt.EntryPoint
@@ -110,6 +111,7 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import java.util.Locale
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
@@ -667,7 +669,8 @@ fun ExerciseBlock(
         PlateCalculatorDialog(
             weightUnit = weightUnit,
             initialTargetWeight = kgToDisplay(initial, weightUnit),
-            onDismiss = { showPlateCalc = false }
+            onDismiss = { showPlateCalc = false },
+            exerciseId = exercise.exerciseId
         )
     }
 
@@ -1109,7 +1112,7 @@ fun SwipeableSetRow(
                         .clickable(enabled = !isViewMode && set.setType != SetType.WARM_UP) { showRpePicker = true },
                     contentAlignment = Alignment.Center
                 ) {
-                    val rpeText = set.rpe?.let { if (it % 1f == 0f) it.toInt().toString() else String.format("%.1f", it) } ?: "—"
+                    val rpeText = set.rpe?.let { if (it % 1f == 0f) it.toInt().toString() else String.format(Locale.getDefault(), "%.1f", it) } ?: "—"
                     Text(
                         text = rpeText,
                         style = MaterialTheme.typography.bodyMedium,
@@ -1157,7 +1160,8 @@ fun SetTextField(
     LaunchedEffect(value) {
         if (!isFocused) {
             val current = if (value == 0f) "" else {
-                if (isInteger || value % 1f == 0f) value.toInt().toString() else String.format("%.1f", value)
+                if (isInteger || value % 1f == 0f) value.toInt().toString()
+                else String.format(Locale.getDefault(), "%.1f", value)
             }
             textState = TextFieldValue(text = current)
         }
@@ -1179,14 +1183,25 @@ fun SetTextField(
                 if (newText.text.isEmpty()) {
                     onValueChange(0f)
                 } else {
-                    newText.text.toFloatOrNull()?.let { onValueChange(it) }
+                    parseDecimalInput(newText.text)?.let { onValueChange(it) }
                 }
             }
         },
         modifier = modifier
             .focusRequester(focusRequester)
             .onFocusChanged {
+                val lostFocus = isFocused && !it.isFocused
                 isFocused = it.isFocused
+                if (lostFocus) {
+                    // Anything that failed to parse never reached `value`, so snap the text back
+                    // to it: what is on screen always matches what will be logged.
+                    textState = TextFieldValue(
+                        text = if (value == 0f) "" else {
+                            if (isInteger || value % 1f == 0f) value.toInt().toString()
+                            else String.format(Locale.getDefault(), "%.1f", value)
+                        }
+                    )
+                }
             },
         textStyle = MaterialTheme.typography.bodyMedium.copy(
             textAlign = TextAlign.Center,
@@ -1511,5 +1526,5 @@ fun RpePickerDialog(
 internal fun exerciseSubtitle(exercise: WorkoutExerciseUi): String {
     val muscle = exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() }
     val equipment = exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() }
-    return "$muscle • $equipment • ${exercise.classification.label()}"
+    return "$muscle • $equipment • ${exercise.type.label()}"
 }

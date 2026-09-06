@@ -57,7 +57,7 @@ class DataExportImportIntegrationTest {
             secondaryMuscles = listOf(MuscleGroup.GLUTES, MuscleGroup.HAMSTRINGS),
             imageUrl = "",
             isCustom = true,
-            classification = ExerciseClassification.COMPOUND
+            type = ExerciseType.COMPOUND
         )
         sourceDao.insertExercise(exercise)
 
@@ -205,7 +205,7 @@ class DataExportImportIntegrationTest {
             assertEquals("1. Rack bar\n2. Squat down\n3. Stand up", instructions)
             assertEquals(2, secondaryMuscles.size)
             assertTrue(isCustom)
-            assertEquals(ExerciseClassification.COMPOUND, classification)
+            assertEquals(ExerciseType.COMPOUND, type)
         }
 
         val targetGroups = targetRoutineDao.getAllRoutineGroupsList()

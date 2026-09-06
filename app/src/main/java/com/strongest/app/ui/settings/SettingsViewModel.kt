@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.withTransaction
 import com.strongest.app.ThemeMode
 import com.strongest.app.data.db.ExerciseDao
 import com.strongest.app.data.db.MeasurementEntryDao
@@ -263,6 +264,7 @@ class SettingsViewModel @Inject constructor(
             routineExercises = routineDao.getAllRoutineExercisesList(),
             routineSets = routineDao.getAllRoutineSetsList(),
             exerciseNotes = exerciseDao.getAllNotes(),
+            exerciseSettings = exerciseDao.getAllExerciseSettings(),
             workouts = workoutDao.getAllWorkoutsList(),
             workoutExercises = workoutDao.getAllWorkoutExercises(),
             sets = workoutDao.getAllSets(),
@@ -272,15 +274,22 @@ class SettingsViewModel @Inject constructor(
     }
 
     private suspend fun importExportData(data: ExportData) {
-        val db = database.openHelper.writableDatabase
         val exerciseDao = database.exerciseDao()
         val routineDao = database.routineDao()
         val workoutDao = database.workoutDao()
         val measurementDao = database.measurementEntryDao()
 
-        db.execSQL("PRAGMA foreign_keys = OFF")
-        try {
+        // All-or-nothing: this wipes every table before repopulating it, so a failure part-way
+        // through must not leave the user with their old data deleted and the new data only
+        // half-written. Any throw inside the block rolls the whole import back.
+        database.withTransaction {
+            val db = database.openHelper.writableDatabase
+            // `PRAGMA foreign_keys` is a no-op inside a transaction; `defer_foreign_keys` is the
+            // in-transaction equivalent and switches itself off again at COMMIT/ROLLBACK.
+            db.execSQL("PRAGMA defer_foreign_keys = ON")
+
             db.execSQL("DELETE FROM exercise_notes")
+            db.execSQL("DELETE FROM exercise_settings")
             db.execSQL("DELETE FROM measurement_entries")
             db.execSQL("DELETE FROM routine_sets")
             db.execSQL("DELETE FROM routine_exercises")
@@ -309,6 +318,9 @@ class SettingsViewModel @Inject constructor(
             for (note in data.exerciseNotes) {
                 exerciseDao.upsertNote(note)
             }
+            for (settings in data.exerciseSettings) {
+                exerciseDao.upsertExerciseSettings(settings)
+            }
             for (workout in data.workouts) {
                 workoutDao.insertWorkout(workout)
             }
@@ -321,9 +333,10 @@ class SettingsViewModel @Inject constructor(
             for (entry in data.measurementEntries) {
                 measurementDao.insertEntry(entry)
             }
-            settingsRepository.importSettings(data.settings)
-        } finally {
-            db.execSQL("PRAGMA foreign_keys = ON")
         }
+
+        // Settings live in DataStore, outside the database transaction, so they are only applied
+        // once the data import has actually committed.
+        settingsRepository.importSettings(data.settings)
     }
 }

@@ -20,7 +20,7 @@ class DataExportImportTest {
         secondaryMuscles = listOf(MuscleGroup.SHOULDERS, MuscleGroup.TRICEPS),
         imageUrl = "https://example.com/bench.png",
         isCustom = true,
-        classification = ExerciseClassification.COMPOUND
+        type = ExerciseType.COMPOUND
     )
 
     private val sampleRoutineGroup = RoutineGroup(
@@ -106,6 +106,13 @@ class DataExportImportTest {
         notes = "Morning weight"
     )
 
+    private val sampleExerciseSettings = ExerciseSettings(
+        exerciseId = 42,
+        warmUpSetCount = 2,
+        barWeightKg = 0f,
+        plateSingleSide = true
+    )
+
     private val sampleSettings = AppSettings(
         themeMode = com.strongest.app.ThemeMode.DARK,
         weightUnit = WeightUnit.KG,
@@ -139,6 +146,7 @@ class DataExportImportTest {
             routineExercises = listOf(sampleRoutineExercise),
             routineSets = listOf(sampleRoutineSet),
             exerciseNotes = listOf(sampleExerciseNote),
+            exerciseSettings = listOf(sampleExerciseSettings),
             workouts = listOf(sampleWorkout),
             workoutExercises = listOf(sampleWorkoutExercise),
             sets = listOf(sampleSet),
@@ -171,7 +179,7 @@ class DataExportImportTest {
             assertEquals(MuscleGroup.TRICEPS, secondaryMuscles[1])
             assertEquals("https://example.com/bench.png", imageUrl)
             assertTrue(isCustom)
-            assertEquals(ExerciseClassification.COMPOUND, classification)
+            assertEquals(ExerciseType.COMPOUND, type)
         }
 
         assertEquals(1, parsed.routineGroups.size)
@@ -221,6 +229,14 @@ class DataExportImportTest {
             assertEquals(42L, exerciseId)
             assertEquals("Focus on form", noteText)
             assertEquals(3000L, updatedAt)
+        }
+
+        assertEquals(1, parsed.exerciseSettings.size)
+        with(parsed.exerciseSettings[0]) {
+            assertEquals(42L, exerciseId)
+            assertEquals(2, warmUpSetCount)
+            assertEquals(0f, barWeightKg)
+            assertTrue(plateSingleSide)
         }
 
         assertEquals(1, parsed.workouts.size)
@@ -375,7 +391,7 @@ class DataExportImportTest {
             secondaryMuscles = emptyList(),
             imageUrl = "",
             isCustom = false,
-            classification = ExerciseClassification.ISOLATION
+            type = ExerciseType.ISOLATION
         )
 
         val note = ExerciseNote(
@@ -438,7 +454,7 @@ class DataExportImportTest {
         assertEquals("Test", parsed!!.exercises[0].name)
         assertEquals("", parsed.exercises[0].description)
         assertEquals("", parsed.exercises[0].instructions)
-        assertEquals(ExerciseClassification.ISOLATION, parsed.exercises[0].classification)
+        assertEquals(ExerciseType.ISOLATION, parsed.exercises[0].type)
         assertEquals("", parsed.measurementEntries[0].notes)
         assertEquals(90, parsed.settings.defaultRestSeconds)
     }
@@ -456,7 +472,7 @@ class DataExportImportTest {
                 secondaryMuscles = emptyList(),
                 imageUrl = "",
                 isCustom = false,
-                classification = ExerciseClassification.ISOLATION
+                type = ExerciseType.ISOLATION
             )
         }
 

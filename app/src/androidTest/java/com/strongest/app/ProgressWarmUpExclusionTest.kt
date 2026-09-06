@@ -51,7 +51,7 @@ class ProgressWarmUpExclusionTest {
             secondaryMuscles = listOf(MuscleGroup.GLUTES),
             imageUrl = "",
             isCustom = true,
-            classification = ExerciseClassification.COMPOUND
+            type = ExerciseType.COMPOUND
         )
         exerciseDao.insertExercise(squat)
 
@@ -65,7 +65,7 @@ class ProgressWarmUpExclusionTest {
             secondaryMuscles = emptyList(),
             imageUrl = "",
             isCustom = true,
-            classification = ExerciseClassification.COMPOUND
+            type = ExerciseType.COMPOUND
         )
         exerciseDao.insertExercise(bench)
 

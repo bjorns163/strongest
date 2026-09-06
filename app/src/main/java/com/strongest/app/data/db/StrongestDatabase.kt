@@ -31,7 +31,7 @@ import com.strongest.app.data.model.WorkoutExercise
         SetLog::class,
         MeasurementEntry::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -59,6 +59,51 @@ abstract class StrongestDatabase : RoomDatabase() {
                         "exerciseId INTEGER NOT NULL PRIMARY KEY, " +
                         "warmUpSetCount INTEGER NOT NULL)"
                 )
+            }
+        }
+
+        /** Remembers how the plate calculator is set up per exercise. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE exercise_settings ADD COLUMN barWeightKg REAL")
+                db.execSQL(
+                    "ALTER TABLE exercise_settings " +
+                        "ADD COLUMN plateSingleSide INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
+        /**
+         * Replaces `classification` (which mixed the biomechanical category Compound/Isolation
+         * with the programming role Accessory) by `type`. Accessory lifts are compound movements,
+         * so they fold into COMPOUND; built-ins then pick up their exact type from the seed
+         * re-sync.
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS exercises_new (" +
+                        "id INTEGER NOT NULL PRIMARY KEY, " +
+                        "name TEXT NOT NULL, " +
+                        "muscleGroup TEXT NOT NULL, " +
+                        "equipment TEXT NOT NULL, " +
+                        "description TEXT NOT NULL, " +
+                        "instructions TEXT NOT NULL, " +
+                        "secondaryMuscles TEXT NOT NULL, " +
+                        "imageUrl TEXT NOT NULL, " +
+                        "isCustom INTEGER NOT NULL, " +
+                        "type TEXT NOT NULL)"
+                )
+                db.execSQL(
+                    "INSERT INTO exercises_new (id, name, muscleGroup, equipment, description, " +
+                        "instructions, secondaryMuscles, imageUrl, isCustom, type) " +
+                        "SELECT id, name, muscleGroup, equipment, description, instructions, " +
+                        "secondaryMuscles, imageUrl, isCustom, " +
+                        "CASE classification WHEN 'ISOLATION' THEN 'ISOLATION' ELSE 'COMPOUND' END " +
+                        "FROM exercises"
+                )
+                db.execSQL("DROP TABLE exercises")
+                db.execSQL("ALTER TABLE exercises_new RENAME TO exercises")
             }
         }
     }

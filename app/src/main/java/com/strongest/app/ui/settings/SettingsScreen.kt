@@ -6,26 +6,38 @@ import android.media.RingtoneManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -68,7 +80,6 @@ import com.strongest.app.ui.workout.STANDARD_KG_PLATES
 import com.strongest.app.ui.workout.STANDARD_LBS_PLATES
 import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.weightUnitLabel
-import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
@@ -77,8 +88,6 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var showThemeDropdown by remember { mutableStateOf(value = false) }
-    var showUnitDropdown by remember { mutableStateOf(value = false) }
     var showTimerDialog by remember { mutableStateOf(value = false) }
     var timerSecondsInput by remember { mutableIntStateOf(90) }
     var showAdjustDialog by remember { mutableStateOf(value = false) }
@@ -89,6 +98,11 @@ fun SettingsScreen(
     var recoveryInput by remember { mutableStateOf(value = "") }
     var showBirthYearDialog by remember { mutableStateOf(value = false) }
     var birthYearInput by remember { mutableStateOf(value = "") }
+
+    // The two long lists start folded away: between them they are more rows than the rest of the
+    // screen put together, and neither is something you come here to change often.
+    var platesExpanded by remember { mutableStateOf(value = false) }
+    var recoveryExpanded by remember { mutableStateOf(value = false) }
 
     LaunchedEffect(uiState.birthYear) {
         if (!showBirthYearDialog) {
@@ -142,6 +156,17 @@ fun SettingsScreen(
         }
     }
 
+    val soundPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri = result.data?.let { data ->
+                IntentCompat.getParcelableExtra(data, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+            }
+            viewModel.setNotificationSoundUri(uri?.toString())
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
@@ -154,233 +179,60 @@ fun SettingsScreen(
                 Text(
                     text = "Settings",
                     style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp)
                 )
             }
 
             item {
-                SettingSection(title = "Appearance")
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Theme",
-                        modifier = Modifier.align(Alignment.CenterVertically)
+                SettingsGroup(title = "General") {
+                    SettingsChoiceRow(
+                        title = "Theme",
+                        selected = uiState.themeMode,
+                        options = ThemeMode.entries,
+                        optionLabel = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } },
+                        onSelect = { viewModel.setThemeMode(it) }
                     )
-                    Button(onClick = { showThemeDropdown = true }) {
-                        Text(uiState.themeMode.name.replaceFirstChar { it.uppercase() })
-                    }
-                    DropdownMenu(
-                        expanded = showThemeDropdown,
-                        onDismissRequest = { showThemeDropdown = false },
-                        modifier = Modifier.width(200.dp)
-                    ) {
-                        ThemeMode.entries.forEach { mode ->
-                            DropdownMenuItem(
-                                text = { Text(mode.name.replaceFirstChar { it.uppercase() }) },
-                                onClick = {
-                                    viewModel.setThemeMode(mode)
-                                    showThemeDropdown = false
-                                }
-                            )
-                        }
-                    }
+                    SettingsChoiceRow(
+                        title = "Weight unit",
+                        description = "Used for every weight you enter and see.",
+                        selected = uiState.weightUnit,
+                        options = listOf(WeightUnit.KG, WeightUnit.LBS),
+                        optionLabel = { if (it == WeightUnit.KG) "Kilograms (kg)" else "Pounds (lbs)" },
+                        valueLabel = { weightUnitLabel(it) },
+                        onSelect = { viewModel.setWeightUnit(it) }
+                    )
                 }
             }
 
             item {
-                SettingSection(title = "Units")
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Weight Unit",
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
-                    Button(onClick = { showUnitDropdown = true }) {
-                        Text(if (uiState.weightUnit == WeightUnit.KG) "Kilograms (kg)" else "Pounds (lbs)")
-                    }
-                    DropdownMenu(
-                        expanded = showUnitDropdown,
-                        onDismissRequest = { showUnitDropdown = false },
-                        modifier = Modifier.width(200.dp)
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Kilograms (kg)") },
-                            onClick = {
-                                viewModel.setWeightUnit(WeightUnit.KG)
-                                showUnitDropdown = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Pounds (lbs)") },
-                            onClick = {
-                                viewModel.setWeightUnit(WeightUnit.LBS)
-                                showUnitDropdown = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            item {
-                SettingSection(title = "Rest Timer")
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clickable {
+                // The alert sound belongs with the timer it fires for, not with the workout toggles.
+                SettingsGroup(title = "Rest timer") {
+                    SettingsRow(
+                        title = "Default rest",
+                        onClick = {
                             timerSecondsInput = uiState.defaultRestSeconds
                             showTimerDialog = true
                         },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Default rest")
-                    Text(
-                        text = formatDuration(uiState.defaultRestSeconds),
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        trailing = { SettingsValue(formatDuration(uiState.defaultRestSeconds)) }
                     )
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clickable { showAdjustDialog = true },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Timer adjust +/- (seconds)")
-                    Text(
-                        text = "${uiState.timerAdjustmentSeconds}s",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clickable {
+                    SettingsRow(
+                        title = "Last set rest",
+                        description = "Applied to the final set of an exercise.",
+                        onClick = {
                             lastSetTimerSecondsInput = uiState.lastSetRestSeconds
                             showLastSetTimerDialog = true
                         },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Last set rest")
-                    Text(
-                        text = formatDuration(uiState.lastSetRestSeconds),
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        trailing = { SettingsValue(formatDuration(uiState.lastSetRestSeconds)) }
                     )
-                }
-            }
-
-            item {
-                SettingSection(title = "Workout")
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Keep screen on during workout")
-                    Switch(
-                        checked = uiState.keepScreenOn,
-                        onCheckedChange = { viewModel.setKeepScreenOn(it) }
+                    SettingsRow(
+                        title = "Adjustment step",
+                        description = "How much the +/- buttons move a running timer.",
+                        onClick = { showAdjustDialog = true },
+                        trailing = { SettingsValue("${uiState.timerAdjustmentSeconds}s") }
                     )
-                }
-            }
-
-            item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Rate sets with RPE")
-                        Switch(
-                            checked = uiState.rpeTrackingEnabled,
-                            onCheckedChange = { viewModel.setRpeTrackingEnabled(it) }
-                        )
-                    }
-                    Text(
-                        text = "Advanced: rate each set 1–10 (Rate of Perceived Exertion) during workouts.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Notification bar during workout")
-                        Switch(
-                            checked = uiState.workoutNotificationEnabled,
-                            onCheckedChange = { viewModel.setWorkoutNotificationEnabled(it) }
-                        )
-                    }
-                    Text(
-                        text = "Shows your active workout progress, rest timer, and quick controls in the notification bar.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item {
-                val soundPickerLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.StartActivityForResult()
-                ) { result ->
-                    if (result.resultCode == android.app.Activity.RESULT_OK) {
-                        val uri = result.data?.let { data ->
-                        IntentCompat.getParcelableExtra(data, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
-                    }
-                        viewModel.setNotificationSoundUri(uri?.toString())
-                    }
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clickable {
+                    SettingsRow(
+                        title = "Alert sound",
+                        onClick = {
                             val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
                                 putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
                                 putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Select Timer Sound")
@@ -390,346 +242,181 @@ fun SettingsScreen(
                             }
                             soundPickerLauncher.launch(intent)
                         },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Timer notification sound")
-                    Text(
-                        text = if (uiState.notificationSoundUri != null) "Custom" else "Default",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-            }
-
-            item {
-                SettingSection(title = "Plate Calculator")
-            }
-
-            item {
-                val unit = uiState.weightUnit
-                val unitLabel = weightUnitLabel(unit)
-                val allPlates = if (unit == WeightUnit.KG) STANDARD_KG_PLATES else STANDARD_LBS_PLATES
-                val plateQtys = if (unit == WeightUnit.KG) uiState.availableKgPlates else uiState.availableLbsPlates
-
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text(
-                        text = "Set how many of each plate your gym has (999 = unlimited). The calculator only lets you load plates you actually have — for a barbell, a pair at a time.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    val rows = allPlates.chunked(2)
-                    for (row in rows) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            for (plate in row) {
-                                val currentQty = plateQtys.entries.find { kotlin.math.abs(it.key - plate) < 0.001f }?.value ?: 0
-                                var editText by remember(plate, unit) { mutableStateOf(TextFieldValue(currentQty.toString())) }
-                                var editFocused by remember(plate, unit) { mutableStateOf(false) }
-
-                                // Select all on focus so typing replaces the existing value.
-                                LaunchedEffect(editFocused) {
-                                    if (editFocused) {
-                                        editText = editText.copy(selection = TextRange(0, editText.text.length))
-                                    }
-                                }
-
-                                Row(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = formatPlateLabel(plate) + " $unitLabel",
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    OutlinedTextField(
-                                        value = editText,
-                                        onValueChange = { input ->
-                                            val filtered = input.text.filter { it.isDigit() }
-                                            editText = if (filtered == input.text) input else TextFieldValue(filtered)
-                                            val qty = filtered.toIntOrNull()
-                                            if (qty != null && qty >= 0) {
-                                                val updated = plateQtys.toMutableMap()
-                                                updated[plate] = qty
-                                                viewModel.setAvailablePlates(unit, updated)
-                                            }
-                                        },
-                                        modifier = Modifier
-                                            .width(72.dp)
-                                            .onFocusChanged { editFocused = it.isFocused },
-                                        singleLine = true,
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        textStyle = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            }
-                            if (row.size == 1) {
-                                Row(modifier = Modifier.weight(1f)) {}
-                            }
+                        trailing = {
+                            SettingsValue(if (uiState.notificationSoundUri != null) "Custom" else "Default")
                         }
-                    }
-                }
-            }
-
-            item {
-                SettingSection(title = "1RM Calculator")
-            }
-
-            item {
-                var showFormulaDropdown by remember { mutableStateOf(false) }
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Formula")
-                        Box {
-                            Button(onClick = { showFormulaDropdown = true }) {
-                                Text(
-                                    when (uiState.oneRmFormula) {
-                                        OneRmFormula.EPLEY -> "Epley"
-                                        OneRmFormula.BRZYCKI -> "Brzycki"
-                                        OneRmFormula.BOTH -> "Both"
-                                    }
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showFormulaDropdown,
-                                onDismissRequest = { showFormulaDropdown = false }
-                            ) {
-                                OneRmFormula.entries.forEach { f ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                when (f) {
-                                                    OneRmFormula.EPLEY -> "Epley"
-                                                    OneRmFormula.BRZYCKI -> "Brzycki"
-                                                    OneRmFormula.BOTH -> "Both (average)"
-                                                }
-                                            )
-                                        },
-                                        onClick = {
-                                            viewModel.setOneRmFormula(f)
-                                            showFormulaDropdown = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Text(
-                        text = "Used by the 1RM calculator on the exercise detail screen.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
             item {
-                SettingSection(title = "Recovery")
+                SettingsGroup(title = "Workout") {
+                    SettingsSwitchRow(
+                        title = "Keep screen on",
+                        description = "Stops the screen sleeping during an active workout.",
+                        checked = uiState.keepScreenOn,
+                        onCheckedChange = { viewModel.setKeepScreenOn(it) }
+                    )
+                    SettingsSwitchRow(
+                        title = "Rate sets with RPE",
+                        description = "Rate each set 1–10 for perceived exertion. Cardio sets are excluded.",
+                        checked = uiState.rpeTrackingEnabled,
+                        onCheckedChange = { viewModel.setRpeTrackingEnabled(it) }
+                    )
+                    SettingsSwitchRow(
+                        title = "Notification bar",
+                        description = "Shows workout progress, the rest timer and quick controls while you train.",
+                        checked = uiState.workoutNotificationEnabled,
+                        onCheckedChange = { viewModel.setWorkoutNotificationEnabled(it) }
+                    )
+                }
             }
 
             item {
-                Text(
-                    text = "Recovery time per muscle, shown on the Progress tab. Big groups need longer.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-
-            items(RECOVERABLE_MUSCLE_GROUPS) { muscle ->
-                val hours = uiState.recoveryHoursByMuscle[muscle] ?: defaultRecoveryHours(muscle)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .clickable {
-                            recoveryInput = hours.toString()
-                            editingRecoveryMuscle = muscle
+                SettingsGroup(title = "Calculators") {
+                    SettingsChoiceRow(
+                        title = "1RM formula",
+                        description = "Used by the 1RM calculator on the exercise detail screen.",
+                        selected = uiState.oneRmFormula,
+                        options = OneRmFormula.entries,
+                        optionLabel = { formula ->
+                            when (formula) {
+                                OneRmFormula.EPLEY -> "Epley"
+                                OneRmFormula.BRZYCKI -> "Brzycki"
+                                OneRmFormula.BOTH -> "Both (average)"
+                            }
                         },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        muscle.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " ")
+                        onSelect = { viewModel.setOneRmFormula(it) }
                     )
-                    Text(
-                        text = "${hours}h",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.primary
+                    SettingsExpanderRow(
+                        title = "Available plates",
+                        description = "How many of each plate your gym has. The calculator only loads plates you own.",
+                        expanded = platesExpanded,
+                        onToggle = { platesExpanded = !platesExpanded }
+                    )
+                    if (platesExpanded) {
+                        PlateInventory(
+                            weightUnit = uiState.weightUnit,
+                            availableKgPlates = uiState.availableKgPlates,
+                            availableLbsPlates = uiState.availableLbsPlates,
+                            onPlatesChange = { unit, plates -> viewModel.setAvailablePlates(unit, plates) }
                         )
-                    )
+                    }
                 }
             }
 
             item {
-                SettingSection(title = "Profile")
-            }
-
-            item {
-                var showSexDropdown by remember { mutableStateOf(false) }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Gender")
-                    Box {
-                        Button(onClick = { showSexDropdown = true }) {
-                            Text(
-                                when (uiState.userSex) {
-                                    Sex.MALE -> "Male"
-                                    Sex.FEMALE -> "Female"
-                                    Sex.UNSET -> "Not set"
-                                }
+                SettingsGroup(title = "Recovery") {
+                    SettingsExpanderRow(
+                        title = "Recovery windows",
+                        description = "How long each muscle needs before it counts as fresh on the Progress tab.",
+                        expanded = recoveryExpanded,
+                        onToggle = { recoveryExpanded = !recoveryExpanded }
+                    )
+                    if (recoveryExpanded) {
+                        SettingsSubDivider()
+                        RECOVERABLE_MUSCLE_GROUPS.forEach { muscle ->
+                            val hours = uiState.recoveryHoursByMuscle[muscle] ?: defaultRecoveryHours(muscle)
+                            SettingsRow(
+                                title = muscleLabel(muscle),
+                                dense = true,
+                                onClick = {
+                                    recoveryInput = hours.toString()
+                                    editingRecoveryMuscle = muscle
+                                },
+                                trailing = { SettingsValue("${hours}h") }
                             )
                         }
-                        DropdownMenu(
-                            expanded = showSexDropdown,
-                            onDismissRequest = { showSexDropdown = false }
+                    }
+                }
+            }
+
+            item {
+                SettingsGroup(title = "Profile") {
+                    SettingsChoiceRow(
+                        title = "Gender",
+                        selected = uiState.userSex,
+                        options = listOf(Sex.MALE, Sex.FEMALE, Sex.UNSET),
+                        optionLabel = { sex ->
+                            when (sex) {
+                                Sex.MALE -> "Male"
+                                Sex.FEMALE -> "Female"
+                                Sex.UNSET -> "Not set"
+                            }
+                        },
+                        onSelect = { viewModel.setUserSex(it) }
+                    )
+                    SettingsRow(
+                        title = "Birth year",
+                        onClick = { showBirthYearDialog = true },
+                        trailing = {
+                            SettingsValue(if (uiState.birthYear > 0) uiState.birthYear.toString() else "Not set")
+                        }
+                    )
+                    SettingsChoiceRow(
+                        title = "Caliper method",
+                        description = "Skinfold protocol used by the guided body-fat measurement.",
+                        selected = uiState.caliperMode,
+                        options = CaliperMode.entries,
+                        optionLabel = { it.label },
+                        onSelect = { viewModel.setCaliperMode(it) }
+                    )
+                }
+            }
+
+            item {
+                SettingsGroup(title = "Data") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { exportLauncher.launch("strongest_export.json") },
+                            modifier = Modifier.weight(1f),
+                            enabled = exportImportResult !is ExportImportResult.InProgress
                         ) {
-                            listOf(Sex.MALE, Sex.FEMALE).forEach { s ->
-                                DropdownMenuItem(
-                                    text = { Text(if (s == Sex.MALE) "Male" else "Female") },
-                                    onClick = {
-                                        viewModel.setUserSex(s)
-                                        showSexDropdown = false
-                                    }
+                            if (exportImportResult is ExportImportResult.InProgress) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
                                 )
+                            } else {
+                                Text("Export")
                             }
+                        }
+                        OutlinedButton(
+                            onClick = { showImportConfirmDialog = true },
+                            modifier = Modifier.weight(1f),
+                            enabled = exportImportResult !is ExportImportResult.InProgress
+                        ) {
+                            Text("Import")
                         }
                     }
                 }
             }
 
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clickable { showBirthYearDialog = true },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Birth year")
-                    Text(
-                        text = if (uiState.birthYear > 0) uiState.birthYear.toString() else "Not set",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                SettingsGroup(title = "About") {
+                    SettingsRow(
+                        title = "Strongest",
+                        description = "Free workout tracker with ${exerciseSeedData.size} exercises.",
+                        trailing = { SettingsValue("v${BuildConfig.VERSION_NAME}") }
                     )
-                }
-            }
-
-            item {
-                var showCaliperDropdown by remember { mutableStateOf(false) }
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Caliper method")
-                        Box {
-                            Button(onClick = { showCaliperDropdown = true }) {
-                                Text(uiState.caliperMode.label)
-                            }
-                            DropdownMenu(
-                                expanded = showCaliperDropdown,
-                                onDismissRequest = { showCaliperDropdown = false }
-                            ) {
-                                CaliperMode.entries.forEach { mode ->
-                                    DropdownMenuItem(
-                                        text = { Text(mode.label) },
-                                        onClick = {
-                                            viewModel.setCaliperMode(mode)
-                                            showCaliperDropdown = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Text(
-                        text = "Skinfold protocol used by the guided body-fat measurement.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item {
-                SettingSection(title = "Data")
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
+                    SettingsRow(
+                        title = "Support development",
+                        description = "Opens the project on GitHub.",
                         onClick = {
-                            exportLauncher.launch("strongest_export.json")
-                        },
-                        modifier = Modifier.weight(1f),
-                        enabled = exportImportResult !is ExportImportResult.InProgress
-                    ) {
-                        if (exportImportResult is ExportImportResult.InProgress) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.padding(4.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text("Export Data")
+                            val intent = Intent(Intent.ACTION_VIEW, "https://github.com/bjorns163/strongest".toUri())
+                            context.startActivity(intent)
                         }
-                    }
-                    Button(
-                        onClick = { showImportConfirmDialog = true },
-                        modifier = Modifier.weight(1f),
-                        enabled = exportImportResult !is ExportImportResult.InProgress
-                    ) {
-                        Text("Import Data")
-                    }
+                    )
                 }
             }
 
             item {
-                SettingSection(title = "About")
-            }
-
-            item {
-                Text(
-                    text = "Strongest v${BuildConfig.VERSION_NAME}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                Text(
-                    text = "Free workout tracker with ${exerciseSeedData.size} exercises",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-
-            item {
-                val context = LocalContext.current
-                TextButton(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/bjorns163/strongest"))
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                ) {
-                    Text("Support Development")
-                }
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -764,10 +451,9 @@ fun SettingsScreen(
     }
 
     editingRecoveryMuscle?.let { muscle ->
-        val muscleLabel = muscle.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " ")
         AlertDialog(
             onDismissRequest = { editingRecoveryMuscle = null },
-            title = { Text("$muscleLabel recovery") },
+            title = { Text("${muscleLabel(muscle)} recovery") },
             text = {
                 OutlinedTextField(
                     value = recoveryInput,
@@ -929,15 +615,296 @@ fun SettingsScreen(
     }
 }
 
+/**
+ * A titled block of settings, drawn as one card.
+ *
+ * The screen had grown into a single flat run of rows under coloured headings, where the only
+ * thing separating "Rest Timer" from "Workout" was a line of text. Giving each section its own
+ * surface is what makes the list scannable again as it keeps growing.
+ */
 @Composable
-fun SettingSection(title: String) {
+private fun SettingsGroup(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+        )
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            // The palette's light background sits between surface and surfaceContainer, so a
+            // filled card alone is nearly invisible there. The hairline edge is what actually
+            // draws the group, and it holds up in both themes.
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(content = content)
+        }
+    }
+}
+
+/**
+ * One setting: a label, optional supporting line, and whatever shows or changes the value.
+ *
+ * Every row in the screen goes through here so they all get the same height, padding and ripple —
+ * previously each was hand-built, and rows ranged from comfortably tall to under the minimum
+ * touch target depending on which ones had picked up a description along the way.
+ */
+@Composable
+private fun SettingsRow(
+    title: String,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    dense: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null
+) {
+    val clickModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(clickModifier)
+            .heightIn(min = if (dense) 44.dp else 56.dp)
+            .padding(horizontal = 16.dp, vertical = if (dense) 6.dp else 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 12.dp)
+        ) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
+        trailing?.invoke()
+    }
+}
+
+/** The current value of a setting, sitting at the end of its row. */
+@Composable
+private fun SettingsValue(text: String) {
     Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.primary
     )
 }
+
+/**
+ * A row that toggles. The whole row is the target, not just the switch.
+ */
+@Composable
+private fun SettingsSwitchRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    description: String? = null
+) {
+    SettingsRow(
+        title = title,
+        description = description,
+        onClick = { onCheckedChange(!checked) },
+        trailing = {
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
+    )
+}
+
+/**
+ * A row that picks one of a few values. [valueLabel] shortens the collapsed row where the full
+ * menu wording would crowd the supporting line.
+ *
+ * These were filled buttons opening a dropdown, which put five loud primary-coloured blocks down
+ * a screen whose other half showed its values as quiet text. Same interaction, same row shape as
+ * everything else, so the eye has one thing to follow.
+ */
+@Composable
+private fun <T> SettingsChoiceRow(
+    title: String,
+    selected: T,
+    options: List<T>,
+    optionLabel: (T) -> String,
+    onSelect: (T) -> Unit,
+    description: String? = null,
+    valueLabel: (T) -> String = optionLabel
+) {
+    var expanded by remember { mutableStateOf(false) }
+    SettingsRow(
+        title = title,
+        description = description,
+        onClick = { expanded = true },
+        trailing = {
+            // The menu anchors to this box rather than to the whole row, so it drops from the
+            // value being changed instead of from the far side of the screen.
+            Box {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SettingsValue(valueLabel(selected))
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.width(220.dp)
+                ) {
+                    options.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(optionLabel(option)) },
+                            onClick = {
+                                onSelect(option)
+                                expanded = false
+                            },
+                            trailingIcon = {
+                                if (option == selected) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+/** A row that folds a long list of settings open and shut. */
+@Composable
+private fun SettingsExpanderRow(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    description: String? = null
+) {
+    SettingsRow(
+        title = title,
+        description = description,
+        onClick = onToggle,
+        trailing = {
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) "Collapse" else "Expand",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    )
+}
+
+/** Separates an expanded list from the row that opened it. */
+@Composable
+private fun SettingsSubDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+}
+
+/**
+ * The per-plate counts for the plate calculator, in two columns.
+ *
+ * Only the plates for the active weight unit are shown: the kg and lbs inventories are stored
+ * separately and switching units swaps which one you are editing.
+ */
+@Composable
+private fun PlateInventory(
+    weightUnit: WeightUnit,
+    availableKgPlates: Map<Float, Int>,
+    availableLbsPlates: Map<Float, Int>,
+    onPlatesChange: (WeightUnit, Map<Float, Int>) -> Unit
+) {
+    val unitLabel = weightUnitLabel(weightUnit)
+    val allPlates = if (weightUnit == WeightUnit.KG) STANDARD_KG_PLATES else STANDARD_LBS_PLATES
+    val plateQtys = if (weightUnit == WeightUnit.KG) availableKgPlates else availableLbsPlates
+
+    SettingsSubDivider()
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            text = "999 means unlimited. For a barbell the calculator loads a pair at a time.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        for (row in allPlates.chunked(2)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                for (plate in row) {
+                    val currentQty = plateQtys.entries.find { kotlin.math.abs(it.key - plate) < 0.001f }?.value ?: 0
+                    var editText by remember(plate, weightUnit) { mutableStateOf(TextFieldValue(currentQty.toString())) }
+                    var editFocused by remember(plate, weightUnit) { mutableStateOf(false) }
+
+                    // Select all on focus so typing replaces the existing value.
+                    LaunchedEffect(editFocused) {
+                        if (editFocused) {
+                            editText = editText.copy(selection = TextRange(0, editText.text.length))
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = formatPlateLabel(plate) + " $unitLabel",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = editText,
+                            onValueChange = { input ->
+                                val filtered = input.text.filter { it.isDigit() }
+                                editText = if (filtered == input.text) input else TextFieldValue(filtered)
+                                val qty = filtered.toIntOrNull()
+                                if (qty != null && qty >= 0) {
+                                    val updated = plateQtys.toMutableMap()
+                                    updated[plate] = qty
+                                    onPlatesChange(weightUnit, updated)
+                                }
+                            },
+                            modifier = Modifier
+                                .width(72.dp)
+                                .onFocusChanged { editFocused = it.isFocused },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            textStyle = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                if (row.size == 1) {
+                    Row(modifier = Modifier.weight(1f)) {}
+                }
+            }
+        }
+    }
+}
+
+/** "LOWER_BACK" as "Lower back". */
+private fun muscleLabel(muscle: MuscleGroup): String =
+    muscle.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " ")
 
 /**
  * Formats a plate weight for display, trimming trailing zeros (2.5 not 2.50).

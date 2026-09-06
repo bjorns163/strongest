@@ -13,6 +13,7 @@ import com.strongest.app.data.db.WorkoutDao
 import com.strongest.app.data.db.WorkoutsPerDay
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.ExerciseNote
+import com.strongest.app.data.model.ExerciseSettings
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.Routine
 import com.strongest.app.data.model.RoutineExercise
@@ -399,8 +400,6 @@ class WorkoutRepository @Inject constructor(
         val count = exerciseDao.getExerciseCount()
         if (count == 0) {
             exerciseDao.insertExercises(exerciseSeedData)
-            // Fresh installs already have classifications baked into the seed data.
-            settingsRepository.markExerciseClassificationBackfillDone()
             settingsRepository.setExerciseSeedVersion(EXERCISE_SEED_VERSION)
         } else {
             // Insert any seed exercises whose IDs aren't in the DB yet (newly added entries).
@@ -409,10 +408,6 @@ class WorkoutRepository @Inject constructor(
             val newExercises = exerciseSeedData.filter { it.id !in existingIds }
             if (newExercises.isNotEmpty()) {
                 exerciseDao.insertExercises(newExercises)
-            }
-            if (!settingsRepository.isExerciseClassificationBackfillDone()) {
-                backfillExerciseClassifications()
-                settingsRepository.markExerciseClassificationBackfillDone()
             }
             // Re-sync built-in exercise definitions when the seed data version was bumped, so edits
             // to names/descriptions/instructions reach existing installs without a reinstall.
@@ -425,7 +420,7 @@ class WorkoutRepository @Inject constructor(
 
     /**
      * Updates the definition fields (name, muscle group, equipment, description, instructions,
-     * classification) of built-in exercises to match the current seed data. Custom exercises and
+     * type) of built-in exercises to match the current seed data. Custom exercises and
      * all user data (workout history, sets, notes, routines) are left untouched, since those live
      * in separate tables keyed by exerciseId.
      */
@@ -442,7 +437,7 @@ class WorkoutRepository @Inject constructor(
                 description = seed.description,
                 instructions = seed.instructions,
                 secondaryMuscles = seed.secondaryMuscles,
-                classification = seed.classification
+                type = seed.type
             )
             if (merged != current) updates.add(merged)
         }
@@ -451,26 +446,29 @@ class WorkoutRepository @Inject constructor(
         }
     }
 
-    private suspend fun backfillExerciseClassifications() {
-        val all = exerciseDao.getAllExercisesList()
-        for (ex in all) {
-            if (ex.isCustom) continue
-            val computed = com.strongest.app.data.model.classifyExercise(ex.name, ex.equipment, ex.muscleGroup)
-            if (ex.classification != computed) {
-                exerciseDao.updateExercise(ex.copy(classification = computed))
-            }
-        }
-    }
-
     suspend fun getNote(exerciseId: Long): ExerciseNote? = exerciseDao.getNote(exerciseId)
 
     suspend fun upsertNote(note: ExerciseNote) = exerciseDao.upsertNote(note)
 
-    suspend fun getExerciseSettings(exerciseId: Long): com.strongest.app.data.model.ExerciseSettings? =
+    suspend fun getExerciseSettings(exerciseId: Long): ExerciseSettings? =
         exerciseDao.getExerciseSettings(exerciseId)
 
+    /** Upserts one field of an exercise's settings without dropping the others. */
+    private suspend fun updateExerciseSettings(
+        exerciseId: Long,
+        change: (ExerciseSettings) -> ExerciseSettings
+    ) {
+        val current = exerciseDao.getExerciseSettings(exerciseId)
+            ?: ExerciseSettings(exerciseId = exerciseId)
+        exerciseDao.upsertExerciseSettings(change(current))
+    }
+
     suspend fun saveWarmUpSetCount(exerciseId: Long, count: Int) =
-        exerciseDao.upsertExerciseSettings(
-            com.strongest.app.data.model.ExerciseSettings(exerciseId = exerciseId, warmUpSetCount = count)
-        )
+        updateExerciseSettings(exerciseId) { it.copy(warmUpSetCount = count) }
+
+    /** Remembers how this exercise is loaded, so the plate calculator opens ready to use. */
+    suspend fun savePlatePreferences(exerciseId: Long, barWeightKg: Float, singleSide: Boolean) =
+        updateExerciseSettings(exerciseId) {
+            it.copy(barWeightKg = barWeightKg, plateSingleSide = singleSide)
+        }
 }

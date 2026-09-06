@@ -66,12 +66,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.data.model.RoutineGroup
 import com.strongest.app.data.model.SetType
+import com.strongest.app.utils.parseDecimalInput
+import java.util.Locale
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
 import com.strongest.app.utils.displayToKg
@@ -167,7 +168,7 @@ fun RoutineBuilderScreen(
                     )
                     Row {
                         TextButton(onClick = onBack) {
-                            Text("Cancel")
+                            Text("Cancel", color = MaterialTheme.colorScheme.error)
                         }
                         Spacer(modifier = Modifier.padding(horizontal = 4.dp))
                         Button(
@@ -627,7 +628,8 @@ fun RoutineSetTextField(
     LaunchedEffect(value) {
         if (!isFocused) {
             val current = if (value == 0f) "" else {
-                if (isInteger || value % 1f == 0f) value.toInt().toString() else String.format("%.1f", value)
+                if (isInteger || value % 1f == 0f) value.toInt().toString()
+                else String.format(Locale.getDefault(), "%.1f", value)
             }
             textState = TextFieldValue(text = current)
         }
@@ -649,7 +651,7 @@ fun RoutineSetTextField(
                 if (newText.text.isEmpty()) {
                     onValueChange(0f)
                 } else {
-                    newText.text.toFloatOrNull()?.let { onValueChange(it) }
+                    parseDecimalInput(newText.text)?.let { onValueChange(it) }
                 }
             }
         },

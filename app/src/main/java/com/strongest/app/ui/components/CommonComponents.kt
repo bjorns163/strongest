@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.strongest.app.utils.parseDecimalInput
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -91,7 +92,7 @@ fun WeightTextField(
             if (input.isEmpty()) {
                 onValueChange(0f)
             } else {
-                input.toFloatOrNull()?.let { onValueChange(it) }
+                parseDecimalInput(input)?.let { onValueChange(it) }
             }
         },
         label = { Text(label) },

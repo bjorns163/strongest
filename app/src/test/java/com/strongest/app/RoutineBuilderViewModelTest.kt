@@ -2,7 +2,7 @@ package com.strongest.app
 
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
-import com.strongest.app.data.model.ExerciseClassification
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.RoutineSet
 import com.strongest.app.data.model.SetType
@@ -67,7 +67,7 @@ class RoutineBuilderViewModelTest {
         name = name,
         muscleGroup = MuscleGroup.CHEST,
         equipment = Equipment.BARBELL,
-        classification = ExerciseClassification.COMPOUND
+        type = ExerciseType.COMPOUND
     )
 
     @Test

@@ -27,7 +27,12 @@ object AppModule {
             StrongestDatabase::class.java,
             StrongestDatabase.DATABASE_NAME
         )
-            .addMigrations(StrongestDatabase.MIGRATION_1_2, StrongestDatabase.MIGRATION_2_3)
+            .addMigrations(
+                StrongestDatabase.MIGRATION_1_2,
+                StrongestDatabase.MIGRATION_2_3,
+                StrongestDatabase.MIGRATION_3_4,
+                StrongestDatabase.MIGRATION_4_5
+            )
             .build()
     }
 

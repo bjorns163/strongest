@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import coil3.compose.SubcomposeAsyncImage
 import com.strongest.app.data.repository.CaliperMode
+import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.data.repository.Sex
 import java.util.Calendar
 
@@ -93,13 +94,14 @@ fun CaliperBodyFatDialog(
             mode = mode,
             sex = sex,
             ageYears = age,
-            values = sites.associateWith { (values[it]?.toFloatOrNull() ?: 0f) }
+            values = sites.associateWith { (values[it]?.let(::parseDecimalInput) ?: 0f) }
         )
     } else null
 
     val profileValid = sex != Sex.UNSET && age > 0
     val currentSite = sites.getOrNull(siteIndex)
-    val currentSiteValid = currentSite != null && (values[currentSite]?.toFloatOrNull()?.let { it > 0f } == true)
+    val currentSiteValid = currentSite != null &&
+        (values[currentSite]?.let(::parseDecimalInput)?.let { it > 0f } == true)
 
     val canAdvance = when {
         onProfileStep -> profileValid
@@ -162,7 +164,7 @@ fun CaliperBodyFatDialog(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "${mode.label} • sum ${"%.0f".format(sites.sumOf { (values[it]?.toDoubleOrNull() ?: 0.0) })} mm",
+                                text = "${mode.label} • sum ${"%.0f".format(sites.sumOf { (values[it]?.let(::parseDecimalInput)?.toDouble() ?: 0.0) })} mm",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp)

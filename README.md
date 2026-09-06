@@ -28,7 +28,7 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 - **RPE rating** (optional, toggle in Settings) — rates each set 1–10 with a brief description; auto-prompts after tapping the check button
 - **Previous session data** shown inline while logging so you can beat your last performance
 - **Rest timer** — auto-starts after completing a set
-- **Plate calculator** — accessible from the 3-dot menu on any exercise; shows plates needed per side for target weight; supports kg and lbs; respects your available plates from Settings
+- **Plate calculator** — accessible from the 3-dot menu on any exercise; pick your bar and load plates onto it to see the running total, with the target weight and the gap to it shown alongside; "Fill to target" loads the plates that reach a weight in one tap; **remembers the bar and single-side setting per exercise**, so a machine stays set up the way you left it; supports kg and lbs; respects your available plates from Settings
 - **Reorder exercises** and sets
 - **Delete exercises** and sets
 - **Finish or discard** workout
@@ -38,6 +38,7 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 - **Routine groups** — organize routines into named groups
 - **Build routines** from the full exercise library
 - **Launch a workout directly** from a routine
+- **Share a routine** as JSON and import one back — warm-up, failure and drop sets included ([format](docs/export-import-format.md#routine-share-format))
 
 ### Progress & History
 - **Workout history** — browse all past workouts
@@ -55,11 +56,12 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 - **Keep screen on** — prevent screen sleep during active workouts
 - **RPE tracking** — turn on/off; when on, a pop-up appears after each completed set
 - **Timer notification sound** — pick a custom sound for rest timer alerts
-- **Plate calculator defaults** — select which plates are available in your gym (separate presets for kg and lbs); 2-column grid layout
+- **Plate calculator defaults** — set how many of each plate your gym has (separate presets for kg and lbs); 2-column grid layout
 - **1RM formula** — choose Epley, Brzycki, or show both
 - **Recovery hours** — per-muscle-group recovery windows shown on the Progress tab
 - **Profile** — gender, birth year, and caliper method for accurate body fat calculations
 - **XLSX export** — select workouts in History and share them as an Excel file
+- **Full backup export/import** — write your whole database (exercises, routines with warm-up sets, history, measurements, settings) to a JSON file and restore it; see [Export / Import Formats](docs/export-import-format.md)
 
 ### General
 - **Material 3** design
@@ -90,6 +92,7 @@ app/src/main/java/com/strongest/app/
 │   ├── model/           # Data classes (Exercise, Workout, Set, Routine, …)
 │   └── repository/      # WorkoutRepository, SettingsRepository, seed data
 ├── di/                  # Hilt modules
+├── utils/               # Export/import formats (backup + routine share)
 └── ui/
     ├── exercise/        # Exercise library, detail, picker, custom exercise dialog
     ├── history/         # Workout history

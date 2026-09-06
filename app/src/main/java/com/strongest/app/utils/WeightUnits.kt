@@ -6,12 +6,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.strongest.app.data.repository.SettingsRepository
+import com.strongest.app.data.repository.WorkoutRepository
 import com.strongest.app.data.repository.WeightUnit
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlin.math.roundToInt
+import java.util.Locale
 
 private const val KG_PER_LB = 0.45359237f
 
@@ -29,13 +31,21 @@ fun weightUnitLabel(unit: WeightUnit): String = when (unit) {
 fun formatWeightForDisplay(kg: Float, unit: WeightUnit): String {
     val v = kgToDisplay(kg, unit)
     val rounded = (v * 10f).roundToInt() / 10f
-    return if (rounded % 1f == 0f) rounded.toInt().toString() else String.format("%.1f", rounded)
+    return if (rounded % 1f == 0f) rounded.toInt().toString()
+    else String.format(Locale.getDefault(), "%.1f", rounded)
 }
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface SettingsEntryPoint {
     fun settingsRepository(): SettingsRepository
+}
+
+/** Lets dialogs that are not backed by a ViewModel reach per-exercise preferences. */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface WorkoutRepositoryEntryPoint {
+    fun workoutRepository(): WorkoutRepository
 }
 
 @Composable

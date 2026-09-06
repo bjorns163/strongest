@@ -221,8 +221,7 @@ class RoutineBuilderViewModel @Inject constructor(
         if (exerciseIndex == -1) return
 
         val exercise = _state.value.exercises[exerciseIndex]
-        val warmUpCount = warmUpSets.size
-        if (warmUpCount == 0) return
+        if (warmUpSets.isEmpty()) return
 
         val newWarmUps = warmUpSets.mapIndexed { index, spec ->
             RoutineSetUi(
@@ -233,10 +232,14 @@ class RoutineBuilderViewModel @Inject constructor(
                 setType = SetType.WARM_UP
             )
         }
-        val renumbered = exercise.sets.map { it.copy(setNumber = it.setNumber + warmUpCount) }
+        // Replace the routine's existing warm-ups rather than prepending another batch. Routine
+        // sets are a draft with no completed state, so all of them go.
+        val workingSets = exercise.sets.filter { it.setType != SetType.WARM_UP }
+        val combined = (newWarmUps + workingSets)
+            .mapIndexed { idx, set -> set.copy(setNumber = idx + 1) }
 
         val updatedExercises = _state.value.exercises.toMutableList()
-        updatedExercises[exerciseIndex] = exercise.copy(sets = newWarmUps + renumbered)
+        updatedExercises[exerciseIndex] = exercise.copy(sets = combined)
         _state.update { it.copy(exercises = updatedExercises) }
     }
 

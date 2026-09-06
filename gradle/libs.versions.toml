@@ -1,7 +1,7 @@
 [versions]
 accompanistPermissions = "0.37.3"
 activityCompose = "1.13.0"
-coil = "3.6.1"
+coil = "3.6.2"
 composeBom = "2026.08.00"
 core-ktx = "1.19.0"
 dagger = "2.60.1"

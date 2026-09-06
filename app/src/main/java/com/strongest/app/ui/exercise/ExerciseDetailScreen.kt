@@ -69,6 +69,7 @@ import com.strongest.app.utils.WarmUpCalculator
 import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.utils.OneRepMaxCalculator
 import com.strongest.app.utils.SettingsEntryPoint
+import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.rememberWeightUnit
@@ -799,14 +800,15 @@ fun HistoryTab(
                                 }
                                 Text(
                                     text = if (isCardio) {
-                                        "\u00d7 ${entry.reps}"
+                                        formatDuration(entry.reps)
                                     } else {
                                         "\u00d7 ${entry.reps} reps"
                                     },
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                if (rpeTrackingEnabled && entry.rpe != null) {
+                                // Cardio sets carry no RPE, so the column stays out of their history too.
+                                if (rpeTrackingEnabled && !isCardio && entry.rpe != null) {
                                     Text(
                                         text = "RPE ${formatDisplayValue(entry.rpe)}",
                                         style = MaterialTheme.typography.bodySmall,

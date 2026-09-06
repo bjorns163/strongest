@@ -25,9 +25,10 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 - **Add exercises** with multi-select exercise picker (search + filters)
 - **Replace exercise** mid-workout
 - **Set tracking** — log weight, reps, and set type (normal, warm-up, drop set, failure)
-- **RPE rating** (optional, toggle in Settings) — rates each set 1–10 with a brief description; auto-prompts after tapping the check button
+- **Cardio sets** — the reps column becomes a **Duration** entered and shown as a clock (`mm:ss`, widening to `h:mm:ss`) instead of a bare number, and RPE is hidden
+- **RPE rating** (optional, toggle in Settings) — rates each set 1–10 with a brief description; auto-prompts after tapping the check button; hidden on cardio exercises, which are logged as time rather than effort per rep
 - **Previous session data** shown inline while logging so you can beat your last performance
-- **Rest timer** — auto-starts after completing a set
+- **Rest timer** — auto-starts after completing a set; per-set rest is shown and entered as a clock (`mm:ss`, widening to `h:mm:ss`), with digits filling from the right so "130" is 01:30
 - **Plate calculator** — accessible from the 3-dot menu on any exercise; pick your bar and load plates onto it to see the running total, with the target weight and the gap to it shown alongside; "Fill to target" loads the plates that reach a weight in one tap; **remembers the bar and single-side setting per exercise**, so a machine stays set up the way you left it; supports kg and lbs; respects your available plates from Settings
 - **Reorder exercises** and sets
 - **Delete exercises** and sets
@@ -52,9 +53,9 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 ### Settings
 - **Theme** — Light, Dark, or System default
 - **Weight unit** — kg or lbs (affects all input and display)
-- **Rest timer** — default rest seconds, last set rest seconds, and timer adjustment step
+- **Rest timer** — default rest and last set rest, both shown and entered as `mm:ss`, plus the timer adjustment step in seconds
 - **Keep screen on** — prevent screen sleep during active workouts
-- **RPE tracking** — turn on/off; when on, a pop-up appears after each completed set
+- **RPE tracking** — turn on/off; when on, a pop-up appears after each completed set (cardio sets excluded)
 - **Timer notification sound** — pick a custom sound for rest timer alerts
 - **Plate calculator defaults** — set how many of each plate your gym has (separate presets for kg and lbs); 2-column grid layout
 - **1RM formula** — choose Epley, Brzycki, or show both

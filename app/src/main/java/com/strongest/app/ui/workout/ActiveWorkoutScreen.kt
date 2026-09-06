@@ -88,9 +88,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.WeightUnit
+import com.strongest.app.ui.components.DurationTextField
+import com.strongest.app.ui.components.reopenKeyboardOnTap
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
 import com.strongest.app.ui.theme.LocalSuccessColor
 import com.strongest.app.utils.displayToKg
+import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.parseDecimalInput
@@ -661,6 +664,9 @@ fun ExerciseBlock(
     var showPlateCalc by remember { mutableStateOf(false) }
     var noteText by remember { mutableStateOf(exercise.noteText) }
     val isCardio = exercise.muscleGroup == MuscleGroup.CARDIO
+    // RPE rates how hard a set of reps was; a cardio block is logged as time, so the column and
+    // its after-the-set prompt are dropped there even when RPE tracking is on.
+    val showRpe = rpeTrackingEnabled && !isCardio
 
     if (showPlateCalc) {
         val initial = exercise.sets.firstOrNull { !it.isCompleted && it.weight > 0f }?.weight
@@ -841,7 +847,7 @@ fun ExerciseBlock(
                     )
                 }
                 Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
-                Text("Last", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
+                Text("Last", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f), textAlign = TextAlign.Center)
                 Text(
                     if (isCardio) "Level" else weightUnitLabel(weightUnit),
                     style = MaterialTheme.typography.labelSmall,
@@ -854,8 +860,8 @@ fun ExerciseBlock(
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center
                 )
-                Text("Rest", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
-                if (rpeTrackingEnabled) {
+                Text("Rest", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f), textAlign = TextAlign.Center)
+                if (showRpe) {
                     Text("RPE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.5f), textAlign = TextAlign.Center)
                 }
                 Text("", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f))
@@ -866,7 +872,7 @@ fun ExerciseBlock(
                     set = set,
                     weightUnit = weightUnit,
                     index = setIndex,
-                    rpeTrackingEnabled = rpeTrackingEnabled,
+                    rpeTrackingEnabled = showRpe,
                     isCardio = isCardio,
                     onUpdateSet = onUpdateSet,
                     onUpdateRest = { restSec -> onUpdateSetRest(setIndex, restSec) },
@@ -901,8 +907,6 @@ fun RestTimerBar(
     onSkip: () -> Unit,
     onAdjustTimer: (Int) -> Unit
 ) {
-    val minutes = secondsRemaining / 60
-    val seconds = secondsRemaining % 60
     val progress = if (totalSeconds > 0) secondsRemaining.toFloat() / totalSeconds.toFloat() else 0f
 
     Column(
@@ -917,7 +921,7 @@ fun RestTimerBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = String.format("Rest: %02d:%02d", minutes, seconds),
+                text = "Rest: ${formatDuration(secondsRemaining)}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -984,7 +988,10 @@ fun SwipeableSetRow(
         }
     }
 
-    val historyLabel = set.previousSetInfo?.let { "${formatWeightForDisplay(it.weight, weightUnit)}-${it.reps}" } ?: "-"
+    val historyLabel = set.previousSetInfo?.let {
+        val performed = if (isCardio) formatDuration(it.reps) else it.reps.toString()
+        "${formatWeightForDisplay(it.weight, weightUnit)}-$performed"
+    } ?: "-"
 
     if (showDeleteConfirm) {
         AlertDialog(
@@ -1081,7 +1088,7 @@ fun SwipeableSetRow(
                 text = historyLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(0.7f),
+                modifier = Modifier.weight(0.8f),
                 textAlign = TextAlign.Center
             )
 
@@ -1091,18 +1098,25 @@ fun SwipeableSetRow(
                 modifier = Modifier.weight(1f)
             )
 
-            SetTextField(
-                value = set.reps.toFloat(),
-                onValueChange = { r -> onUpdateSet(index, set.weight, r.toInt()) },
-                modifier = Modifier.weight(1f),
-                isInteger = true
-            )
+            if (isCardio) {
+                DurationTextField(
+                    totalSeconds = set.reps,
+                    onValueChange = { seconds -> onUpdateSet(index, set.weight, seconds) },
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                SetTextField(
+                    value = set.reps.toFloat(),
+                    onValueChange = { r -> onUpdateSet(index, set.weight, r.toInt()) },
+                    modifier = Modifier.weight(1f),
+                    isInteger = true
+                )
+            }
 
-            SetTextField(
-                value = set.restSeconds.toFloat(),
-                onValueChange = { s -> onUpdateRest(s.toInt()) },
-                modifier = Modifier.weight(0.7f),
-                isInteger = true
+            DurationTextField(
+                totalSeconds = set.restSeconds,
+                onValueChange = { seconds -> onUpdateRest(seconds) },
+                modifier = Modifier.weight(0.9f)
             )
 
             if (rpeTrackingEnabled) {
@@ -1189,6 +1203,7 @@ fun SetTextField(
         },
         modifier = modifier
             .focusRequester(focusRequester)
+            .reopenKeyboardOnTap { isFocused }
             .onFocusChanged {
                 val lostFocus = isFocused && !it.isFocused
                 isFocused = it.isFocused

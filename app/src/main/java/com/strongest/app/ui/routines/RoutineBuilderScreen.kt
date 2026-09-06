@@ -74,8 +74,11 @@ import com.strongest.app.data.model.SetType
 import com.strongest.app.utils.parseDecimalInput
 import java.util.Locale
 import com.strongest.app.data.repository.WeightUnit
+import com.strongest.app.ui.components.DurationTextField
+import com.strongest.app.ui.components.reopenKeyboardOnTap
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
 import com.strongest.app.utils.displayToKg
+import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.rememberWeightUnit
@@ -454,7 +457,7 @@ fun RoutineExerciseBlock(
                     )
                 }
                 Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
-                Text("Last", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
+                Text("Last", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f), textAlign = TextAlign.Center)
                 Text(
                     if (isCardio) "Level" else weightUnitLabel(weightUnit),
                     style = MaterialTheme.typography.labelSmall,
@@ -467,7 +470,7 @@ fun RoutineExerciseBlock(
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center
                 )
-                Text("Rest", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
+                Text("Rest", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f), textAlign = TextAlign.Center)
                 Text("", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f))
             }
 
@@ -574,13 +577,14 @@ fun SwipeableRoutineSetRow(
             )
 
             val previousLabel = set.previousSetInfo?.let {
-                "${formatWeightForDisplay(it.weight, weightUnit)}-${it.reps}"
+                val performed = if (isCardio) formatDuration(it.reps) else it.reps.toString()
+                "${formatWeightForDisplay(it.weight, weightUnit)}-$performed"
             } ?: "-"
             Text(
                 text = previousLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(0.7f),
+                modifier = Modifier.weight(0.8f),
                 textAlign = TextAlign.Center
             )
 
@@ -590,18 +594,25 @@ fun SwipeableRoutineSetRow(
                 modifier = Modifier.weight(1f)
             )
 
-            RoutineSetTextField(
-                value = set.reps.toFloat(),
-                onValueChange = { r -> onUpdateSet(index, set.weight, r.toInt()) },
-                modifier = Modifier.weight(1f),
-                isInteger = true
-            )
+            if (isCardio) {
+                DurationTextField(
+                    totalSeconds = set.reps,
+                    onValueChange = { seconds -> onUpdateSet(index, set.weight, seconds) },
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                RoutineSetTextField(
+                    value = set.reps.toFloat(),
+                    onValueChange = { r -> onUpdateSet(index, set.weight, r.toInt()) },
+                    modifier = Modifier.weight(1f),
+                    isInteger = true
+                )
+            }
 
-            RoutineSetTextField(
-                value = set.restSeconds.toFloat(),
-                onValueChange = { s -> onUpdateRest(s.toInt()) },
-                modifier = Modifier.weight(0.7f),
-                isInteger = true
+            DurationTextField(
+                totalSeconds = set.restSeconds,
+                onValueChange = { seconds -> onUpdateRest(seconds) },
+                modifier = Modifier.weight(0.9f)
             )
 
             Icon(
@@ -657,6 +668,7 @@ fun RoutineSetTextField(
         },
         modifier = modifier
             .focusRequester(focusRequester)
+            .reopenKeyboardOnTap { isFocused }
             .onFocusChanged { isFocused = it.isFocused },
         textStyle = MaterialTheme.typography.bodyMedium.copy(
             textAlign = TextAlign.Center,

@@ -75,6 +75,7 @@ import com.strongest.app.utils.parseDecimalInput
 import java.util.Locale
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.components.DurationTextField
+import com.strongest.app.ui.components.reopenKeyboardOnTap
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
 import com.strongest.app.utils.displayToKg
 import com.strongest.app.utils.formatDuration
@@ -667,6 +668,7 @@ fun RoutineSetTextField(
         },
         modifier = modifier
             .focusRequester(focusRequester)
+            .reopenKeyboardOnTap { isFocused }
             .onFocusChanged { isFocused = it.isFocused },
         textStyle = MaterialTheme.typography.bodyMedium.copy(
             textAlign = TextAlign.Center,

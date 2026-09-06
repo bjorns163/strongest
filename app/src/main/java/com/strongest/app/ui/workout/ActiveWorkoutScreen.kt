@@ -89,6 +89,7 @@ import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.components.DurationTextField
+import com.strongest.app.ui.components.reopenKeyboardOnTap
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
 import com.strongest.app.ui.theme.LocalSuccessColor
 import com.strongest.app.utils.displayToKg
@@ -1202,6 +1203,7 @@ fun SetTextField(
         },
         modifier = modifier
             .focusRequester(focusRequester)
+            .reopenKeyboardOnTap { isFocused }
             .onFocusChanged {
                 val lostFocus = isFocused && !it.isFocused
                 isFocused = it.isFocused

@@ -96,6 +96,7 @@ fun DurationTextField(
         },
         modifier = modifier
             .focusRequester(focusRequester)
+            .reopenKeyboardOnTap { isFocused }
             .onFocusChanged { focusState ->
                 val gainedFocus = !isFocused && focusState.isFocused
                 isFocused = focusState.isFocused
@@ -182,6 +183,7 @@ fun DurationInputField(
         modifier = modifier
             .fillMaxWidth()
             .focusRequester(focusRequester)
+            .reopenKeyboardOnTap { isFocused }
             .onFocusChanged { focusState ->
                 val gainedFocus = !isFocused && focusState.isFocused
                 isFocused = focusState.isFocused

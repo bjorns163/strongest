@@ -353,7 +353,7 @@ fun ExercisePickerCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = exercise.classification.label(),
+                        text = exercise.type.label(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

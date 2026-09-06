@@ -381,7 +381,7 @@ fun ExerciseListCard(
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "${exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() }} \u2022 ${exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() }} \u2022 ${exercise.classification.label()}",
+                    text = "${exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() }} \u2022 ${exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() }} \u2022 ${exercise.type.label()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

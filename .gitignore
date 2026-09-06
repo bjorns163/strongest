@@ -28,6 +28,7 @@ app/release/**
 
 # Custom/Local tooling notes
 .sisyphus/
+.omo/
 
 # Signing files (NEVER share your keys!)
 *.jks

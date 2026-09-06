@@ -5,7 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.strongest.app.data.db.RoutineWithExercisesAndSets
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
-import com.strongest.app.data.model.ExerciseClassification
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.ExerciseNote
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.Routine
@@ -33,6 +33,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -78,8 +79,179 @@ class ActiveWorkoutViewModelTest {
         name = name,
         muscleGroup = MuscleGroup.CHEST,
         equipment = Equipment.BARBELL,
-        classification = ExerciseClassification.COMPOUND
+        type = ExerciseType.COMPOUND
     )
+
+    /**
+     * Regression: deleting a set renumbered only the UI state, so the DB kept the pre-delete
+     * numbers (1, 3, 4). Those resurfaced on reload, misaligned the previous-session hints
+     * (looked up by setNumber) and carried the gaps into exports.
+     */
+    @Test
+    fun `deleting a set persists the renumbering of the sets after it`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+
+        seedWorkoutWithThreeSets(vm)
+        advanceUntilIdle()
+        assertEquals(listOf(1, 2, 3), vm.state.value.workoutExercises.single().sets.map { it.setNumber })
+
+        // Drop the middle set.
+        vm.deleteSet(workoutExerciseId = 10L, setIndex = 1)
+        advanceUntilIdle()
+
+        val sets = vm.state.value.workoutExercises.single().sets
+        assertEquals(listOf(1000L, 1002L), sets.map { it.setId })
+        assertEquals(listOf(1, 2), sets.map { it.setNumber })
+
+        // The delete call itself is not argument-matched: deleteSet builds its SetLog without a
+        // completedAt, so that field defaults to "now" and cannot be predicted. The renumbering
+        // below is what this test is guarding anyway.
+        // ...and the set that followed it is written back as set 2, not left as set 3.
+        verify(repository).updateSet(
+            SetLog(
+                id = 1002L,
+                workoutExerciseId = 10L,
+                setNumber = 2,
+                weightKg = 100f,
+                reps = 4,
+                rpe = null,
+                setType = SetType.NORMAL,
+                restSeconds = 150,
+                completedAt = 0L
+            )
+        )
+    }
+
+    /** Stubs one ongoing exercise carrying three sets, so a middle delete has a tail to renumber. */
+    private suspend fun seedWorkoutWithThreeSets(vm: ActiveWorkoutViewModel, workoutId: Long = 5L) {
+        val workout = Workout(
+            id = workoutId,
+            routineId = null,
+            routineName = null,
+            workoutName = "Workout",
+            startTime = 1000L,
+            endTime = null,
+            isOngoing = true
+        )
+        `when`(repository.getWorkoutById(workoutId)).thenReturn(workout)
+        `when`(repository.getWorkoutWithDetails(workoutId)).thenReturn(
+            WorkoutWithDetails(
+                workout = workout,
+                exercises = listOf(
+                    WorkoutExerciseWithSets(
+                        workoutExercise = WorkoutExercise(
+                            id = 10L,
+                            workoutId = workoutId,
+                            exerciseId = 1L,
+                            orderIndex = 0
+                        ),
+                        sets = listOf(
+                            SetLog(1000L, 10L, 1, 80f, 8, null, SetType.NORMAL, 90, 0L),
+                            SetLog(1001L, 10L, 2, 90f, 6, null, SetType.NORMAL, 90, 0L),
+                            SetLog(1002L, 10L, 3, 100f, 4, null, SetType.NORMAL, 150, 0L)
+                        )
+                    )
+                )
+            )
+        )
+        `when`(repository.getExerciseById(1L)).thenReturn(exercise(1L, "Exercise 1"))
+        `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getNote(1L)).thenReturn(null)
+
+        vm.loadWorkout(workoutId)
+    }
+
+    @Test
+    fun `adding warm-up sets again replaces the previous ones instead of stacking them`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+
+        seedWorkout(vm, pairs = listOf(1L to 10L))
+        advanceUntilIdle()
+
+        `when`(repository.logSet(10L, 1, 40f, 8, null, SetType.WARM_UP, 90, 0L)).thenReturn(500L)
+        `when`(repository.logSet(10L, 2, 56f, 5, null, SetType.WARM_UP, 90, 0L)).thenReturn(501L)
+        vm.addWarmUpSets(10L, listOf(WarmUpSetSpec(40f, 8), WarmUpSetSpec(56f, 5)))
+        advanceUntilIdle()
+        assertEquals(listOf(500L, 501L, 1000L), vm.state.value.workoutExercises.single().sets.map { it.setId })
+
+        // The user reopens the calculator and adds a different ramp.
+        `when`(repository.logSet(10L, 1, 45f, 8, null, SetType.WARM_UP, 90, 0L)).thenReturn(600L)
+        `when`(repository.logSet(10L, 2, 60f, 5, null, SetType.WARM_UP, 90, 0L)).thenReturn(601L)
+        vm.addWarmUpSets(10L, listOf(WarmUpSetSpec(45f, 8), WarmUpSetSpec(60f, 5)))
+        advanceUntilIdle()
+
+        val sets = vm.state.value.workoutExercises.single().sets
+        // Two warm-ups, not four: the first pair was replaced, not prepended to.
+        assertEquals(listOf(600L, 601L, 1000L), sets.map { it.setId })
+        assertEquals(listOf(1, 2, 3), sets.map { it.setNumber })
+        assertEquals(
+            listOf(SetType.WARM_UP, SetType.WARM_UP, SetType.NORMAL),
+            sets.map { it.setType }
+        )
+    }
+
+    @Test
+    fun `replacing warm-up sets keeps ones the user already completed`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+
+        seedWorkoutWithCompletedWarmUp(vm)
+        advanceUntilIdle()
+        assertEquals(listOf(900L, 1000L), vm.state.value.workoutExercises.single().sets.map { it.setId })
+
+        `when`(repository.logSet(10L, 2, 45f, 8, null, SetType.WARM_UP, 90, 0L)).thenReturn(600L)
+        vm.addWarmUpSets(10L, listOf(WarmUpSetSpec(45f, 8)))
+        advanceUntilIdle()
+
+        val sets = vm.state.value.workoutExercises.single().sets
+        // The completed warm-up is work that actually happened, so it survives the replace.
+        assertEquals(listOf(900L, 600L, 1000L), sets.map { it.setId })
+        assertEquals(listOf(1, 2, 3), sets.map { it.setNumber })
+        assertTrue(sets.first().isCompleted)
+    }
+
+    /** Stubs an exercise whose first set is a warm-up the user has already completed. */
+    private suspend fun seedWorkoutWithCompletedWarmUp(vm: ActiveWorkoutViewModel, workoutId: Long = 5L) {
+        val workout = Workout(
+            id = workoutId,
+            routineId = null,
+            routineName = null,
+            workoutName = "Workout",
+            startTime = 1000L,
+            endTime = null,
+            isOngoing = true
+        )
+        `when`(repository.getWorkoutById(workoutId)).thenReturn(workout)
+        `when`(repository.getWorkoutWithDetails(workoutId)).thenReturn(
+            WorkoutWithDetails(
+                workout = workout,
+                exercises = listOf(
+                    WorkoutExerciseWithSets(
+                        workoutExercise = WorkoutExercise(
+                            id = 10L,
+                            workoutId = workoutId,
+                            exerciseId = 1L,
+                            orderIndex = 0
+                        ),
+                        sets = listOf(
+                            SetLog(900L, 10L, 1, 40f, 8, null, SetType.WARM_UP, 90, 12345L),
+                            SetLog(1000L, 10L, 2, 80f, 8, null, SetType.NORMAL, 90, 0L)
+                        )
+                    )
+                )
+            )
+        )
+        `when`(repository.getExerciseById(1L)).thenReturn(exercise(1L, "Exercise 1"))
+        `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getNote(1L)).thenReturn(null)
+
+        vm.loadWorkout(workoutId)
+    }
 
     /** Stubs an ongoing workout (pairs of exerciseId to workoutExerciseId) and loads it into the ViewModel. */
     private suspend fun seedWorkout(

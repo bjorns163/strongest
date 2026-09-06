@@ -93,8 +93,6 @@ class SettingsRepository @Inject constructor(
     private val AVAILABLE_KG_PLATES_KEY = stringSetPreferencesKey("available_kg_plates")
     private val AVAILABLE_LBS_PLATES_KEY = stringSetPreferencesKey("available_lbs_plates")
     private val ONE_RM_FORMULA_KEY = stringPreferencesKey("one_rm_formula")
-    private val EXERCISE_CLASSIFICATION_BACKFILL_DONE_KEY =
-        booleanPreferencesKey("exercise_classification_backfill_done")
     private val EXERCISE_SEED_VERSION_KEY = intPreferencesKey("exercise_seed_version")
     private val RECOVERY_BY_MUSCLE_KEY = stringPreferencesKey("recovery_hours_by_muscle")
     private val USER_SEX_KEY = stringPreferencesKey("user_sex")
@@ -257,18 +255,6 @@ class SettingsRepository @Inject constructor(
     suspend fun setCaliperMode(mode: CaliperMode) {
         context.dataStore.edit { preferences ->
             preferences[CALIPER_MODE_KEY] = mode.name
-        }
-    }
-
-    suspend fun isExerciseClassificationBackfillDone(): Boolean {
-        return context.dataStore.data
-            .map { it[EXERCISE_CLASSIFICATION_BACKFILL_DONE_KEY] ?: false }
-            .first()
-    }
-
-    suspend fun markExerciseClassificationBackfillDone() {
-        context.dataStore.edit { preferences ->
-            preferences[EXERCISE_CLASSIFICATION_BACKFILL_DONE_KEY] = true
         }
     }
 

@@ -5,6 +5,7 @@ import com.strongest.app.data.model.MeasurementUnit
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.weightUnitLabel
+import java.util.Locale
 
 fun metricUnitLabel(metric: BodyMetric, weightUnit: WeightUnit): String =
     when (metric.unit) {
@@ -31,7 +32,8 @@ fun formatMetricValue(metric: BodyMetric, canonical: Float, weightUnit: WeightUn
     val unit = metricUnitLabel(metric, weightUnit)
     val number = when (metric.unit) {
         MeasurementUnit.KCAL -> display.toInt().toString()
-        else -> if (display % 1f == 0f) display.toInt().toString() else String.format("%.1f", display)
+        else -> if (display % 1f == 0f) display.toInt().toString()
+        else String.format(Locale.getDefault(), "%.1f", display)
     }
     return "$number $unit"
 }

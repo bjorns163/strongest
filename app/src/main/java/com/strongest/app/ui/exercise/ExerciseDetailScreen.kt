@@ -59,12 +59,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.data.model.Equipment
-import com.strongest.app.data.model.ExerciseClassification
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.OneRmFormula
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.navigation.AddWarmUpSetsRequest
 import com.strongest.app.ui.navigation.WarmUpSetSpec
+import com.strongest.app.utils.WarmUpCalculator
+import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.utils.OneRepMaxCalculator
 import com.strongest.app.utils.SettingsEntryPoint
 import com.strongest.app.utils.formatWeightForDisplay
@@ -167,8 +169,8 @@ fun ExerciseDetailScreen(
         EditExerciseDialog(
             exercise = state.exercise!!,
             onDismiss = { showEditDialog = false },
-        ) { name, muscleGroup, equipment, classification, instructions ->
-            viewModel.updateExercise(name, muscleGroup, equipment, classification, instructions)
+        ) { name, muscleGroup, equipment, type, instructions ->
+            viewModel.updateExercise(name, muscleGroup, equipment, type, instructions)
             showEditDialog = false
         }
     }
@@ -327,7 +329,7 @@ fun DetailsTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = exercise.classification.label(),
+                        text = exercise.type.label(),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -497,16 +499,15 @@ fun DetailsTab(
 fun EditExerciseDialog(
     exercise: com.strongest.app.data.model.Exercise,
     onDismiss: () -> Unit,
-    onSave: (String, MuscleGroup, Equipment, ExerciseClassification, String) -> Unit
+    onSave: (String, MuscleGroup, Equipment, ExerciseType, String) -> Unit
 ) {
     var name by remember { mutableStateOf(exercise.name) }
     var selectedMuscleGroup by remember { mutableStateOf(exercise.muscleGroup) }
     var selectedEquipment by remember { mutableStateOf(exercise.equipment) }
-    var selectedClassification by remember { mutableStateOf(exercise.classification) }
+    var selectedType by remember { mutableStateOf(exercise.type) }
     var instructions by remember { mutableStateOf(exercise.instructions) }
     var muscleExpanded by remember { mutableStateOf(false) }
     var equipmentExpanded by remember { mutableStateOf(false) }
-    var classificationExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -584,34 +585,10 @@ fun EditExerciseDialog(
                     }
                 }
 
-                ExposedDropdownMenuBox(
-                    expanded = classificationExpanded,
-                    onExpandedChange = { classificationExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = selectedClassification.label(),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Classification") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = classificationExpanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = classificationExpanded,
-                        onDismissRequest = { classificationExpanded = false }
-                    ) {
-                        ExerciseClassification.entries.forEach { c ->
-                            DropdownMenuItem(
-                                text = { Text(c.label()) },
-                                onClick = {
-                                    selectedClassification = c
-                                    classificationExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
+                ExerciseTypeField(
+                    type = selectedType,
+                    onTypeChange = { selectedType = it }
+                )
 
                 OutlinedTextField(
                     value = instructions,
@@ -627,7 +604,13 @@ fun EditExerciseDialog(
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onSave(name.trim(), selectedMuscleGroup, selectedEquipment, selectedClassification, instructions.trim())
+                        onSave(
+                            name.trim(),
+                            selectedMuscleGroup,
+                            selectedEquipment,
+                            selectedType,
+                            instructions.trim()
+                        )
                     }
                 },
                 enabled = name.isNotBlank()
@@ -871,7 +854,7 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
         mutableStateOf(if (initialReps > 0) initialReps.toString() else "")
     }
 
-    val weight = weightText.toFloatOrNull() ?: 0f
+    val weight = parseDecimalInput(weightText) ?: 0f
     val reps = repsText.toIntOrNull() ?: 0
 
     Column(
@@ -1030,9 +1013,21 @@ fun WarmupTab(
     }
     var sliderCount by remember(warmUpSetCount) { mutableIntStateOf(warmUpSetCount.coerceIn(1, 4)) }
 
-    val working = workingText.toFloatOrNull() ?: 0f
+    val working = parseDecimalInput(workingText) ?: 0f
     val reps = repsText.toIntOrNull() ?: 0
-    val count = sliderCount
+    val increment = if (useKg) 2.5f else 5f
+
+    // A light working weight cannot support the full scheme — steps round down onto each other or
+    // onto the working weight itself. Cap the picker at what is actually reachable so the user
+    // cannot ask for 4 and silently get 2. Before a weight is entered there is nothing to cap
+    // against, so the whole range stays available.
+    val hasInput = working > 0f && reps > 0
+    val maxSets = if (hasInput) {
+        WarmUpCalculator.maxAchievable(working, reps, increment)
+    } else {
+        WarmUpCalculator.MAX_SETS
+    }
+    val count = sliderCount.coerceIn(1, maxSets.coerceAtLeast(1))
 
     Column(
         modifier = Modifier
@@ -1081,31 +1076,44 @@ fun WarmupTab(
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold
         )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "1",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Slider(
-                value = count.toFloat(),
-                onValueChange = { sliderCount = it.roundToInt().coerceIn(1, 4) },
-                onValueChangeFinished = { onWarmUpSetCountChange(sliderCount) },
-                valueRange = 1f..4f,
-                steps = 2,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = "4",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        if (maxSets >= 2) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "1",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Slider(
+                    value = count.toFloat(),
+                    onValueChange = { sliderCount = it.roundToInt().coerceIn(1, maxSets) },
+                    onValueChangeFinished = { onWarmUpSetCountChange(sliderCount) },
+                    valueRange = 1f..maxSets.toFloat(),
+                    steps = (maxSets - 2).coerceAtLeast(0),
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = maxSets.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         Text(
-            text = "$count warm-up set${if (count != 1) "s" else ""}",
+            text = when {
+                maxSets == 0 -> "This weight is too light to warm up to — just do your working set."
+                maxSets == 1 -> "This weight only supports 1 warm-up set."
+                else -> "$count warm-up set${if (count != 1) "s" else ""}"
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (hasInput && maxSets in 1 until WarmUpCalculator.MAX_SETS) {
+            Text(
+                text = "Lighter working weights leave less room to ramp up.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -1118,25 +1126,8 @@ fun WarmupTab(
             return@Column
         }
 
-        val increment = if (useKg) 2.5f else 5f
-        val scheme = listOf(
-            0.5f to minOf(8, reps),
-            0.7f to minOf(5, reps),
-            0.85f to minOf(3, reps),
-            0.95f to minOf(2, reps)
-        ).take(count)
-        val sets = buildList {
-            var lastWeight = 0f
-            for ((pct, warmReps) in scheme) {
-                val raw = working * pct
-                val rounded = (raw / increment).roundToInt() * increment
-                if (rounded > 0f && rounded < working && rounded > lastWeight + 0.01f) {
-                    add(Triple(rounded, warmReps, false))
-                    lastWeight = rounded
-                }
-            }
-            add(Triple(working, reps, true))
-        }
+        val warmUps = WarmUpCalculator.suggest(working, reps, increment, count)
+        val sets = warmUps.map { Triple(it.weight, it.reps, false) } + Triple(working, reps, true)
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -1169,7 +1160,7 @@ fun WarmupTab(
             }
         }
 
-        if (addWarmUpSetsAction != null) {
+        if (addWarmUpSetsAction != null && warmUps.isNotEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {

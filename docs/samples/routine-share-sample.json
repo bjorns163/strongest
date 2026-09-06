@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "name": "Monday Push/Pull",
+  "description": "Heavy compounds",
+  "exercises": [
+    {
+      "name": "Bench Press",
+      "muscleGroup": "CHEST",
+      "equipment": "BARBELL",
+      "sets": [
+        { "setNumber": 1, "weight": 40, "reps": 10, "restSeconds": 60, "setType": "WARM_UP" },
+        { "setNumber": 2, "weight": 60, "reps": 5, "restSeconds": 60, "setType": "WARM_UP" },
+        { "setNumber": 3, "weight": 80, "reps": 8, "restSeconds": 120, "setType": "NORMAL" },
+        { "setNumber": 4, "weight": 80, "reps": 8, "restSeconds": 120, "setType": "NORMAL" }
+      ],
+      "defaultSets": 4,
+      "defaultWeight": 80,
+      "defaultReps": 8,
+      "restSeconds": 120
+    },
+    {
+      "name": "Barbell Row",
+      "muscleGroup": "BACK",
+      "equipment": "BARBELL",
+      "sets": [
+        { "setNumber": 1, "weight": 40, "reps": 10, "restSeconds": 60, "setType": "WARM_UP" },
+        { "setNumber": 2, "weight": 60, "reps": 10, "restSeconds": 90, "setType": "NORMAL" },
+        { "setNumber": 3, "weight": 60, "reps": 10, "restSeconds": 90, "setType": "FAILURE" }
+      ],
+      "defaultSets": 3,
+      "defaultWeight": 60,
+      "defaultReps": 10,
+      "restSeconds": 90
+    }
+  ]
+}

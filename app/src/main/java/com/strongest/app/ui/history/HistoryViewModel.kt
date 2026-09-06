@@ -13,6 +13,7 @@ import com.strongest.app.utils.Cell
 import com.strongest.app.utils.WorkoutPrInfo
 import com.strongest.app.utils.XlsxWriter
 import com.strongest.app.utils.computeWorkoutPrs
+import com.strongest.app.utils.excludingWarmUps
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.weightUnitLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -251,7 +252,10 @@ class HistoryViewModel @Inject constructor(
 private fun buildSummaries(rows: List<HistorySetRow>): Map<Long, WorkoutSummary> {
     if (rows.isEmpty()) return emptyMap()
 
-    val byWorkout = rows.groupBy { it.workoutId }
+    // Warm-ups are excluded from the card's volume and set count so History agrees with the
+    // Progress tab, which filters them in SQL. The workout detail view still lists them.
+    val workingRows = rows.excludingWarmUps()
+    val byWorkout = workingRows.groupBy { it.workoutId }
     val result = mutableMapOf<Long, WorkoutSummary>()
 
     for ((workoutId, wrows) in byWorkout) {
@@ -287,7 +291,7 @@ private fun buildSummaries(rows: List<HistorySetRow>): Map<Long, WorkoutSummary>
             workoutId = workoutId,
             totalVolumeKg = volume,
             exercises = bestPerEx.values.sortedBy { it.exerciseName },
-            prs = computeWorkoutPrs(rows, workoutId)
+            prs = computeWorkoutPrs(workingRows, workoutId)
         )
     }
     return result

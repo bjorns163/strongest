@@ -26,7 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
-import com.strongest.app.data.model.ExerciseClassification
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.MuscleGroup
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,12 +38,11 @@ fun AddCustomExerciseDialog(
     var name by remember { mutableStateOf("") }
     var selectedMuscleGroup by remember { mutableStateOf(MuscleGroup.CHEST) }
     var selectedEquipment by remember { mutableStateOf(Equipment.DUMBBELL) }
-    var selectedClassification by remember { mutableStateOf(ExerciseClassification.ISOLATION) }
+    var selectedType by remember { mutableStateOf(ExerciseType.ISOLATION) }
     var instructions by remember { mutableStateOf("") }
     var nameError by remember { mutableStateOf(false) }
     var muscleExpanded by remember { mutableStateOf(false) }
     var equipmentExpanded by remember { mutableStateOf(false) }
-    var classificationExpanded by remember { mutableStateOf(false) }
 
     val canSave = name.isNotBlank()
 
@@ -134,37 +133,10 @@ fun AddCustomExerciseDialog(
                     }
                 }
 
-                // Classification dropdown
-                ExposedDropdownMenuBox(
-                    expanded = classificationExpanded,
-                    onExpandedChange = { classificationExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = selectedClassification.label(),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Classification") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = classificationExpanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = classificationExpanded,
-                        onDismissRequest = { classificationExpanded = false }
-                    ) {
-                        ExerciseClassification.entries.forEach { c ->
-                            DropdownMenuItem(
-                                text = { Text(c.label()) },
-                                onClick = {
-                                    selectedClassification = c
-                                    classificationExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
+                ExerciseTypeField(
+                    type = selectedType,
+                    onTypeChange = { selectedType = it }
+                )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -193,7 +165,7 @@ fun AddCustomExerciseDialog(
                         equipment = selectedEquipment,
                         instructions = instructions.trim(),
                         isCustom = true,
-                        classification = selectedClassification
+                        type = selectedType
                     )
                     onExerciseCreated(exercise)
                 },

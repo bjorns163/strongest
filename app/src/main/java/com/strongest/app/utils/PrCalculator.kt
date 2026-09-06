@@ -1,6 +1,7 @@
 package com.strongest.app.utils
 
 import com.strongest.app.data.db.HistorySetRow
+import com.strongest.app.data.model.SetType
 
 enum class PrKind { WEIGHT, ONE_RM, VOLUME }
 
@@ -30,7 +31,16 @@ fun computeWorkoutVolume(rows: List<HistorySetRow>): Float {
     return volume
 }
 
-fun computeWorkoutPrs(allRows: List<HistorySetRow>, workoutId: Long): List<WorkoutPrInfo> {
+/**
+ * Warm-up sets do not count toward any statistic — every Progress query filters them out in SQL.
+ * The rows feeding PRs come from `getAllCompletedHistoryRows`, which deliberately returns
+ * everything, so the same rule is applied here rather than relying on the caller.
+ */
+fun List<HistorySetRow>.excludingWarmUps(): List<HistorySetRow> =
+    filter { it.setType != SetType.WARM_UP.name }
+
+fun computeWorkoutPrs(rows: List<HistorySetRow>, workoutId: Long): List<WorkoutPrInfo> {
+    val allRows = rows.excludingWarmUps()
     if (allRows.isEmpty()) return emptyList()
 
     val workoutVolume = mutableMapOf<Long, Float>()

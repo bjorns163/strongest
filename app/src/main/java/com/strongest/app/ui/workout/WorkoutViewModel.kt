@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.RingtoneManager
 import android.net.Uri
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import androidx.core.content.ContextCompat
@@ -14,7 +15,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
-import com.strongest.app.data.model.ExerciseClassification
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.ExerciseNote
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.Routine
@@ -181,7 +182,7 @@ data class WorkoutExerciseUi(
     val exerciseName: String,
     val muscleGroup: MuscleGroup = MuscleGroup.OTHER,
     val equipment: Equipment = Equipment.NONE,
-    val classification: ExerciseClassification = ExerciseClassification.ISOLATION,
+    val type: ExerciseType = ExerciseType.ISOLATION,
     val sets: List<SetUi>,
     val previousSets: List<PreviousSetInfo> = emptyList(),
     val noteText: String = ""
@@ -231,6 +232,14 @@ class ActiveWorkoutViewModel @Inject constructor(
     // True once the user has committed to finishing; stops the state collector from re-publishing
     // the ongoing-workout notification while a post-workout (e.g. routine-save) dialog is shown.
     private var isFinishing = false
+    /**
+     * When the current rest ends, on the [SystemClock.elapsedRealtime] timebase.
+     *
+     * Deliberately not wall-clock: an NTP correction or a manual clock change would
+     * otherwise jump the countdown mid-rest, ending it early or stretching it. Unlike
+     * uptimeMillis, elapsedRealtime keeps counting through deep sleep, so the rest still
+     * runs out while the screen is off.
+     */
     private var timerEndTime: Long = 0
     private val persistOrderMutex = Mutex()
 
@@ -372,7 +381,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     fun adjustTimer(seconds: Int) {
         viewModelScope.launch {
             timerEndTime += (seconds * 1000L)
-            val remaining = ((timerEndTime - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+            val remaining = ((timerEndTime - SystemClock.elapsedRealtime()) / 1000).toInt().coerceAtLeast(0)
             _state.update {
                 it.copy(
                     timerRemainingSeconds = remaining,
@@ -407,6 +416,8 @@ class ActiveWorkoutViewModel @Inject constructor(
     override fun onCleared() {
         timerJob?.cancel()
         unregisterWorkoutActionsReceiver()
+        // Workout stays ongoing/resumable in DB; only kill its notification.
+        stopServiceAndClearNotification()
         super.onCleared()
     }
 
@@ -554,7 +565,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                         exerciseName = exercise?.name ?: "Unknown",
                         muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                         equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
-                        classification = exercise?.classification ?: com.strongest.app.data.model.ExerciseClassification.ISOLATION,
+                        type = exercise?.type ?: ExerciseType.ISOLATION,
                         noteText = note?.noteText ?: "",
                         sets = uiSets,
                         previousSets = previousSets
@@ -604,7 +615,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                     exerciseName = exercise?.name ?: "Unknown",
                     muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                     equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
-                    classification = exercise?.classification ?: com.strongest.app.data.model.ExerciseClassification.ISOLATION,
+                    type = exercise?.type ?: ExerciseType.ISOLATION,
                     noteText = note?.noteText ?: "",
                     sets = setsToShow.map { set ->
                         val prevInfo = previousSets.getOrNull(set.setNumber - 1)
@@ -670,7 +681,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                 exerciseName = exercise?.name ?: "Unknown",
                 muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                 equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
-                classification = exercise?.classification ?: com.strongest.app.data.model.ExerciseClassification.ISOLATION,
+                type = exercise?.type ?: ExerciseType.ISOLATION,
                 noteText = note?.noteText ?: "",
                 sets = uiSets,
                 previousSets = previousSets
@@ -729,7 +740,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                         exerciseName = exercise?.name ?: "Unknown",
                         muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                         equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
-                        classification = exercise?.classification ?: com.strongest.app.data.model.ExerciseClassification.ISOLATION,
+                        type = exercise?.type ?: ExerciseType.ISOLATION,
                         noteText = note?.noteText ?: "",
                         sets = uiSets,
                         previousSets = previousSets
@@ -816,20 +827,40 @@ class ActiveWorkoutViewModel @Inject constructor(
             if (exerciseIndex == -1) return@launch
 
             val exercise = _state.value.workoutExercises[exerciseIndex]
-            val warmUpCount = warmUpSets.size
-            if (warmUpCount == 0) return@launch
+            if (warmUpSets.isEmpty()) return@launch
 
             val defaultRest = _state.value.restTimerSeconds
 
+            // Adding from the calculator replaces the warm-ups this exercise already has instead
+            // of stacking a second batch on top of them. Completed warm-ups are work the user
+            // actually did, so those stay; only the untouched ones are swapped out.
+            val (existingWarmUps, workingSets) = exercise.sets.partition { it.setType == SetType.WARM_UP }
+            val keptWarmUps = existingWarmUps.filter { it.isCompleted }
+            for (stale in existingWarmUps.filter { !it.isCompleted }) {
+                val staleId = stale.setId ?: continue
+                repository.deleteSet(
+                    SetLog(
+                        id = staleId,
+                        workoutExerciseId = workoutExerciseId,
+                        setNumber = stale.setNumber,
+                        weightKg = stale.weight,
+                        reps = stale.reps,
+                        setType = stale.setType
+                    )
+                )
+            }
+
+            val firstNewNumber = keptWarmUps.size + 1
             val newWarmUps = warmUpSets.mapIndexed { index, spec ->
+                val setNumber = firstNewNumber + index
                 val setId = repository.logSet(
-                    workoutExerciseId, index + 1,
+                    workoutExerciseId, setNumber,
                     spec.weightKg, spec.reps, null, SetType.WARM_UP,
                     restSeconds = defaultRest, completedAt = 0
                 )
                 SetUi(
                     setId = setId,
-                    setNumber = index + 1,
+                    setNumber = setNumber,
                     weight = spec.weightKg,
                     reps = spec.reps,
                     setType = SetType.WARM_UP,
@@ -837,32 +868,35 @@ class ActiveWorkoutViewModel @Inject constructor(
                 )
             }
 
-            val renumbered = exercise.sets.map { it.copy(setNumber = it.setNumber + warmUpCount) }
-            renumbered.forEach { persistSet(workoutExerciseId, it) }
+            val combined = (keptWarmUps + newWarmUps + workingSets)
+                .mapIndexed { idx, set -> set.copy(setNumber = idx + 1) }
+            combined.forEach { persistSetNow(workoutExerciseId, it) }
 
             val updatedExercises = _state.value.workoutExercises.toMutableList()
-            updatedExercises[exerciseIndex] = exercise.copy(sets = newWarmUps + renumbered)
+            updatedExercises[exerciseIndex] = exercise.copy(sets = combined)
             _state.update { it.copy(workoutExercises = updatedExercises) }
         }
     }
 
     private fun persistSet(workoutExerciseId: Long, set: SetUi) {
+        viewModelScope.launch { persistSetNow(workoutExerciseId, set) }
+    }
+
+    private suspend fun persistSetNow(workoutExerciseId: Long, set: SetUi) {
         val id = set.setId ?: return
-        viewModelScope.launch {
-            repository.updateSet(
-                com.strongest.app.data.model.SetLog(
-                    id = id,
-                    workoutExerciseId = workoutExerciseId,
-                    setNumber = set.setNumber,
-                    weightKg = set.weight,
-                    reps = set.reps,
-                    rpe = set.rpe,
-                    setType = set.setType,
-                    restSeconds = set.restSeconds,
-                    completedAt = set.completedAt
-                )
+        repository.updateSet(
+            com.strongest.app.data.model.SetLog(
+                id = id,
+                workoutExerciseId = workoutExerciseId,
+                setNumber = set.setNumber,
+                weightKg = set.weight,
+                reps = set.reps,
+                rpe = set.rpe,
+                setType = set.setType,
+                restSeconds = set.restSeconds,
+                completedAt = set.completedAt
             )
-        }
+        )
     }
 
     fun updateSet(workoutExerciseId: Long, setIndex: Int, weight: Float, reps: Int) {
@@ -1036,6 +1070,13 @@ class ActiveWorkoutViewModel @Inject constructor(
                 renumberedSets[lastIdx] = renumberedSets[lastIdx].copy(restSeconds = _state.value.lastSetRestSeconds)
             }
 
+            // Write the new numbering back. Without this the DB keeps the pre-delete numbers
+            // (1, 3, 4), which resurface when the workout is reloaded, misalign the
+            // previous-session hints (looked up by setNumber) and carry the gaps into exports.
+            // Every set is rewritten rather than just the shifted tail: the last set's rest time
+            // may also have changed, and a handful of rows is not worth the bookkeeping.
+            renumberedSets.forEach { persistSetNow(workoutExerciseId, it) }
+
             val updatedExercises = _state.value.workoutExercises.toMutableList()
             val exerciseIndex = updatedExercises.indexOfFirst { it.workoutExerciseId == workoutExerciseId }
             updatedExercises[exerciseIndex] = exercise.copy(sets = renumberedSets)
@@ -1046,7 +1087,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     fun startRestTimer(setId: Long?, durationSeconds: Int) {
         timerJob?.cancel()
         ensureWorkoutActionsReceiverRegistered()
-        timerEndTime = System.currentTimeMillis() + (durationSeconds * 1000L)
+        timerEndTime = SystemClock.elapsedRealtime() + (durationSeconds * 1000L)
         _state.update {
             it.copy(
                 activeTimerSetId = setId,
@@ -1059,7 +1100,7 @@ class ActiveWorkoutViewModel @Inject constructor(
         timerJob = viewModelScope.launch {
             while (isActive) {
                 delay(1000)
-                val remaining = ((timerEndTime - System.currentTimeMillis()) / 1000).toInt()
+                val remaining = ((timerEndTime - SystemClock.elapsedRealtime()) / 1000).toInt()
                 if (remaining <= 0) {
                     _state.update { it.copy(isTimerRunning = false, timerRemainingSeconds = 0, activeTimerSetId = null) }
                     playTimerAlert()
@@ -1436,7 +1477,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                 exerciseName = newExercise.name,
                 muscleGroup = newExercise.muscleGroup,
                 equipment = newExercise.equipment,
-                classification = newExercise.classification,
+                type = newExercise.type,
                 noteText = newNote?.noteText ?: "",
                 sets = uiSets,
                 previousSets = previousSets

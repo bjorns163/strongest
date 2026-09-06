@@ -75,6 +75,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercise_settings WHERE exerciseId = :exerciseId")
     suspend fun getExerciseSettings(exerciseId: Long): ExerciseSettings?
 
+    @Query("SELECT * FROM exercise_settings")
+    suspend fun getAllExerciseSettings(): List<ExerciseSettings>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertExerciseSettings(settings: ExerciseSettings)
 }

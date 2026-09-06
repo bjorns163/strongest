@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,8 +63,10 @@ import com.strongest.app.data.repository.defaultRecoveryHours
 import com.strongest.app.data.repository.exerciseSeedData
 import com.strongest.app.data.repository.WeightUnit
 import java.util.Locale
+import com.strongest.app.ui.components.DurationInputField
 import com.strongest.app.ui.workout.STANDARD_KG_PLATES
 import com.strongest.app.ui.workout.STANDARD_LBS_PLATES
+import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.weightUnitLabel
 import kotlinx.coroutines.launch
 
@@ -77,11 +80,11 @@ fun SettingsScreen(
     var showThemeDropdown by remember { mutableStateOf(value = false) }
     var showUnitDropdown by remember { mutableStateOf(value = false) }
     var showTimerDialog by remember { mutableStateOf(value = false) }
-    var timerInput by remember { mutableStateOf(value = "") }
+    var timerSecondsInput by remember { mutableIntStateOf(90) }
     var showAdjustDialog by remember { mutableStateOf(value = false) }
     var adjustInput by remember { mutableStateOf(value = "") }
     var showLastSetTimerDialog by remember { mutableStateOf(value = false) }
-    var lastSetTimerInput by remember { mutableStateOf(value = "") }
+    var lastSetTimerSecondsInput by remember { mutableIntStateOf(150) }
     var editingRecoveryMuscle by remember { mutableStateOf<MuscleGroup?>(null) }
     var recoveryInput by remember { mutableStateOf(value = "") }
     var showBirthYearDialog by remember { mutableStateOf(value = false) }
@@ -93,21 +96,9 @@ fun SettingsScreen(
         }
     }
 
-    LaunchedEffect(uiState.defaultRestSeconds) {
-        if (!showTimerDialog) {
-            timerInput = uiState.defaultRestSeconds.toString()
-        }
-    }
-
     LaunchedEffect(uiState.timerAdjustmentSeconds) {
         if (!showAdjustDialog) {
             adjustInput = uiState.timerAdjustmentSeconds.toString()
-        }
-    }
-
-    LaunchedEffect(uiState.lastSetRestSeconds) {
-        if (!showLastSetTimerDialog) {
-            lastSetTimerInput = uiState.lastSetRestSeconds.toString()
         }
     }
 
@@ -253,13 +244,16 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .clickable { showTimerDialog = true },
+                        .clickable {
+                            timerSecondsInput = uiState.defaultRestSeconds
+                            showTimerDialog = true
+                        },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Default rest (seconds)")
+                    Text("Default rest")
                     Text(
-                        text = "${uiState.defaultRestSeconds}s",
+                        text = formatDuration(uiState.defaultRestSeconds),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -291,13 +285,16 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .clickable { showLastSetTimerDialog = true },
+                        .clickable {
+                            lastSetTimerSecondsInput = uiState.lastSetRestSeconds
+                            showLastSetTimerDialog = true
+                        },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Last set rest (seconds)")
+                    Text("Last set rest")
                     Text(
-                        text = "${uiState.lastSetRestSeconds}s",
+                        text = formatDuration(uiState.lastSetRestSeconds),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -742,22 +739,16 @@ fun SettingsScreen(
             onDismissRequest = { showTimerDialog = false },
             title = { Text("Default Rest Timer") },
             text = {
-                OutlinedTextField(
-                    value = timerInput,
-                    onValueChange = { timerInput = it.filter { c -> c.isDigit() } },
-                    label = { Text("Seconds") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                DurationInputField(
+                    totalSeconds = timerSecondsInput,
+                    onValueChange = { timerSecondsInput = it },
+                    label = "Rest (mm:ss)"
                 )
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        timerInput.toIntOrNull()?.let { seconds ->
-                            if (seconds in 1..600) {
-                                viewModel.setDefaultRestSeconds(seconds)
-                            }
-                        }
+                        viewModel.setDefaultRestSeconds(timerSecondsInput)
                         showTimerDialog = false
                     }
                 ) {
@@ -884,22 +875,16 @@ fun SettingsScreen(
             onDismissRequest = { showLastSetTimerDialog = false },
             title = { Text("Last Set Rest Timer") },
             text = {
-                OutlinedTextField(
-                    value = lastSetTimerInput,
-                    onValueChange = { lastSetTimerInput = it.filter { c -> c.isDigit() } },
-                    label = { Text("Seconds") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                DurationInputField(
+                    totalSeconds = lastSetTimerSecondsInput,
+                    onValueChange = { lastSetTimerSecondsInput = it },
+                    label = "Rest (mm:ss)"
                 )
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        lastSetTimerInput.toIntOrNull()?.let { seconds ->
-                            if (seconds in 1..600) {
-                                viewModel.setLastSetRestSeconds(seconds)
-                            }
-                        }
+                        viewModel.setLastSetRestSeconds(lastSetTimerSecondsInput)
                         showLastSetTimerDialog = false
                     }
                 ) {

@@ -30,8 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.RangeSlider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +74,7 @@ import com.strongest.app.data.db.VolumeByDate
 import com.strongest.app.data.db.WorkoutsPerDay
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.MuscleGroup
+import com.strongest.app.data.model.SECONDARY_MUSCLE_WEIGHT
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.exercise.FILTERABLE_EQUIPMENT
 import com.strongest.app.ui.exercise.FILTERABLE_MUSCLE_GROUPS
@@ -202,7 +205,13 @@ fun ProgressScreen(
                 )
             }
 
-            item { SectionHeader(muscleTitle(state.metric)) }
+            item {
+                SectionHeader(
+                    text = muscleTitle(state.metric),
+                    infoTitle = muscleTitle(state.metric),
+                    infoText = muscleInfo(state.metric, weightUnit)
+                )
+            }
             item {
                 MuscleChartCard(
                     metric = state.metric,
@@ -325,6 +334,36 @@ private fun perDayTitle(metric: ProgressMetric): String = when (metric) {
     ProgressMetric.PRS -> "PRs per Day"
 }
 
+/** How each metric is credited to muscles — the "0.5 sets" otherwise looks like a bug. */
+private fun muscleInfo(metric: ProgressMetric, weightUnit: WeightUnit): String {
+    val secondary = SECONDARY_MUSCLE_WEIGHT.toString().removeSuffix(".0")
+    val unit = weightUnitLabel(weightUnit)
+    val shared = "\n\nMuscle Balance and the Muscle Heatmap use the same numbers. " +
+        "Warm-up sets and cardio are not counted."
+    return when (metric) {
+        ProgressMetric.SETS ->
+            "Every exercise has one main muscle and can work other muscles too. " +
+                "A set counts as 1 set for the main muscle and $secondary set for each other muscle " +
+                "it works.\n\nFor example, 1 set of Barbell Flat Bench Press counts as 1 set for " +
+                "Chest, and $secondary set each for Triceps and Shoulders. That's why you can see " +
+                "halves like 7.5 sets." + shared
+        ProgressMetric.WEIGHT ->
+            "Volume is weight × reps. The main muscle of an exercise gets all of it, and each " +
+                "other muscle it works gets ${(SECONDARY_MUSCLE_WEIGHT * 100).toInt()}%.\n\n" +
+                "For example, 100 $unit × 10 on Barbell Flat Bench Press adds 1000 $unit to Chest, " +
+                "and ${(1000 * SECONDARY_MUSCLE_WEIGHT).toInt()} $unit each to Triceps and Shoulders." + shared
+        ProgressMetric.WORKOUTS ->
+            "The number of workouts in which a muscle was trained, as the main muscle or as one " +
+                "the exercise also works. A workout counts once per muscle, however many " +
+                "exercises hit it." + shared
+        ProgressMetric.PRS ->
+            "PRs are counted for the main muscle of the exercise only. A workout's total " +
+                "volume PR belongs to no single muscle, so it only shows under PRs per Day." +
+                "\n\nMuscle Balance and the Muscle Heatmap use the same numbers. " +
+                "Cardio is not counted."
+    }
+}
+
 private fun muscleTitle(metric: ProgressMetric): String = when (metric) {
     ProgressMetric.WEIGHT -> "Volume by Muscle Group"
     ProgressMetric.SETS -> "Sets by Muscle Group"
@@ -333,12 +372,38 @@ private fun muscleTitle(metric: ProgressMetric): String = when (metric) {
 }
 
 @Composable
-private fun SectionHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-    )
+private fun SectionHeader(text: String, infoTitle: String? = null, infoText: String? = null) {
+    if (infoText == null) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        return
+    }
+    var showInfo by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = text, style = MaterialTheme.typography.titleMedium)
+        IconButton(onClick = { showInfo = true }) {
+            Icon(Icons.Default.Info, "How this is counted")
+        }
+    }
+    if (showInfo) {
+        AlertDialog(
+            onDismissRequest = { showInfo = false },
+            title = { Text(infoTitle ?: text) },
+            text = { Text(infoText) },
+            confirmButton = {
+                TextButton(onClick = { showInfo = false }) { Text("Got it") }
+            }
+        )
+    }
 }
 
 @Composable

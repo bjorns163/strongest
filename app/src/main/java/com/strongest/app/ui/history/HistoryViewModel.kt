@@ -13,6 +13,7 @@ import com.strongest.app.utils.Cell
 import com.strongest.app.utils.WorkoutPrInfo
 import com.strongest.app.utils.XlsxWriter
 import com.strongest.app.utils.computeWorkoutPrs
+import com.strongest.app.utils.countsTowardVolume
 import com.strongest.app.utils.excludingWarmUps
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.weightUnitLabel
@@ -271,7 +272,7 @@ private fun buildSummaries(rows: List<HistorySetRow>): Map<Long, WorkoutSummary>
             for (r in exRows) {
                 val w = r.weightKg ?: continue
                 val reps = r.reps ?: 0
-                volume += w * reps
+                if (r.countsTowardVolume()) volume += w * reps
                 if (w > bestW || (w == bestW && reps > bestReps)) {
                     bestW = w
                     bestReps = reps

@@ -1,6 +1,7 @@
 package com.strongest.app.utils
 
 import com.strongest.app.data.db.HistorySetRow
+import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.SetType
 
 enum class PrKind { WEIGHT, ONE_RM, VOLUME }
@@ -21,9 +22,16 @@ fun epleyOneRm(weightKg: Float, reps: Int): Float {
     return weightKg * (1f + reps / 30f)
 }
 
+/**
+ * Cardio sets store distance and time in the weight and reps columns, so multiplying them is
+ * meaningless — they never count toward volume. The Progress queries apply the same rule in SQL.
+ */
+fun HistorySetRow.countsTowardVolume(): Boolean = muscleGroup != MuscleGroup.CARDIO.name
+
 fun computeWorkoutVolume(rows: List<HistorySetRow>): Float {
     var volume = 0f
     for (r in rows) {
+        if (!r.countsTowardVolume()) continue
         val w = r.weightKg ?: continue
         val reps = r.reps ?: 0
         volume += w * reps

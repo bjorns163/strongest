@@ -45,6 +45,16 @@ data class MuscleVolume(
     val workoutCount: Int
 )
 
+/** One cardio exercise's totals over a range, for the Progress tab's cardio card. */
+data class CardioSummary(
+    val exerciseId: Long,
+    val exerciseName: String,
+    val sessions: Int,
+    val totalSeconds: Int,
+    val maxLevel: Float,
+    val lastDone: Long
+)
+
 /** Per-exercise, per-workout completed-set totals, used to weight secondary-muscle contributions. */
 data class ExerciseWorkoutVolume(
     val exerciseId: Long,
@@ -195,8 +205,10 @@ interface WorkoutDao {
                COUNT(s.id) as totalSets
         FROM workouts w
         JOIN workout_exercises we ON w.id = we.workoutId
+        JOIN exercises e ON we.exerciseId = e.id
         JOIN sets s ON we.id = s.workoutExerciseId
         WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND s.setType != 'WARM_UP'
+          AND e.muscleGroup != 'CARDIO'
         GROUP BY w.startTime
         ORDER BY w.startTime ASC
     """)
@@ -236,12 +248,35 @@ interface WorkoutDao {
                SUM(s.weightKg * s.reps) AS volumeKg
         FROM sets s
         JOIN workout_exercises we ON s.workoutExerciseId = we.id
+        JOIN exercises e ON we.exerciseId = e.id
         JOIN workouts w ON we.workoutId = w.id
         WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND s.completedAt > 0
-          AND s.setType != 'WARM_UP'
+          AND s.setType != 'WARM_UP' AND e.muscleGroup != 'CARDIO'
         GROUP BY we.exerciseId, w.id
     """)
     suspend fun getExerciseWorkoutVolume(startDate: Long): List<ExerciseWorkoutVolume>
+
+    /**
+     * Per cardio exercise in range: how often it was done and for how long. Cardio sets keep the
+     * machine level in `weightKg` and the time in seconds in `reps`.
+     */
+    @Query("""
+        SELECT we.exerciseId AS exerciseId,
+               e.name AS exerciseName,
+               COUNT(DISTINCT w.id) AS sessions,
+               COALESCE(SUM(s.reps), 0) AS totalSeconds,
+               COALESCE(MAX(s.weightKg), 0) AS maxLevel,
+               MAX(w.startTime) AS lastDone
+        FROM sets s
+        JOIN workout_exercises we ON s.workoutExerciseId = we.id
+        JOIN exercises e ON we.exerciseId = e.id
+        JOIN workouts w ON we.workoutId = w.id
+        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND s.completedAt > 0
+          AND s.setType != 'WARM_UP' AND e.muscleGroup = 'CARDIO'
+        GROUP BY we.exerciseId
+        ORDER BY totalSeconds DESC
+    """)
+    suspend fun getCardioSummary(startDate: Long): List<CardioSummary>
 
     @Query("""
         SELECT e.muscleGroup AS muscleGroup, MAX(w.startTime) AS lastTrained

@@ -4,6 +4,7 @@ import com.strongest.app.data.db.HistorySetRow
 import com.strongest.app.data.model.SetType
 import com.strongest.app.utils.PrKind
 import com.strongest.app.utils.computeWorkoutPrs
+import com.strongest.app.utils.computeWorkoutVolume
 import com.strongest.app.utils.excludingWarmUps
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -25,13 +26,14 @@ class PrCalculatorTest {
         exerciseId: Long,
         weightKg: Float,
         reps: Int,
-        setType: SetType = SetType.NORMAL
+        setType: SetType = SetType.NORMAL,
+        muscleGroup: String = "CHEST"
     ) = HistorySetRow(
         workoutId = workoutId,
         workoutExerciseId = workoutId * 10 + exerciseId,
         exerciseId = exerciseId,
         exerciseName = "Exercise $exerciseId",
-        muscleGroup = "CHEST",
+        muscleGroup = muscleGroup,
         orderIndex = 0,
         setId = nextId++,
         setNumber = 1,
@@ -110,5 +112,28 @@ class PrCalculatorTest {
             listOf(SetType.NORMAL.name, SetType.FAILURE.name, SetType.DROP_SET.name),
             kept.map { it.setType }
         )
+    }
+
+    @Test
+    fun `cardio sets do not count toward workout volume`() {
+        val rows = listOf(
+            row(workoutId = 1, exerciseId = 1, weightKg = 100f, reps = 10),
+            // Cardio stores distance × time in weight × reps — not a load.
+            row(workoutId = 1, exerciseId = 2, weightKg = 5f, reps = 1800, muscleGroup = "CARDIO")
+        )
+
+        assertEquals(1000f, computeWorkoutVolume(rows), 0.01f)
+    }
+
+    @Test
+    fun `cardio does not win the volume PR`() {
+        val rows = listOf(
+            row(workoutId = 1, exerciseId = 1, weightKg = 100f, reps = 10),
+            row(workoutId = 2, exerciseId = 1, weightKg = 50f, reps = 10),
+            row(workoutId = 2, exerciseId = 2, weightKg = 10f, reps = 3600, muscleGroup = "CARDIO")
+        )
+
+        assertNull(computeWorkoutPrs(rows, workoutId = 2).firstOrNull { it.kind == PrKind.VOLUME })
+        assertTrue(computeWorkoutPrs(rows, workoutId = 1).any { it.kind == PrKind.VOLUME })
     }
 }

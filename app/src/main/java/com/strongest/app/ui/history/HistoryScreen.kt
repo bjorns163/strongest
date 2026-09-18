@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.data.model.Workout
 import com.strongest.app.data.repository.WeightUnit
+import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.rememberWeightUnit
@@ -335,7 +336,7 @@ private fun ExerciseSummaryTable(
             Text(
                 text = if (ex.setCount > 0 && (ex.bestWeightKg > 0f || ex.bestReps > 0)) {
                     if (ex.muscleGroup == "CARDIO") {
-                        "${formatWeightForDisplay(ex.bestWeightKg, weightUnit)} × ${ex.bestReps}"
+                        "Level ${formatWeightForDisplay(ex.bestWeightKg, weightUnit)} - ${formatDuration(ex.bestReps)}"
                     } else {
                         "${formatWeightForDisplay(ex.bestWeightKg, weightUnit)} ${weightUnitLabel(weightUnit)} × ${ex.bestReps}"
                     }

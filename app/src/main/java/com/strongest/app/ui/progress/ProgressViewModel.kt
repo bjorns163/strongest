@@ -2,6 +2,7 @@ package com.strongest.app.ui.progress
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.strongest.app.data.db.CardioSummary
 import com.strongest.app.data.db.MuscleVolume
 import com.strongest.app.data.db.PersonalRecord
 import com.strongest.app.data.db.VolumeByDate
@@ -54,6 +55,8 @@ data class ProgressUiState(
     val volumeByDay: List<VolumeByDate> = emptyList(),
     val workoutsPerDay: List<WorkoutsPerDay> = emptyList(),
     val muscleVolume: List<MuscleVolume> = emptyList(),
+    /** Cardio is kept out of every sets/volume/muscle chart and summarised here instead. */
+    val cardio: List<CardioSummary> = emptyList(),
     val recoveringMuscles: List<MuscleRecovery> = emptyList(),
     /** The muscle the whole tab is focused on: highlighted in every chart, and the PR filter. */
     val selectedMuscle: MuscleGroup? = null,
@@ -149,6 +152,7 @@ class ProgressViewModel @Inject constructor(
             val volume = repository.getVolumeByDate(startDate)
             val muscle = repository.getMuscleVolume(startDate)
             val perDay = repository.getWorkoutsPerDay(startDate)
+            val cardio = repository.getCardioSummary(startDate)
             // Aggregate volume/sets per local calendar day so the chart can sit on a continuous
             // day axis (multiple workouts on one day collapse into a single point).
             val volumeByDay = volume
@@ -166,7 +170,8 @@ class ProgressViewModel @Inject constructor(
                     isLoading = false,
                     volumeByDay = volumeByDay,
                     muscleVolume = muscle,
-                    workoutsPerDay = perDay
+                    workoutsPerDay = perDay,
+                    cardio = cardio
                 )
             }
         }

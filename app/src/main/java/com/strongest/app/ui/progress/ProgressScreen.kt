@@ -56,6 +56,7 @@ import com.github.mikephil.charting.data.RadarDataSet
 import com.github.mikephil.charting.data.RadarEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
+import com.strongest.app.data.db.CardioSummary
 import com.strongest.app.data.db.MuscleVolume
 import com.strongest.app.data.db.PersonalRecord
 import com.strongest.app.data.db.VolumeByDate
@@ -68,6 +69,7 @@ import com.strongest.app.ui.exercise.FILTERABLE_MUSCLE_GROUPS
 import com.strongest.app.utils.DAY_MS
 import com.strongest.app.utils.dailyEntries
 import com.strongest.app.utils.daySlotCount
+import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.localDayStart
@@ -146,8 +148,8 @@ fun ProgressScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(FILTERABLE_MUSCLE_GROUPS.size) { idx ->
-                            val mg = FILTERABLE_MUSCLE_GROUPS[idx]
+                        items(PROGRESS_MUSCLE_GROUPS.size) { idx ->
+                            val mg = PROGRESS_MUSCLE_GROUPS[idx]
                             FilterChip(
                                 selected = state.selectedMuscle == mg,
                                 onClick = { viewModel.selectMuscle(mg) },
@@ -227,6 +229,17 @@ fun ProgressScreen(
                 )
             }
 
+            item { SectionHeader("Cardio") }
+            item {
+                CardioCard(
+                    cardio = state.cardio,
+                    weightUnit = weightUnit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+
             item { SectionHeader("Personal Records") }
             item {
                 Text(
@@ -285,6 +298,9 @@ fun ProgressScreen(
         }
     }
 }
+
+/** Cardio isn't a muscle on this tab — it has its own card — so it can't be focused. */
+private val PROGRESS_MUSCLE_GROUPS = FILTERABLE_MUSCLE_GROUPS.filter { it != MuscleGroup.CARDIO }
 
 private fun perDayTitle(metric: ProgressMetric): String = when (metric) {
     ProgressMetric.WEIGHT -> "Volume per Day"
@@ -371,6 +387,103 @@ private fun RecoveryCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * Cardio stays out of the sets, volume and muscle charts (its "weight" is a machine level and its
+ * "reps" a time), so it gets its own summary: total time, then each exercise's share of it.
+ */
+@Composable
+private fun CardioCard(
+    cardio: List<CardioSummary>,
+    weightUnit: WeightUnit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            if (cardio.isEmpty()) {
+                Text(
+                    text = "No cardio in this range",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                return@Column
+            }
+            val totalSeconds = cardio.sumOf { it.totalSeconds }
+            val maxSeconds = cardio.maxOf { it.totalSeconds }.coerceAtLeast(1)
+            val dateFormat = SimpleDateFormat("MMM d", LocalConfiguration.current.locales[0])
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                CardioStat(label = "Total time", value = formatDuration(totalSeconds))
+                CardioStat(label = "Sessions", value = cardio.sumOf { it.sessions }.toString())
+                CardioStat(label = "Exercises", value = cardio.size.toString())
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            cardio.forEach { item ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.exerciseName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        val sessions = if (item.sessions == 1) "1 session" else "${item.sessions} sessions"
+                        val level = if (item.maxLevel > 0f) {
+                            "  ·  max level ${formatWeightForDisplay(item.maxLevel, weightUnit)}"
+                        } else ""
+                        Text(
+                            text = "$sessions$level  ·  last ${dateFormat.format(Date(item.lastDone))}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = formatDuration(item.totalSeconds),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = { item.totalSeconds.toFloat() / maxSeconds },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun CardioStat(label: String, value: String) {
+    Column {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -849,7 +962,7 @@ private fun PersonalRecordCard(
             }
             Text(
                 text = if (pr.muscleGroup == "CARDIO") {
-                    "${formatWeightForDisplay(pr.maxWeightKg, weightUnit)} × ${pr.maxReps}"
+                    "Level ${formatWeightForDisplay(pr.maxWeightKg, weightUnit)} - ${formatDuration(pr.maxReps)}"
                 } else {
                     "${formatWeightForDisplay(pr.maxWeightKg, weightUnit)} ${weightUnitLabel(weightUnit)} × ${pr.maxReps}"
                 },

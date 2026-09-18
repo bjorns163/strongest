@@ -1,5 +1,6 @@
 package com.strongest.app.data.repository
 
+import com.strongest.app.data.db.CardioSummary
 import com.strongest.app.data.db.ExerciseDao
 import com.strongest.app.data.db.ExerciseHistoryEntry
 import com.strongest.app.data.db.ExerciseUsageCount
@@ -341,6 +342,8 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun getVolumeByDate(startDate: Long): List<VolumeByDate> = workoutDao.getVolumeByDate(startDate)
 
+    suspend fun getCardioSummary(startDate: Long): List<CardioSummary> = workoutDao.getCardioSummary(startDate)
+
     /**
      * Aggregates completed-set volume by muscle group, crediting each exercise's primary muscle
      * fully and every secondary muscle at [SECONDARY_MUSCLE_WEIGHT]. Because secondary muscles are
@@ -359,6 +362,8 @@ class WorkoutRepository @Inject constructor(
         for (row in rows) {
             val contributions = musclesByExerciseId[row.exerciseId] ?: continue
             for ((muscle, weight) in contributions) {
+                // Cardio has its own card; a CARDIO secondary on e.g. burpees isn't a muscle.
+                if (muscle == MuscleGroup.CARDIO) continue
                 val acc = byMuscle.getOrPut(muscle) { Acc() }
                 acc.sets += row.sets * weight
                 acc.volume += row.volumeKg * weight

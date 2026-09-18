@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.data.model.RoutineGroup
 import com.strongest.app.data.model.SetType
+import com.strongest.app.ui.workout.exerciseSubtitle
 import com.strongest.app.utils.parseDecimalInput
 import java.util.Locale
 import com.strongest.app.data.repository.WeightUnit
@@ -344,14 +345,24 @@ fun RoutineExerciseBlock(
                     ) {
                         Icon(Icons.Default.ArrowDownward, "Move down")
                     }
-                    Text(
-                        text = exercise.exerciseName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                    Column(
                         modifier = Modifier
                             .weight(1f)
                             .clickable { onViewExercise() }
-                    )
+                    ) {
+                        Text(
+                            text = exercise.exerciseName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (exercise.muscleGroup.isNotEmpty()) {
+                            Text(
+                                text = exerciseSubtitle(exercise.muscleGroup, exercise.equipment, exercise.type),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
                 Box {
                     IconButton(onClick = { showMenu = true }) {

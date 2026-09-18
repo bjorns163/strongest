@@ -2,8 +2,10 @@ package com.strongest.app.ui.routines
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.ExerciseNote
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.Routine
 import com.strongest.app.data.model.RoutineExercise
 import com.strongest.app.data.model.RoutineGroup
@@ -28,6 +30,8 @@ data class RoutineExerciseUi(
     val exerciseName: String,
     val routineExerciseId: Long,
     val muscleGroup: String = "",
+    val equipment: Equipment = Equipment.NONE,
+    val type: ExerciseType = ExerciseType.ISOLATION,
     val sets: List<RoutineSetUi>,
     val noteText: String = "",
     val previousSets: List<com.strongest.app.ui.workout.PreviousSetInfo> = emptyList()
@@ -125,6 +129,8 @@ class RoutineBuilderViewModel @Inject constructor(
                         exerciseName = exercise?.name ?: "Unknown",
                         routineExerciseId = re.id,
                         muscleGroup = exercise?.muscleGroup?.name ?: "",
+                        equipment = exercise?.equipment ?: Equipment.NONE,
+                        type = exercise?.type ?: ExerciseType.ISOLATION,
                         noteText = note?.noteText ?: "",
                         sets = sets,
                         previousSets = previousSetInfos
@@ -162,6 +168,8 @@ class RoutineBuilderViewModel @Inject constructor(
                 exerciseName = found.name,
                 routineExerciseId = nextTempId(),
                 muscleGroup = found.muscleGroup.name,
+                equipment = found.equipment,
+                type = found.type,
                 noteText = note?.noteText ?: "",
                 sets = List(defaultSetCount) { i ->
                     val prev = previousSets.getOrNull(i)
@@ -357,6 +365,9 @@ class RoutineBuilderViewModel @Inject constructor(
             updatedExercises[exerciseIndex] = oldExercise.copy(
                 exerciseId = newExerciseId,
                 exerciseName = newExercise.name,
+                muscleGroup = newExercise.muscleGroup.name,
+                equipment = newExercise.equipment,
+                type = newExercise.type,
                 sets = newSets,
                 previousSets = previousSetInfos
             )

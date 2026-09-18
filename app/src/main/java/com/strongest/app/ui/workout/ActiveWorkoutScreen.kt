@@ -85,6 +85,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.data.model.Equipment
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.WeightUnit
@@ -1538,8 +1540,11 @@ fun RpePickerDialog(
     )
 }
 
-internal fun exerciseSubtitle(exercise: WorkoutExerciseUi): String {
-    val muscle = exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() }
-    val equipment = exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() }
-    return "$muscle • $equipment • ${exercise.type.label()}"
+internal fun exerciseSubtitle(exercise: WorkoutExerciseUi): String =
+    exerciseSubtitle(exercise.muscleGroup.name, exercise.equipment, exercise.type)
+
+internal fun exerciseSubtitle(muscleGroup: String, equipment: Equipment, type: ExerciseType): String {
+    val muscle = muscleGroup.lowercase().replaceFirstChar { it.uppercase() }
+    val equipmentLabel = equipment.name.lowercase().replaceFirstChar { it.uppercase() }
+    return "$muscle • $equipmentLabel • ${type.label()}"
 }

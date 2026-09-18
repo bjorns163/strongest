@@ -2512,7 +2512,7 @@ val exerciseSeedData: List<Exercise> = listOf(
     ),
     Exercise(
         261,
-        "Standing Calf Raise (Single Leg)",
+        "Seated Calf Raise (Single Leg)",
         MuscleGroup.CALVES,
         Equipment.MACHINE,
         "Single-leg standing calf raise for one calf at a time.",

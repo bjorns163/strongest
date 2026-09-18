@@ -12,7 +12,7 @@ import com.strongest.app.data.model.MuscleGroup
  * On the next launch, non-custom exercises are re-synced from the seed data without touching the
  * user's workout history, notes, routines, or any exercises they created themselves.
  */
-const val EXERCISE_SEED_VERSION = 3
+const val EXERCISE_SEED_VERSION = 4
 
 @Suppress("MagicNumber", "MaxLineLength")
 val exerciseSeedData: List<Exercise> = listOf(
@@ -4251,16 +4251,17 @@ val exerciseSeedData: List<Exercise> = listOf(
     Exercise(
         444,
         "Band Shrug",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.RESISTANCE_BAND,
         "Resistance band shrug targeting the upper trapezius.",
         "Stand on the middle of the band with feet shoulder width apart. Grasp the handles or ends at your sides. Elevate your shoulders toward your ears. Hold the contraction briefly. Lower slowly to the start.",
+        secondaryMuscles = listOf(MuscleGroup.SHOULDERS),
         type = ExerciseType.ISOLATION
     ),
     Exercise(
         445,
         "Barbell Seated Shrug",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.BARBELL,
         "Seated barbell shrug that isolates the upper traps by removing leg drive.",
         "Sit on a bench with your feet flat on the floor. Hold the barbell across your thighs with an overhand grip. Elevate your shoulders toward your ears. Pause and squeeze your traps at the top. Lower the bar under control.",
@@ -4269,79 +4270,87 @@ val exerciseSeedData: List<Exercise> = listOf(
     Exercise(
         446,
         "Smith Shrug Behind the Back",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.MACHINE,
         "Smith machine shrug with the bar behind the back to target the upper traps.",
         "Stand facing away from the Smith machine bar. Grip the bar behind your glutes with an overhand grip. Shrug your shoulders straight up toward your ears. Squeeze your traps at the top. Lower the bar slowly to the start.",
+        secondaryMuscles = listOf(MuscleGroup.SHOULDERS),
         type = ExerciseType.ISOLATION
     ),
     Exercise(
         447,
         "Cable Lying Shrug",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.CABLE,
         "Lying cable shrug performed on a bench to isolate the trapezius.",
         "Lie flat on your back facing the cable pulley. Grip the bar handle with both hands and arms extended. Pull your shoulder blades upward toward your ears. Hold the squeeze briefly. Return under control to a stretch.",
+        secondaryMuscles = listOf(MuscleGroup.SHOULDERS),
         type = ExerciseType.ISOLATION
     ),
     Exercise(
         448,
         "Cable Seated Horizontal Shrug",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.CABLE,
         "Seated horizontal cable shrug targeting the mid-traps and rhomboids.",
         "Sit facing the cable column with your feet braced. Hold the handles with arms extended in front of you. Retract your shoulder blades straight back. Squeeze your mid-back at the end. Return slowly to a full stretch.",
+        secondaryMuscles = listOf(MuscleGroup.SHOULDERS),
         type = ExerciseType.ISOLATION
     ),
     Exercise(
         449,
         "Bodyweight Shrug",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.BODYWEIGHT,
         "Bodyweight shrug from dip bars to isolate the shoulder girdle.",
         "Suspend yourself on dip bars with your arms straight. Allow your shoulders to shrug upward toward your ears. Press through your palms to depress your shoulders. Hold the bottom position briefly. Repeat in a controlled rhythm.",
+        secondaryMuscles = listOf(MuscleGroup.SHOULDERS),
         type = ExerciseType.ISOLATION
     ),
     Exercise(
         450,
         "Kettlebell Shrug",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.KETTLEBELL,
         "Kettlebell shrug developing the upper trapezius with a neutral grip.",
         "Hold a kettlebell in each hand at your sides. Stand upright with your core braced. Elevate your shoulders toward your ears. Squeeze your traps at the top. Lower the kettlebells slowly to the start.",
+        secondaryMuscles = listOf(MuscleGroup.SHOULDERS),
         type = ExerciseType.ISOLATION
     ),
     Exercise(
         451,
         "Machine Gripless Shrug",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.MACHINE,
         "Machine shrug using pads to isolate the traps without grip fatigue.",
         "Place your forearms or shoulders against the machine pads. Stand tall with your core braced. Elevate your shoulders toward your ears. Hold the contraction at the top. Lower the weight under control.",
+        secondaryMuscles = listOf(MuscleGroup.SHOULDERS),
         type = ExerciseType.ISOLATION
     ),
     Exercise(
         452,
         "Hanging Scapular Shrug",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.BODYWEIGHT,
         "Bodyweight scapular shrug hanging from a bar to build scapular stability.",
         "Hang from a pull-up bar with your arms straight. Keep your arms locked and pull your shoulder blades down and back. Allow your shoulders to rise again at the top. Repeat the scapular movement under control. Keep your core engaged throughout.",
+        secondaryMuscles = listOf(MuscleGroup.SHOULDERS),
         type = ExerciseType.ISOLATION
     ),
     Exercise(
         453,
         "Inverted Shrug",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.BODYWEIGHT,
         "Bodyweight shrug performed from an inverted row position.",
         "Set up under a bar or straps with your body in a straight line. Keep your arms straight and your heels on the floor. Shrug your shoulder blades together to raise your torso. Hold the contraction briefly. Lower under control to the start.",
+        secondaryMuscles = listOf(MuscleGroup.SHOULDERS),
         type = ExerciseType.ISOLATION
     ),
     Exercise(
         454,
         "Jump Shrug Form",
-        MuscleGroup.SHOULDERS,
+        MuscleGroup.TRAPS,
         Equipment.BARBELL,
         "Explosive barbell shrug with hip drive to develop power.",
         "Hold a barbell with an overhand grip in front of your thighs. Hinge slightly at the hips with a flat back. Explosively extend your hips and knees while shrugging the weight upward. Land softly and reset your stance. Repeat with full power on each rep.",

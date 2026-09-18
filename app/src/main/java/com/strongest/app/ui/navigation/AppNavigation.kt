@@ -110,7 +110,8 @@ fun AppNavigation(
                     onExercisesSelected = { _ ->
                         navController.popBackStack()
                     },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onViewExercise = { navController.navigate(Screen.ExerciseDetail.createRoute(it)) }
                 )
             }
             composable(Screen.Routines.route) {
@@ -158,7 +159,8 @@ fun AppNavigation(
                     onExercisesSelected = { _ ->
                         navController.popBackStack()
                     },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onViewExercise = { navController.navigate(Screen.ExerciseDetail.createRoute(it)) }
                 )
             }
             composable(Screen.History.route) {

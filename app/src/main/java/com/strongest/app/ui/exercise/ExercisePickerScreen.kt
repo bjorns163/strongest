@@ -2,10 +2,14 @@ package com.strongest.app.ui.exercise
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,6 +39,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,14 +93,22 @@ val FILTERABLE_EQUIPMENT = listOf(
 fun ExercisePickerScreen(
     onExercisesSelected: (List<Long>) -> Unit,
     onBack: () -> Unit,
+    onViewExercise: (Long) -> Unit = {},
     viewModel: WorkoutViewModel = hiltViewModel(),
 ) {
     val exercises by viewModel.exercises.collectAsState()
     val usageCounts by viewModel.exerciseUsageCounts.collectAsState()
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedMuscleGroup by remember { mutableStateOf<MuscleGroup?>(null) }
-    var selectedEquipment by remember { mutableStateOf<Equipment?>(null) }
-    val selectedExerciseIds = remember { mutableStateOf(emptySet<Long>()) }
+    // Saveable: opening an exercise's details leaves this screen, and coming back must not lose
+    // the search, filters or what was already ticked.
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedMuscleGroup by rememberSaveable { mutableStateOf<MuscleGroup?>(null) }
+    var selectedEquipment by rememberSaveable { mutableStateOf<Equipment?>(null) }
+    val selectedExerciseIds = rememberSaveable(
+        saver = Saver(
+            save = { it.value.toLongArray() },
+            restore = { mutableStateOf(it.toSet()) }
+        )
+    ) { mutableStateOf(emptySet<Long>()) }
     var showCreateDialog by remember { mutableStateOf(value = false) }
     val scope = rememberCoroutineScope()
 
@@ -251,6 +265,7 @@ fun ExercisePickerScreen(
                             exercise = exercise,
                             isSelected = isSelected,
                             usageCount = usageCounts[exercise.id] ?: 0,
+                            onViewDetails = { onViewExercise(exercise.id) },
                             onToggle = {
                                 if (isReplaceMode) {
                                     selectedExerciseIds.value = if (isSelected) emptySet() else setOf(exercise.id)
@@ -291,13 +306,15 @@ fun ExercisePickerCard(
     exercise: Exercise,
     isSelected: Boolean,
     usageCount: Int,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    onViewDetails: () -> Unit = {}
 ) {
+    // Two tap targets: the checkbox strip on the left selects, the rest of the row (image, name,
+    // details) opens the exercise so it can be looked at before adding it.
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 2.dp)
-            .clickable(onClick = onToggle),
+            .padding(horizontal = 16.dp, vertical = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -309,63 +326,79 @@ fun ExercisePickerCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(
-                checked = isSelected,
-                onCheckedChange = { onToggle() }
-            )
-            ExerciseThumbnail(
-                exerciseId = exercise.id,
-                contentDescription = exercise.name,
+            Box(
                 modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = exercise.name,
-                    style = MaterialTheme.typography.bodyLarge
+                    .fillMaxHeight()
+                    .clickable(onClick = onToggle)
+                    .padding(start = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onToggle() }
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+            }
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onViewDetails)
+                    .padding(top = 12.dp, bottom = 12.dp, end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ExerciseThumbnail(
+                    exerciseId = exercise.id,
+                    contentDescription = exercise.name,
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = exercise.name,
+                        style = MaterialTheme.typography.bodyLarge
                     )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "\u2022",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "\u2022",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = exercise.type.label(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                if (usageCount > 0) {
                     Text(
-                        text = "\u2022",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "\u2022",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = exercise.type.label(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = usageCount.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 8.dp)
                     )
                 }
-            }
-            if (usageCount > 0) {
-                Text(
-                    text = usageCount.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
             }
         }
     }

@@ -837,6 +837,9 @@ private fun PerWorkoutChartCard(
                     circleRadius = 3f
                 }
                 chart.data = LineData(dataSet)
+                // Per day, everything but volume is a whole count: no 0.7-step axis labels.
+                chart.axisLeft.isGranularityEnabled = metric != ProgressMetric.WEIGHT
+                chart.axisLeft.granularity = 1f
                 chart.xAxis.valueFormatter = object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
                         val idx = value.toInt()
@@ -946,8 +949,10 @@ private fun MuscleChartCard(
                     }
                 }
                 chart.data = BarData(dataSet).apply { barWidth = 0.6f }
-                // PRs are whole counts; don't let the axis step in fractions of one.
-                chart.axisLeft.isGranularityEnabled = metric == ProgressMetric.PRS
+                // Workouts and PRs are whole counts; don't let the axis step in fractions of one.
+                // Sets by muscle can be halves (secondary muscles), so they keep a fine axis.
+                chart.axisLeft.isGranularityEnabled =
+                    metric == ProgressMetric.WORKOUTS || metric == ProgressMetric.PRS
                 chart.axisLeft.granularity = 1f
                 chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
                 chart.xAxis.labelCount = labels.size

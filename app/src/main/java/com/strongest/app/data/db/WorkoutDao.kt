@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.strongest.app.data.model.SetLog
 import com.strongest.app.data.model.SetType
@@ -157,6 +158,25 @@ interface WorkoutDao {
 
     @Delete
     suspend fun deleteSet(setLog: SetLog)
+
+    @Query("DELETE FROM sets WHERE workoutExerciseId IN (SELECT id FROM workout_exercises WHERE workoutId = :workoutId)")
+    suspend fun deleteSetsForWorkout(workoutId: Long)
+
+    @Query("DELETE FROM workout_exercises WHERE workoutId = :workoutId")
+    suspend fun deleteWorkoutExercisesForWorkout(workoutId: Long)
+
+    /**
+     * Puts a workout back exactly as [workout], [exercises] and [sets] describe it, with their
+     * original ids: whatever was added since is removed and whatever was deleted comes back.
+     */
+    @Transaction
+    suspend fun restoreWorkout(workout: Workout, exercises: List<WorkoutExercise>, sets: List<SetLog>) {
+        deleteSetsForWorkout(workout.id)
+        deleteWorkoutExercisesForWorkout(workout.id)
+        updateWorkout(workout)
+        insertWorkoutExercises(exercises)
+        insertSets(sets)
+    }
 
     @Query("""
         SELECT w.startTime as workoutDate, e.name as exerciseName,

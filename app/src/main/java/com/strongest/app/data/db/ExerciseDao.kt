@@ -72,6 +72,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercise_notes")
     suspend fun getAllNotes(): List<ExerciseNote>
 
+    @Query("DELETE FROM exercise_notes WHERE exerciseId = :exerciseId")
+    suspend fun deleteNote(exerciseId: Long)
+
     @Query("SELECT * FROM exercise_settings WHERE exerciseId = :exerciseId")
     suspend fun getExerciseSettings(exerciseId: Long): ExerciseSettings?
 

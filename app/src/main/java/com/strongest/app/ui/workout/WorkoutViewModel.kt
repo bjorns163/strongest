@@ -27,6 +27,7 @@ import com.strongest.app.data.model.SetType
 import com.strongest.app.data.model.WorkoutExercise
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.data.repository.WorkoutSnapshot
 import com.strongest.app.ui.navigation.WarmUpSetSpec
 import com.strongest.app.utils.ACTION_COMPLETE_SET
 import com.strongest.app.utils.ACTION_FINISH_WORKOUT
@@ -40,7 +41,10 @@ import com.strongest.app.utils.WorkoutPrInfo
 import com.strongest.app.utils.computeWorkoutPrs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
@@ -414,6 +418,11 @@ class ActiveWorkoutViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        // Left the screen mid-edit without saving: undo it. viewModelScope is already cancelled.
+        historyEditSnapshot?.let { snapshot ->
+            historyEditSnapshot = null
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { repository.restoreWorkout(snapshot) }
+        }
         timerJob?.cancel()
         unregisterWorkoutActionsReceiver()
         // Workout stays ongoing/resumable in DB; only kill its notification.
@@ -1492,6 +1501,9 @@ class ActiveWorkoutViewModel @Inject constructor(
     }
 
     fun loadCompletedWorkout(workoutId: Long) {
+        // The screen asks again each time it comes back into view (e.g. from the exercise picker);
+        // reloading then would flip an in-progress edit back to view mode.
+        if (_state.value.workoutId == workoutId) return
         viewModelScope.launch {
             _state.update { it.copy(workoutId = workoutId, isViewMode = true) }
             val workout = repository.getWorkoutById(workoutId)
@@ -1509,15 +1521,53 @@ class ActiveWorkoutViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Edits to a finished workout go straight to the database, like in an active workout, so a
+     * copy is taken first: Save keeps the changes, Cancel (or leaving) puts the copy back.
+     */
+    private var historyEditSnapshot: WorkoutSnapshot? = null
+
     fun enterHistoryEditMode() {
         _state.update { it.copy(isViewMode = false, isEditingHistory = true) }
         viewModelScope.launch {
             val workoutId = _state.value.workoutId ?: return@launch
+            historyEditSnapshot = repository.snapshotWorkout(workoutId)
             loadWorkoutExercises(workoutId, isOngoing = true)
         }
     }
 
+    /** Whether saving now would change anything compared to before Edit was pressed. */
+    suspend fun hasUnsavedHistoryChanges(): Boolean {
+        val snapshot = historyEditSnapshot ?: return false
+        val current = repository.snapshotWorkout(snapshot.workout.id) ?: return true
+        val originalName = snapshot.workout.workoutName ?: snapshot.workout.routineName
+        return current != snapshot || _state.value.workoutName != originalName
+    }
+
+    /** Throws away every change made since Edit was pressed, then runs [onDiscarded]. */
+    fun cancelHistoryEdit(onDiscarded: () -> Unit = {}) {
+        val snapshot = historyEditSnapshot
+        historyEditSnapshot = null
+        viewModelScope.launch {
+            if (snapshot != null) repository.restoreWorkout(snapshot)
+            val workoutId = _state.value.workoutId
+            val workout = workoutId?.let { repository.getWorkoutById(it) }
+            _state.update {
+                it.copy(
+                    isViewMode = true,
+                    isEditingHistory = false,
+                    workoutName = workout?.let { w -> w.workoutName ?: w.routineName } ?: it.workoutName,
+                    startTime = workout?.startTime ?: it.startTime,
+                    endTime = workout?.endTime ?: it.endTime
+                )
+            }
+            if (workoutId != null) loadWorkoutExercises(workoutId)
+            onDiscarded()
+        }
+    }
+
     fun exitHistoryEditMode() {
+        historyEditSnapshot = null
         viewModelScope.launch {
             val workoutId = _state.value.workoutId ?: return@launch
             val workout = repository.getWorkoutById(workoutId)

@@ -460,6 +460,33 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun upsertNote(note: ExerciseNote) = exerciseDao.upsertNote(note)
 
+    /** Everything editing a finished workout can change, so the edit can be undone. */
+    suspend fun snapshotWorkout(workoutId: Long): WorkoutSnapshot? {
+        val workout = workoutDao.getWorkoutById(workoutId) ?: return null
+        val exercises = workoutDao.getWorkoutExercises(workoutId)
+        return WorkoutSnapshot(
+            workout = workout,
+            exercises = exercises,
+            sets = exercises.flatMap { workoutDao.getSetsForExercise(it.id) },
+            // Exercise notes are per exercise, not per workout, but they can be edited from here.
+            notes = exerciseDao.getAllNotes()
+        )
+    }
+
+    suspend fun restoreWorkout(snapshot: WorkoutSnapshot) {
+        workoutDao.restoreWorkout(snapshot.workout, snapshot.exercises, snapshot.sets)
+        val before = snapshot.notes.associateBy { it.exerciseId }
+        val now = exerciseDao.getAllNotes().associateBy { it.exerciseId }
+        for ((exerciseId, note) in now) {
+            val original = before[exerciseId]
+            if (original == null) exerciseDao.deleteNote(exerciseId)
+            else if (original != note) exerciseDao.upsertNote(original)
+        }
+        for ((exerciseId, original) in before) {
+            if (exerciseId !in now) exerciseDao.upsertNote(original)
+        }
+    }
+
     suspend fun getExerciseSettings(exerciseId: Long): ExerciseSettings? =
         exerciseDao.getExerciseSettings(exerciseId)
 
@@ -482,3 +509,11 @@ class WorkoutRepository @Inject constructor(
             it.copy(barWeightKg = barWeightKg, plateSingleSide = singleSide)
         }
 }
+
+/** A finished workout as it was before editing started; see [WorkoutRepository.restoreWorkout]. */
+data class WorkoutSnapshot(
+    val workout: Workout,
+    val exercises: List<WorkoutExercise>,
+    val sets: List<SetLog>,
+    val notes: List<ExerciseNote>
+)

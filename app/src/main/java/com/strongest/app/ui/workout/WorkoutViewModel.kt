@@ -909,10 +909,14 @@ class ActiveWorkoutViewModel @Inject constructor(
         val updatedSets = exercise.sets.toMutableList()
         updatedSets[setIndex] = updatedSets[setIndex].copy(weight = weight, reps = reps)
 
-        // Fill down weight/reps to all uncompleted sets below this one
-        for (i in (setIndex + 1)..updatedSets.lastIndex) {
-            if (!updatedSets[i].isCompleted) {
-                updatedSets[i] = updatedSets[i].copy(weight = weight, reps = reps)
+        // Fill down weight/reps to all uncompleted sets below this one,
+        // unless this is a warm-up set (its values are not meant for the working sets)
+        val fillDown = updatedSets[setIndex].setType != SetType.WARM_UP
+        if (fillDown) {
+            for (i in (setIndex + 1)..updatedSets.lastIndex) {
+                if (!updatedSets[i].isCompleted) {
+                    updatedSets[i] = updatedSets[i].copy(weight = weight, reps = reps)
+                }
             }
         }
 
@@ -921,7 +925,7 @@ class ActiveWorkoutViewModel @Inject constructor(
         _state.update { it.copy(workoutExercises = updatedExercises) }
 
         for (i in setIndex..updatedSets.lastIndex) {
-            if (i == setIndex || !exercise.sets[i].isCompleted) {
+            if (i == setIndex || (fillDown && !exercise.sets[i].isCompleted)) {
                 persistSet(workoutExerciseId, updatedSets[i])
             }
         }

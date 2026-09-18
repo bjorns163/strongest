@@ -283,8 +283,11 @@ class RoutineBuilderViewModel @Inject constructor(
         if (setIndex !in exercise.sets.indices) return
         val updatedSets = exercise.sets.toMutableList()
         updatedSets[setIndex] = updatedSets[setIndex].copy(weight = weight, reps = reps)
-        for (i in (setIndex + 1)..updatedSets.lastIndex) {
-            updatedSets[i] = updatedSets[i].copy(weight = weight, reps = reps)
+        // Warm-up values are not meant for the working sets, so don't fill them down
+        if (updatedSets[setIndex].setType != SetType.WARM_UP) {
+            for (i in (setIndex + 1)..updatedSets.lastIndex) {
+                updatedSets[i] = updatedSets[i].copy(weight = weight, reps = reps)
+            }
         }
 
         val updatedExercises = _state.value.exercises.toMutableList()

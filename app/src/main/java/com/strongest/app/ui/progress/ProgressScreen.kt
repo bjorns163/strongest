@@ -168,6 +168,7 @@ fun ProgressScreen(
                     rangeDays = state.range.days,
                     volumeByDay = state.volumeByDay,
                     perDay = state.workoutsPerDay,
+                    prsPerDay = state.prsPerDay,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -306,12 +307,14 @@ private fun perDayTitle(metric: ProgressMetric): String = when (metric) {
     ProgressMetric.WEIGHT -> "Volume per Day"
     ProgressMetric.SETS -> "Sets per Day"
     ProgressMetric.WORKOUTS -> "Workouts per Day"
+    ProgressMetric.PRS -> "PRs per Day"
 }
 
 private fun muscleTitle(metric: ProgressMetric): String = when (metric) {
     ProgressMetric.WEIGHT -> "Volume by Muscle Group"
     ProgressMetric.SETS -> "Sets by Muscle Group"
     ProgressMetric.WORKOUTS -> "Workouts by Muscle Group"
+    ProgressMetric.PRS -> "PRs by Muscle Group"
 }
 
 @Composable
@@ -535,6 +538,7 @@ private fun PerWorkoutChartCard(
     rangeDays: Int,
     volumeByDay: List<VolumeByDate>,
     perDay: List<WorkoutsPerDay>,
+    prsPerDay: List<PrsPerDay>,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -555,11 +559,13 @@ private fun PerWorkoutChartCard(
         val startDay = lastDay - (rangeDays - 1) * DAY_MS
         val volumeMap = volumeByDay.associateBy { it.date }
         val perDayMap = perDay.associateBy { it.dayStart }
+        val prsMap = prsPerDay.associateBy { it.dayStart }
         val points = dailyEntries(startDay, lastDay) { day ->
             when (metric) {
                 ProgressMetric.WEIGHT -> volumeMap[day]?.let { kgToDisplay(it.totalVolumeKg, weightUnit) }
                 ProgressMetric.SETS -> volumeMap[day]?.let { it.totalSets.toFloat() }
                 ProgressMetric.WORKOUTS -> perDayMap[day]?.let { it.count.toFloat() }
+                ProgressMetric.PRS -> prsMap[day]?.let { it.count.toFloat() }
             }
         }
         if (points.isEmpty()) {
@@ -571,6 +577,7 @@ private fun PerWorkoutChartCard(
             ProgressMetric.WEIGHT -> "Volume (${weightUnitLabel(weightUnit)})"
             ProgressMetric.SETS -> "Sets"
             ProgressMetric.WORKOUTS -> "Workouts"
+            ProgressMetric.PRS -> "PRs"
         }
 
         AndroidView(
@@ -644,7 +651,11 @@ private fun MuscleChartCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        if (muscle.isEmpty()) {
+        // A muscle with no PRs has no bar to draw under the PRs metric.
+        val sorted = muscle
+            .filter { metric != ProgressMetric.PRS || it.prCount > 0 }
+            .sortedByDescending { metricValue(it, metric, weightUnit) }
+        if (sorted.isEmpty()) {
             ChartEmpty()
             return@Card
         }
@@ -655,7 +666,6 @@ private fun MuscleChartCard(
         val markerBg = MaterialTheme.colorScheme.surfaceContainerHighest.toArgb()
         val markerStroke = MaterialTheme.colorScheme.outline.toArgb()
 
-        val sorted = muscle.sortedByDescending { metricValue(it, metric, weightUnit) }
         val labels = sorted.map { muscleLabel(it.muscleGroup) }
         val barColors = sorted.map { mv ->
             if (selected == null || selected.name == mv.muscleGroup) primary else muted
@@ -667,6 +677,7 @@ private fun MuscleChartCard(
             ProgressMetric.WEIGHT -> "Volume (${weightUnitLabel(weightUnit)})"
             ProgressMetric.SETS -> "Sets"
             ProgressMetric.WORKOUTS -> "Workouts"
+            ProgressMetric.PRS -> "PRs"
         }
         val chartHeight = (60 + sorted.size * 28).coerceIn(180, 480).dp
 
@@ -712,6 +723,9 @@ private fun MuscleChartCard(
                     }
                 }
                 chart.data = BarData(dataSet).apply { barWidth = 0.6f }
+                // PRs are whole counts; don't let the axis step in fractions of one.
+                chart.axisLeft.isGranularityEnabled = metric == ProgressMetric.PRS
+                chart.axisLeft.granularity = 1f
                 chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
                 chart.xAxis.labelCount = labels.size
                 // One swatch, like the other charts: the per-bar colours are a
@@ -778,6 +792,7 @@ private fun MuscleRadarCard(
             ProgressMetric.WEIGHT -> "Volume (${weightUnitLabel(weightUnit)})"
             ProgressMetric.SETS -> "Sets"
             ProgressMetric.WORKOUTS -> "Workouts"
+            ProgressMetric.PRS -> "PRs"
         }
 
         AndroidView(
@@ -860,6 +875,7 @@ private fun formatMetricValue(value: Float, metric: ProgressMetric, weightUnit: 
         ProgressMetric.WEIGHT -> "$rounded ${weightUnitLabel(weightUnit)}"
         ProgressMetric.SETS -> if (value == 1f) "1 set" else "$rounded sets"
         ProgressMetric.WORKOUTS -> if (value == 1f) "1 workout" else "$rounded workouts"
+        ProgressMetric.PRS -> if (value == 1f) "1 PR" else "$rounded PRs"
     }
 }
 
@@ -872,6 +888,7 @@ private fun metricValue(mv: MuscleVolume, metric: ProgressMetric, weightUnit: We
         ProgressMetric.WEIGHT -> kgToDisplay(mv.totalVolumeKg, weightUnit)
         ProgressMetric.SETS -> mv.totalSets
         ProgressMetric.WORKOUTS -> mv.workoutCount.toFloat()
+        ProgressMetric.PRS -> mv.prCount.toFloat()
     }
 
 @Composable

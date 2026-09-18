@@ -27,7 +27,8 @@ class PrCalculatorTest {
         weightKg: Float,
         reps: Int,
         setType: SetType = SetType.NORMAL,
-        muscleGroup: String = "CHEST"
+        muscleGroup: String = "CHEST",
+        startTime: Long = workoutId * 1000
     ) = HistorySetRow(
         workoutId = workoutId,
         workoutExerciseId = workoutId * 10 + exerciseId,
@@ -39,7 +40,8 @@ class PrCalculatorTest {
         setNumber = 1,
         weightKg = weightKg,
         reps = reps,
-        setType = setType.name
+        setType = setType.name,
+        workoutStartTime = startTime
     )
 
     @Test
@@ -59,18 +61,15 @@ class PrCalculatorTest {
     @Test
     fun `volume PR ignores warm-up volume`() {
         val rows = listOf(
-            // Workout 1: 1000 kg of working volume, plus 2000 kg of warm-up.
-            row(workoutId = 1, exerciseId = 1, weightKg = 100f, reps = 10),
-            row(workoutId = 1, exerciseId = 1, weightKg = 200f, reps = 10, setType = SetType.WARM_UP),
-            // Workout 2: 1500 kg, all working sets — the real volume PR.
-            row(workoutId = 2, exerciseId = 1, weightKg = 150f, reps = 10)
+            // Workout 1: 1500 kg, all working sets.
+            row(workoutId = 1, exerciseId = 1, weightKg = 150f, reps = 10),
+            // Workout 2: 1000 kg of working volume, plus 2000 kg of warm-up.
+            row(workoutId = 2, exerciseId = 1, weightKg = 100f, reps = 10),
+            row(workoutId = 2, exerciseId = 1, weightKg = 200f, reps = 10, setType = SetType.WARM_UP)
         )
 
-        // Counting warm-ups, workout 1 would look like 3000 kg and win.
-        assertNull(computeWorkoutPrs(rows, workoutId = 1).firstOrNull { it.kind == PrKind.VOLUME })
-
-        val volumePr = computeWorkoutPrs(rows, workoutId = 2).firstOrNull { it.kind == PrKind.VOLUME }
-        assertEquals(1500f, volumePr!!.volumeKg!!, 0.01f)
+        // Counting warm-ups, workout 2 would look like 3000 kg and beat workout 1.
+        assertNull(computeWorkoutPrs(rows, workoutId = 2).firstOrNull { it.kind == PrKind.VOLUME })
     }
 
     @Test
@@ -135,5 +134,41 @@ class PrCalculatorTest {
 
         assertNull(computeWorkoutPrs(rows, workoutId = 2).firstOrNull { it.kind == PrKind.VOLUME })
         assertTrue(computeWorkoutPrs(rows, workoutId = 1).any { it.kind == PrKind.VOLUME })
+    }
+
+    @Test
+    fun `matching an earlier best is not a PR`() {
+        val rows = listOf(
+            row(workoutId = 1, exerciseId = 1, weightKg = 100f, reps = 5),
+            row(workoutId = 2, exerciseId = 1, weightKg = 100f, reps = 5)
+        )
+
+        assertTrue(computeWorkoutPrs(rows, workoutId = 1).map { it.kind }
+            .containsAll(listOf(PrKind.WEIGHT, PrKind.ONE_RM, PrKind.VOLUME)))
+        assertEquals(emptyList<Any>(), computeWorkoutPrs(rows, workoutId = 2))
+    }
+
+    @Test
+    fun `a PR keeps its badge after a later workout beats it`() {
+        val rows = listOf(
+            row(workoutId = 1, exerciseId = 1, weightKg = 100f, reps = 5),
+            row(workoutId = 2, exerciseId = 1, weightKg = 110f, reps = 5),
+            row(workoutId = 3, exerciseId = 1, weightKg = 120f, reps = 5)
+        )
+
+        val prs = computeWorkoutPrs(rows, workoutId = 2)
+        assertEquals(110f, prs.single { it.kind == PrKind.WEIGHT }.weightKg!!, 0.01f)
+    }
+
+    @Test
+    fun `earlier means earlier start time, not a lower id`() {
+        val rows = listOf(
+            // Workout 5 was logged (e.g. imported) later but happened first.
+            row(workoutId = 5, exerciseId = 1, weightKg = 100f, reps = 5, startTime = 1_000),
+            row(workoutId = 2, exerciseId = 1, weightKg = 100f, reps = 5, startTime = 2_000)
+        )
+
+        assertTrue(computeWorkoutPrs(rows, workoutId = 5).any { it.kind == PrKind.WEIGHT })
+        assertNull(computeWorkoutPrs(rows, workoutId = 2).firstOrNull { it.kind == PrKind.WEIGHT })
     }
 }

@@ -47,64 +47,69 @@ fun computeWorkoutVolume(rows: List<HistorySetRow>): Float {
 fun List<HistorySetRow>.excludingWarmUps(): List<HistorySetRow> =
     filter { it.setType != SetType.WARM_UP.name }
 
-fun computeWorkoutPrs(rows: List<HistorySetRow>, workoutId: Long): List<WorkoutPrInfo> {
-    val allRows = rows.excludingWarmUps()
-    if (allRows.isEmpty()) return emptyList()
+/**
+ * A PR is the first time a best is reached: a workout has to *beat* every workout before it.
+ * Matching an earlier best again is not a PR, and a later workout beating this one doesn't take
+ * the badge away from it either — it was a record when it was set.
+ */
+fun computeWorkoutPrs(rows: List<HistorySetRow>, workoutId: Long): List<WorkoutPrInfo> =
+    computeAllWorkoutPrs(rows)[workoutId].orEmpty()
 
-    val workoutVolume = mutableMapOf<Long, Float>()
-    val byWorkout = allRows.groupBy { it.workoutId }
-    for ((wid, wrows) in byWorkout) {
-        workoutVolume[wid] = computeWorkoutVolume(wrows)
-    }
-    val maxVolumeWorkoutId = workoutVolume.entries.maxByOrNull { it.value }?.key
+/**
+ * The PRs of every workout in [rows], keyed by workout id, in one chronological pass. Workouts are
+ * ordered by start time, with the id breaking ties (and covering rows without a start time).
+ */
+fun computeAllWorkoutPrs(rows: List<HistorySetRow>): Map<Long, List<WorkoutPrInfo>> {
+    val allRows = rows.excludingWarmUps()
+    if (allRows.isEmpty()) return emptyMap()
+
+    val workouts = allRows.groupBy { it.workoutId }.entries
+        .sortedWith(compareBy({ it.value.first().workoutStartTime }, { it.key }))
 
     val maxWeightByExercise = mutableMapOf<Long, Float>()
     val maxOneRmByExercise = mutableMapOf<Long, Float>()
-    for (r in allRows) {
-        val w = r.weightKg ?: continue
-        val reps = r.reps ?: 0
-        val exId = r.exerciseId
-        val curW = maxWeightByExercise[exId] ?: 0f
-        if (w > curW) maxWeightByExercise[exId] = w
-        val orm = epleyOneRm(w, reps)
-        val curOrm = maxOneRmByExercise[exId] ?: 0f
-        if (orm > curOrm) maxOneRmByExercise[exId] = orm
-    }
+    var maxVolume = 0f
+    val result = mutableMapOf<Long, List<WorkoutPrInfo>>()
 
-    val thisRows = byWorkout[workoutId].orEmpty()
-    val bestPerExerciseInWorkout = thisRows.groupBy { it.exerciseId }
-    val prs = mutableListOf<WorkoutPrInfo>()
-
-    for ((exId, rows) in bestPerExerciseInWorkout) {
-        val name = rows.firstOrNull()?.exerciseName
-        val muscleGroup = rows.firstOrNull()?.muscleGroup
-        val isCardio = muscleGroup == "CARDIO"
-        var bestW = 0f
-        var bestReps = 0
-        var bestOrm = 0f
-        for (r in rows) {
-            val w = r.weightKg ?: continue
-            val reps = r.reps ?: 0
-            if (w > bestW || (w == bestW && reps > bestReps)) {
-                bestW = w
-                bestReps = reps
+    for ((workoutId, workoutRows) in workouts) {
+        val prs = mutableListOf<WorkoutPrInfo>()
+        for ((exId, exRows) in workoutRows.groupBy { it.exerciseId }) {
+            val name = exRows.first().exerciseName
+            val muscleGroup = exRows.first().muscleGroup
+            val isCardio = muscleGroup == MuscleGroup.CARDIO.name
+            var bestW = 0f
+            var bestReps = 0
+            var bestOrm = 0f
+            for (r in exRows) {
+                val w = r.weightKg ?: continue
+                val reps = r.reps ?: 0
+                if (w > bestW || (w == bestW && reps > bestReps)) {
+                    bestW = w
+                    bestReps = reps
+                }
+                val orm = epleyOneRm(w, reps)
+                if (orm > bestOrm) bestOrm = orm
             }
-            val orm = epleyOneRm(w, reps)
-            if (orm > bestOrm) bestOrm = orm
+            val previousMaxW = maxWeightByExercise[exId] ?: 0f
+            if (bestW > 0f && bestW > previousMaxW) {
+                prs.add(WorkoutPrInfo(PrKind.WEIGHT, exerciseId = exId, exerciseName = name, muscleGroup = muscleGroup, weightKg = bestW, reps = bestReps))
+                maxWeightByExercise[exId] = bestW
+            }
+            val previousMaxOrm = maxOneRmByExercise[exId] ?: 0f
+            if (bestOrm > previousMaxOrm) {
+                if (bestOrm > 0f && !isCardio) {
+                    prs.add(WorkoutPrInfo(PrKind.ONE_RM, exerciseId = exId, exerciseName = name, muscleGroup = muscleGroup, oneRmKg = bestOrm))
+                }
+                maxOneRmByExercise[exId] = bestOrm
+            }
         }
-        val globalMaxW = maxWeightByExercise[exId] ?: 0f
-        if (bestW > 0f && bestW >= globalMaxW) {
-            prs.add(WorkoutPrInfo(PrKind.WEIGHT, exerciseId = exId, exerciseName = name, muscleGroup = muscleGroup, weightKg = bestW, reps = bestReps))
-        }
-        val globalMaxOrm = maxOneRmByExercise[exId] ?: 0f
-        if (bestOrm > 0f && bestOrm >= globalMaxOrm && !isCardio) {
-            prs.add(WorkoutPrInfo(PrKind.ONE_RM, exerciseId = exId, exerciseName = name, muscleGroup = muscleGroup, oneRmKg = bestOrm))
-        }
-    }
 
-    if (workoutId == maxVolumeWorkoutId && (workoutVolume[workoutId] ?: 0f) > 0f) {
-        prs.add(WorkoutPrInfo(PrKind.VOLUME, volumeKg = workoutVolume[workoutId]))
+        val volume = computeWorkoutVolume(workoutRows)
+        if (volume > 0f && volume > maxVolume) {
+            prs.add(WorkoutPrInfo(PrKind.VOLUME, volumeKg = volume))
+            maxVolume = volume
+        }
+        result[workoutId] = prs
     }
-
-    return prs
+    return result
 }

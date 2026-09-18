@@ -42,7 +42,9 @@ data class MuscleVolume(
     val muscleGroup: String,
     val totalSets: Float,
     val totalVolumeKg: Float,
-    val workoutCount: Int
+    val workoutCount: Int,
+    /** PRs set on exercises with this primary muscle; filled in by the Progress tab. */
+    val prCount: Int = 0
 )
 
 /** One cardio exercise's totals over a range, for the Progress tab's cardio card. */
@@ -85,7 +87,8 @@ data class HistorySetRow(
     val setNumber: Int?,
     val weightKg: Float?,
     val reps: Int?,
-    val setType: String?
+    val setType: String?,
+    val workoutStartTime: Long = 0L
 )
 
 data class ExerciseUsageCount(
@@ -316,6 +319,7 @@ interface WorkoutDao {
 
     @Query("""
         SELECT we.workoutId AS workoutId,
+               w.startTime AS workoutStartTime,
                we.id AS workoutExerciseId,
                we.exerciseId AS exerciseId,
                e.name AS exerciseName,

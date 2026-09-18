@@ -50,6 +50,7 @@ class ProgressRecoveryRefreshTest {
         `when`(repository.getMuscleVolume(anyLong())).thenReturn(emptyList())
         `when`(repository.getWorkoutsPerDay(anyLong())).thenReturn(emptyList())
         `when`(repository.getCardioSummary(anyLong())).thenReturn(emptyList())
+        `when`(repository.getAllCompletedHistoryRows()).thenReturn(flowOf(emptyList()))
     }
 
     @After

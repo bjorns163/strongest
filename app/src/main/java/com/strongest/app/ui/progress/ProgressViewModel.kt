@@ -12,6 +12,8 @@ import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.utils.WorkoutPrInfo
+import com.strongest.app.utils.computeAllWorkoutPrs
 import com.strongest.app.utils.localDayStart
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,8 +39,12 @@ enum class ProgressRange(val days: Int, val label: String) {
 enum class ProgressMetric(val label: String) {
     SETS("Sets"),
     WEIGHT("Weight"),
-    WORKOUTS("Workouts")
+    WORKOUTS("Workouts"),
+    PRS("PRs")
 }
+
+/** How many PRs were set on one local calendar day. */
+data class PrsPerDay(val dayStart: Long, val count: Int)
 
 /** One recovering primary muscle: hours left until recovered and how far along it is (0..1). */
 data class MuscleRecovery(
@@ -54,6 +60,7 @@ data class ProgressUiState(
     val personalRecords: List<PersonalRecord> = emptyList(),
     val volumeByDay: List<VolumeByDate> = emptyList(),
     val workoutsPerDay: List<WorkoutsPerDay> = emptyList(),
+    val prsPerDay: List<PrsPerDay> = emptyList(),
     val muscleVolume: List<MuscleVolume> = emptyList(),
     /** Cardio is kept out of every sets/volume/muscle chart and summarised here instead. */
     val cardio: List<CardioSummary> = emptyList(),
@@ -153,6 +160,7 @@ class ProgressViewModel @Inject constructor(
             val muscle = repository.getMuscleVolume(startDate)
             val perDay = repository.getWorkoutsPerDay(startDate)
             val cardio = repository.getCardioSummary(startDate)
+            val prs = prsInRange(startDate)
             // Aggregate volume/sets per local calendar day so the chart can sit on a continuous
             // day axis (multiple workouts on one day collapse into a single point).
             val volumeByDay = volume
@@ -169,11 +177,42 @@ class ProgressViewModel @Inject constructor(
                 it.copy(
                     isLoading = false,
                     volumeByDay = volumeByDay,
-                    muscleVolume = muscle,
+                    muscleVolume = withPrCounts(muscle, prs),
                     workoutsPerDay = perDay,
+                    prsPerDay = prs
+                        .groupBy { localDayStart(it.first) }
+                        .map { (day, dayPrs) -> PrsPerDay(day, dayPrs.size) }
+                        .sortedBy { it.dayStart },
                     cardio = cardio
                 )
             }
         }
+    }
+
+    /**
+     * Every PR set from [startDate] on, paired with its workout's start time. PRs are judged
+     * against the whole history, so all rows are loaded and the range applied afterwards. Cardio
+     * stays out, like everywhere else on this tab.
+     */
+    private suspend fun prsInRange(startDate: Long): List<Pair<Long, WorkoutPrInfo>> {
+        val rows = repository.getAllCompletedHistoryRows().first()
+        val startByWorkout = rows.associate { it.workoutId to it.workoutStartTime }
+        return computeAllWorkoutPrs(rows).flatMap { (workoutId, prs) ->
+            val start = startByWorkout[workoutId] ?: return@flatMap emptyList()
+            if (start < startDate) return@flatMap emptyList()
+            prs.filter { it.muscleGroup != MuscleGroup.CARDIO.name }.map { start to it }
+        }
+    }
+
+    /** Adds each muscle's PR count; a workout's volume PR has no muscle and isn't counted here. */
+    private fun withPrCounts(
+        muscle: List<MuscleVolume>,
+        prs: List<Pair<Long, WorkoutPrInfo>>
+    ): List<MuscleVolume> {
+        val counts = prs.mapNotNull { it.second.muscleGroup }.groupingBy { it }.eachCount()
+        val withCounts = muscle.map { it.copy(prCount = counts[it.muscleGroup] ?: 0) }
+        val missing = counts.filterKeys { name -> muscle.none { it.muscleGroup == name } }
+            .map { (name, count) -> MuscleVolume(name, 0f, 0f, 0, prCount = count) }
+        return withCounts + missing
     }
 }

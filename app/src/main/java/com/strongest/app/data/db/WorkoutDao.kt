@@ -210,12 +210,12 @@ interface WorkoutDao {
         JOIN workout_exercises we ON w.id = we.workoutId
         JOIN exercises e ON we.exerciseId = e.id
         JOIN sets s ON we.id = s.workoutExerciseId
-        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND s.setType != 'WARM_UP'
+        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND w.startTime < :endDate AND s.setType != 'WARM_UP'
           AND e.muscleGroup != 'CARDIO'
         GROUP BY w.startTime
         ORDER BY w.startTime ASC
     """)
-    suspend fun getVolumeByDate(startDate: Long): List<VolumeByDate>
+    suspend fun getVolumeByDate(startDate: Long, endDate: Long): List<VolumeByDate>
 
     @Query("""
         SELECT we.exerciseId AS exerciseId,
@@ -253,11 +253,11 @@ interface WorkoutDao {
         JOIN workout_exercises we ON s.workoutExerciseId = we.id
         JOIN exercises e ON we.exerciseId = e.id
         JOIN workouts w ON we.workoutId = w.id
-        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND s.completedAt > 0
+        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND w.startTime < :endDate AND s.completedAt > 0
           AND s.setType != 'WARM_UP' AND e.muscleGroup != 'CARDIO'
         GROUP BY we.exerciseId, w.id
     """)
-    suspend fun getExerciseWorkoutVolume(startDate: Long): List<ExerciseWorkoutVolume>
+    suspend fun getExerciseWorkoutVolume(startDate: Long, endDate: Long): List<ExerciseWorkoutVolume>
 
     /**
      * Per cardio exercise in range: how often it was done and for how long. Cardio sets keep the
@@ -274,12 +274,12 @@ interface WorkoutDao {
         JOIN workout_exercises we ON s.workoutExerciseId = we.id
         JOIN exercises e ON we.exerciseId = e.id
         JOIN workouts w ON we.workoutId = w.id
-        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND s.completedAt > 0
+        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND w.startTime < :endDate AND s.completedAt > 0
           AND s.setType != 'WARM_UP' AND e.muscleGroup = 'CARDIO'
         GROUP BY we.exerciseId
         ORDER BY totalSeconds DESC
     """)
-    suspend fun getCardioSummary(startDate: Long): List<CardioSummary>
+    suspend fun getCardioSummary(startDate: Long, endDate: Long): List<CardioSummary>
 
     @Query("""
         SELECT e.muscleGroup AS muscleGroup, MAX(w.startTime) AS lastTrained
@@ -292,6 +292,10 @@ interface WorkoutDao {
     """)
     suspend fun getMuscleLastTrained(): List<MuscleLastTrained>
 
+    /** Start time of the first finished workout, or null when there are none yet. */
+    @Query("SELECT MIN(startTime) FROM workouts WHERE isOngoing = 0")
+    suspend fun getFirstWorkoutStart(): Long?
+
     /**
      * Buckets workouts by local calendar day. The caller supplies [tzOffsetMs] (e.g.
      * `TimeZone.getDefault().getOffset(now)`) so the same workout is grouped under the same date
@@ -301,11 +305,11 @@ interface WorkoutDao {
         SELECT (((w.startTime + :tzOffsetMs) / 86400000) * 86400000) - :tzOffsetMs AS dayStart,
                COUNT(DISTINCT w.id) AS count
         FROM workouts w
-        WHERE w.isOngoing = 0 AND w.startTime >= :startDate
+        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND w.startTime < :endDate
         GROUP BY dayStart
         ORDER BY dayStart ASC
     """)
-    suspend fun getWorkoutsPerDay(startDate: Long, tzOffsetMs: Long): List<WorkoutsPerDay>
+    suspend fun getWorkoutsPerDay(startDate: Long, endDate: Long, tzOffsetMs: Long): List<WorkoutsPerDay>
 
     @Query("""
         SELECT we.exerciseId AS exerciseId, COUNT(DISTINCT w.id) AS workoutCount

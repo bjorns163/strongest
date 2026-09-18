@@ -340,17 +340,22 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun getAllPersonalRecords(): List<PersonalRecord> = workoutDao.getAllPersonalRecords()
 
-    suspend fun getVolumeByDate(startDate: Long): List<VolumeByDate> = workoutDao.getVolumeByDate(startDate)
+    /** The ranged Progress queries cover workouts started in [startDate, endDate). */
+    suspend fun getVolumeByDate(startDate: Long, endDate: Long): List<VolumeByDate> =
+        workoutDao.getVolumeByDate(startDate, endDate)
 
-    suspend fun getCardioSummary(startDate: Long): List<CardioSummary> = workoutDao.getCardioSummary(startDate)
+    suspend fun getCardioSummary(startDate: Long, endDate: Long): List<CardioSummary> =
+        workoutDao.getCardioSummary(startDate, endDate)
+
+    suspend fun getFirstWorkoutStart(): Long? = workoutDao.getFirstWorkoutStart()
 
     /**
      * Aggregates completed-set volume by muscle group, crediting each exercise's primary muscle
      * fully and every secondary muscle at [SECONDARY_MUSCLE_WEIGHT]. Because secondary muscles are
      * stored as a serialized list (not SQL-groupable), the weighting is done in memory.
      */
-    suspend fun getMuscleVolume(startDate: Long): List<MuscleVolume> {
-        val rows = workoutDao.getExerciseWorkoutVolume(startDate)
+    suspend fun getMuscleVolume(startDate: Long, endDate: Long): List<MuscleVolume> {
+        val rows = workoutDao.getExerciseWorkoutVolume(startDate, endDate)
         if (rows.isEmpty()) return emptyList()
 
         val musclesByExerciseId = exerciseDao.getAllExercisesList()
@@ -386,9 +391,9 @@ class WorkoutRepository @Inject constructor(
     suspend fun getMuscleLastTrained(): List<com.strongest.app.data.db.MuscleLastTrained> =
         workoutDao.getMuscleLastTrained()
 
-    suspend fun getWorkoutsPerDay(startDate: Long): List<WorkoutsPerDay> {
+    suspend fun getWorkoutsPerDay(startDate: Long, endDate: Long): List<WorkoutsPerDay> {
         val tzOffsetMs = java.util.TimeZone.getDefault().getOffset(System.currentTimeMillis()).toLong()
-        return workoutDao.getWorkoutsPerDay(startDate, tzOffsetMs)
+        return workoutDao.getWorkoutsPerDay(startDate, endDate, tzOffsetMs)
     }
 
     fun getAllCompletedHistoryRows(): Flow<List<HistorySetRow>> = workoutDao.getAllCompletedHistoryRows()

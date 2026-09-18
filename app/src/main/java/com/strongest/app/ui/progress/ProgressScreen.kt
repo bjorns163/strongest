@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material3.Card
@@ -27,6 +28,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.RangeSlider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -77,6 +86,7 @@ import com.strongest.app.utils.weightUnitLabel
 import java.util.Locale
 import java.text.SimpleDateFormat
 import java.util.Date
+import kotlin.math.roundToInt
 
 @Composable
 fun ProgressScreen(
@@ -120,7 +130,11 @@ fun ProgressScreen(
                 Column {
                     RangePicker(
                         current = state.range,
+                        startDay = state.startDay,
+                        endDay = state.endDay,
+                        firstDataDay = state.firstDataDay,
                         onSelect = { viewModel.setRange(it) },
+                        onSelectCustom = { start, end -> viewModel.setCustomRange(start, end) },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                     MetricPicker(
@@ -165,7 +179,8 @@ fun ProgressScreen(
                 PerWorkoutChartCard(
                     metric = state.metric,
                     weightUnit = weightUnit,
-                    rangeDays = state.range.days,
+                    startDay = state.startDay,
+                    lastDay = state.endDay,
                     volumeByDay = state.volumeByDay,
                     perDay = state.workoutsPerDay,
                     prsPerDay = state.prsPerDay,
@@ -493,22 +508,166 @@ private fun CardioStat(label: String, value: String) {
 @Composable
 private fun RangePicker(
     current: ProgressRange,
+    startDay: Long,
+    endDay: Long,
+    firstDataDay: Long?,
     onSelect: (ProgressRange) -> Unit,
+    onSelectCustom: (Long, Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showCustom by remember { mutableStateOf(false) }
+    val dateFormat = SimpleDateFormat("MMM d", LocalConfiguration.current.locales[0])
     LazyRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(ProgressRange.entries.size) { idx ->
             val range = ProgressRange.entries[idx]
+            val isCustom = range == ProgressRange.CUSTOM
             FilterChip(
                 selected = current == range,
-                onClick = { onSelect(range) },
-                label = { Text(range.label) }
+                onClick = { if (isCustom) showCustom = true else onSelect(range) },
+                label = {
+                    // Once picked, the custom chip names its own dates.
+                    Text(
+                        if (isCustom && current == range) {
+                            "${dateFormat.format(Date(startDay))} – ${dateFormat.format(Date(endDay))}"
+                        } else range.label
+                    )
+                },
+                leadingIcon = if (isCustom) {
+                    { Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                } else null
             )
         }
     }
+    if (showCustom) {
+        CustomRangeDialog(
+            firstDataDay = firstDataDay,
+            initialStart = startDay,
+            initialEnd = endDay,
+            onApply = { start, end ->
+                showCustom = false
+                onSelectCustom(start, end)
+            },
+            onDismiss = { showCustom = false }
+        )
+    }
+}
+
+/**
+ * Picks a custom range with a two-thumb slider. The slider only spans days the app has data for:
+ * from the first finished workout up to today, one step per day.
+ */
+@Composable
+private fun CustomRangeDialog(
+    firstDataDay: Long?,
+    initialStart: Long,
+    initialEnd: Long,
+    onApply: (Long, Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val today = localDayStart(System.currentTimeMillis())
+    val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
+    val first = firstDataDay?.coerceAtMost(today)
+    val lastIndex = first?.let { daySlotCount(it, today) - 1 } ?: 0
+    // Day index -> local midnight. The half-day nudge keeps DST's 23h/25h days from drifting.
+    fun dayAt(index: Int): Long = localDayStart(first!! + index * DAY_MS + DAY_MS / 2)
+    fun indexOf(day: Long): Int =
+        if (first == null) 0 else (daySlotCount(first, day.coerceIn(first, today)) - 1).coerceIn(0, lastIndex)
+
+    var selection by remember {
+        mutableStateOf(indexOf(initialStart).toFloat()..indexOf(initialEnd).toFloat())
+    }
+    val startIdx = selection.start.roundToInt()
+    val endIdx = selection.endInclusive.roundToInt()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Custom range") },
+        text = {
+            if (first == null) {
+                Text("Finish a workout to pick a range from your data.")
+            } else Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            "From",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            dateFormat.format(Date(dayAt(startIdx))),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            "To",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            dateFormat.format(Date(dayAt(endIdx))),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                if (lastIndex > 0) {
+                    RangeSlider(
+                        value = selection,
+                        // Snap to whole days by hand: `steps` would draw a tick per day, which
+                        // turns into a solid dotted bar once there's a year or more of data.
+                        onValueChange = { selection = it.start.roundToInt().toFloat()..it.endInclusive.roundToInt().toFloat() },
+                        valueRange = 0f..lastIndex.toFloat()
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            dateFormat.format(Date(first)),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Today",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    Text(
+                        "All your workouts are from today.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                val days = endIdx - startIdx + 1
+                Text(
+                    if (days == 1) "1 day" else "$days days",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onApply(dayAt(startIdx), dayAt(endIdx)) },
+                enabled = first != null
+            ) { Text("Apply") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
@@ -535,7 +694,8 @@ private fun MetricPicker(
 private fun PerWorkoutChartCard(
     metric: ProgressMetric,
     weightUnit: WeightUnit,
-    rangeDays: Int,
+    startDay: Long,
+    lastDay: Long,
     volumeByDay: List<VolumeByDate>,
     perDay: List<WorkoutsPerDay>,
     prsPerDay: List<PrsPerDay>,
@@ -555,8 +715,6 @@ private fun PerWorkoutChartCard(
 
         // The x-axis spans every calendar day in the selected range; days without data simply
         // have no point, and the line connects across them.
-        val lastDay = localDayStart(System.currentTimeMillis())
-        val startDay = lastDay - (rangeDays - 1) * DAY_MS
         val volumeMap = volumeByDay.associateBy { it.date }
         val perDayMap = perDay.associateBy { it.dayStart }
         val prsMap = prsPerDay.associateBy { it.dayStart }

@@ -40,7 +40,7 @@ class MuscleVolumeCardioTest {
                 )
             )
         )
-        `when`(workoutDao.getExerciseWorkoutVolume(anyLong())).thenReturn(
+        `when`(workoutDao.getExerciseWorkoutVolume(anyLong(), anyLong())).thenReturn(
             listOf(ExerciseWorkoutVolume(exerciseId = 1L, workoutId = 1L, sets = 3, volumeKg = 0f))
         )
         val repository = WorkoutRepository(
@@ -50,7 +50,7 @@ class MuscleVolumeCardioTest {
             mock(SettingsRepository::class.java)
         )
 
-        val muscles = repository.getMuscleVolume(0L)
+        val muscles = repository.getMuscleVolume(0L, Long.MAX_VALUE)
 
         assertNull(muscles.firstOrNull { it.muscleGroup == MuscleGroup.CARDIO.name })
         assertEquals(3f, muscles.single { it.muscleGroup == MuscleGroup.FULL_BODY.name }.totalSets, 0.01f)

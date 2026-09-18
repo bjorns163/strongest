@@ -5,7 +5,9 @@ import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.AppSettings
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.ui.progress.ProgressRange
 import com.strongest.app.ui.progress.ProgressViewModel
+import com.strongest.app.utils.localDayStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -22,6 +24,7 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 
 /**
@@ -46,10 +49,10 @@ class ProgressRecoveryRefreshTest {
         settingsRepository = mock(SettingsRepository::class.java)
         `when`(settingsRepository.settingsFlow).thenReturn(flowOf(AppSettings()))
         `when`(repository.getAllPersonalRecords()).thenReturn(emptyList())
-        `when`(repository.getVolumeByDate(anyLong())).thenReturn(emptyList())
-        `when`(repository.getMuscleVolume(anyLong())).thenReturn(emptyList())
-        `when`(repository.getWorkoutsPerDay(anyLong())).thenReturn(emptyList())
-        `when`(repository.getCardioSummary(anyLong())).thenReturn(emptyList())
+        `when`(repository.getVolumeByDate(anyLong(), anyLong())).thenReturn(emptyList())
+        `when`(repository.getMuscleVolume(anyLong(), anyLong())).thenReturn(emptyList())
+        `when`(repository.getWorkoutsPerDay(anyLong(), anyLong())).thenReturn(emptyList())
+        `when`(repository.getCardioSummary(anyLong(), anyLong())).thenReturn(emptyList())
         `when`(repository.getAllCompletedHistoryRows()).thenReturn(flowOf(emptyList()))
     }
 
@@ -100,7 +103,7 @@ class ProgressRecoveryRefreshTest {
 
         // Recovery is range-independent by design, so the range selector must not be what
         // refreshes it — this is why the bug looked like "only the charts update".
-        vm.setRange(com.strongest.app.ui.progress.ProgressRange.DAYS_90)
+        vm.setRange(com.strongest.app.ui.progress.ProgressRange.DAYS_182)
         advanceUntilIdle()
         assertTrue(vm.state.value.recoveringMuscles.isEmpty())
 
@@ -108,5 +111,26 @@ class ProgressRecoveryRefreshTest {
         vm.refresh()
         advanceUntilIdle()
         assertEquals(1, vm.state.value.recoveringMuscles.size)
+    }
+
+    @Test
+    fun `a custom range queries from its first day up to the day after its last`() = runTest(dispatcher) {
+        `when`(repository.getMuscleLastTrained()).thenReturn(emptyList())
+        val vm = ProgressViewModel(repository, settingsRepository)
+        advanceUntilIdle()
+
+        val start = localDayStart(java.util.GregorianCalendar(2026, java.util.Calendar.MARCH, 1).timeInMillis)
+        val end = localDayStart(java.util.GregorianCalendar(2026, java.util.Calendar.MARCH, 31).timeInMillis)
+        val dayAfterEnd = localDayStart(java.util.GregorianCalendar(2026, java.util.Calendar.APRIL, 1).timeInMillis)
+
+        // Passed the wrong way round on purpose: the range is normalised.
+        vm.setCustomRange(end, start)
+        advanceUntilIdle()
+
+        assertEquals(ProgressRange.CUSTOM, vm.state.value.range)
+        assertEquals(start, vm.state.value.startDay)
+        assertEquals(end, vm.state.value.endDay)
+        verify(repository).getVolumeByDate(start, dayAfterEnd)
+        verify(repository).getWorkoutsPerDay(start, dayAfterEnd)
     }
 }

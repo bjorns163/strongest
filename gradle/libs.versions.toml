@@ -17,7 +17,7 @@ mockitoCore = "5.23.0"
 mpandroidchart = "v3.1.0"
 navigationCompose = "2.10.1"
 robolectric = "4.16.1"
-room = "2.8.4"
+room = "2.8.5"
 testCore = "1.7.0"
 
 [libraries]

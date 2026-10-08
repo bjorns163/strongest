@@ -75,6 +75,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +86,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.data.model.Equipment
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.WeightUnit
@@ -107,6 +110,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
@@ -405,6 +409,38 @@ fun ActiveWorkoutScreen(
         )
     }
 
+    // Editing a finished workout: Cancel, the back arrow and the system back all go through here.
+    // Nothing changed -> leave straight away; otherwise ask before throwing the edits away.
+    var pendingDiscard by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val focusManager = LocalFocusManager.current
+    fun requestDiscard(afterDiscard: () -> Unit) {
+        // A focused set field ignores new values, so it would keep showing the discarded edit.
+        focusManager.clearFocus()
+        scope.launch {
+            if (viewModel.hasUnsavedHistoryChanges()) pendingDiscard = afterDiscard
+            else viewModel.cancelHistoryEdit(afterDiscard)
+        }
+    }
+    BackHandler(enabled = state.isEditingHistory) { requestDiscard(onBack) }
+    pendingDiscard?.let { afterDiscard ->
+        AlertDialog(
+            onDismissRequest = { pendingDiscard = null },
+            title = { Text("Discard changes?") },
+            text = { Text("Your changes to this workout won't be saved.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDiscard = null
+                    viewModel.cancelHistoryEdit(afterDiscard)
+                }) {
+                    Text("Discard", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDiscard = null }) { Text("Keep editing") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             Column(
@@ -417,7 +453,9 @@ fun ActiveWorkoutScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        if (state.isEditingHistory) requestDiscard(onBack) else onBack()
+                    }) {
                         Icon(Icons.AutoMirrored.Default.ArrowBack, "Back")
                     }
                     Text(
@@ -430,9 +468,14 @@ fun ActiveWorkoutScreen(
                     )
                     when {
                         state.isEditingHistory -> {
-                            Button(onClick = { viewModel.exitHistoryEditMode() }) {
-                                Icon(Icons.Default.Check, null, Modifier.padding(end = 4.dp))
-                                Text("Done")
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                TextButton(onClick = { requestDiscard {} }) {
+                                    Text("Cancel", color = MaterialTheme.colorScheme.error)
+                                }
+                                Button(onClick = { viewModel.exitHistoryEditMode() }) {
+                                    Icon(Icons.Default.Check, null, Modifier.padding(end = 4.dp))
+                                    Text("Save")
+                                }
                             }
                         }
                         state.isViewMode -> {
@@ -1538,8 +1581,11 @@ fun RpePickerDialog(
     )
 }
 
-internal fun exerciseSubtitle(exercise: WorkoutExerciseUi): String {
-    val muscle = exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() }
-    val equipment = exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() }
-    return "$muscle • $equipment • ${exercise.type.label()}"
+internal fun exerciseSubtitle(exercise: WorkoutExerciseUi): String =
+    exerciseSubtitle(exercise.muscleGroup.name, exercise.equipment, exercise.type)
+
+internal fun exerciseSubtitle(muscleGroup: String, equipment: Equipment, type: ExerciseType): String {
+    val muscle = muscleGroup.lowercase().replaceFirstChar { it.uppercase() }
+    val equipmentLabel = equipment.name.lowercase().replaceFirstChar { it.uppercase() }
+    return "$muscle • $equipmentLabel • ${type.label()}"
 }

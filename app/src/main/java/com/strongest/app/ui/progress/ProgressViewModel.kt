@@ -2,6 +2,7 @@ package com.strongest.app.ui.progress
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.strongest.app.data.db.CardioSummary
 import com.strongest.app.data.db.MuscleVolume
 import com.strongest.app.data.db.PersonalRecord
 import com.strongest.app.data.db.VolumeByDate
@@ -11,6 +12,9 @@ import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.utils.DAY_MS
+import com.strongest.app.utils.WorkoutPrInfo
+import com.strongest.app.utils.computeAllWorkoutPrs
 import com.strongest.app.utils.localDayStart
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,19 +29,24 @@ import kotlinx.coroutines.launch
 import kotlin.math.ceil
 import javax.inject.Inject
 
-enum class ProgressRange(val days: Int, val label: String) {
+/** A preset counts back [days] from today; [CUSTOM] uses the days the user picked. */
+enum class ProgressRange(val days: Int?, val label: String) {
     DAYS_7(7, "7d"),
     DAYS_30(30, "30d"),
-    DAYS_90(90, "90d"),
     DAYS_182(182, "6m"),
-    DAYS_365(365, "1y")
+    DAYS_365(365, "1y"),
+    CUSTOM(null, "Custom")
 }
 
 enum class ProgressMetric(val label: String) {
     SETS("Sets"),
     WEIGHT("Weight"),
-    WORKOUTS("Workouts")
+    WORKOUTS("Workouts"),
+    PRS("PRs")
 }
+
+/** How many PRs were set on one local calendar day. */
+data class PrsPerDay(val dayStart: Long, val count: Int)
 
 /** One recovering primary muscle: hours left until recovered and how far along it is (0..1). */
 data class MuscleRecovery(
@@ -49,11 +58,19 @@ data class MuscleRecovery(
 data class ProgressUiState(
     val isLoading: Boolean = false,
     val range: ProgressRange = ProgressRange.DAYS_30,
+    /** First and last local day (midnight) the charts cover, both inclusive. */
+    val startDay: Long = 0L,
+    val endDay: Long = 0L,
+    /** Local day of the first finished workout — the earliest a custom range can start. */
+    val firstDataDay: Long? = null,
     val metric: ProgressMetric = ProgressMetric.SETS,
     val personalRecords: List<PersonalRecord> = emptyList(),
     val volumeByDay: List<VolumeByDate> = emptyList(),
     val workoutsPerDay: List<WorkoutsPerDay> = emptyList(),
+    val prsPerDay: List<PrsPerDay> = emptyList(),
     val muscleVolume: List<MuscleVolume> = emptyList(),
+    /** Cardio is kept out of every sets/volume/muscle chart and summarised here instead. */
+    val cardio: List<CardioSummary> = emptyList(),
     val recoveringMuscles: List<MuscleRecovery> = emptyList(),
     /** The muscle the whole tab is focused on: highlighted in every chart, and the PR filter. */
     val selectedMuscle: MuscleGroup? = null,
@@ -83,8 +100,20 @@ class ProgressViewModel @Inject constructor(
     }
 
     fun setRange(range: ProgressRange) {
+        val days = range.days ?: return // CUSTOM goes through setCustomRange
         if (range == _state.value.range) return
-        _state.update { it.copy(range = range) }
+        val today = localDayStart(System.currentTimeMillis())
+        // Snap back to local midnight: fixed 24h steps drift by 1h across DST transitions.
+        val start = localDayStart(today - (days - 1) * DAY_MS)
+        _state.update { it.copy(range = range, startDay = start, endDay = today) }
+        loadRanged()
+    }
+
+    /** Show [startDay]..[endDay] (local midnights, both inclusive). */
+    fun setCustomRange(startDay: Long, endDay: Long) {
+        val start = localDayStart(minOf(startDay, endDay))
+        val end = localDayStart(maxOf(startDay, endDay))
+        _state.update { it.copy(range = ProgressRange.CUSTOM, startDay = start, endDay = end) }
         loadRanged()
     }
 
@@ -109,6 +138,20 @@ class ProgressViewModel @Inject constructor(
     private fun loadAll() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
+            val firstDataDay = repository.getFirstWorkoutStart()?.let { localDayStart(it) }
+            _state.update { st ->
+                // A preset always ends today, so re-anchor it in case the date rolled over.
+                val days = st.range.days
+                if (days == null) st.copy(firstDataDay = firstDataDay)
+                else {
+                    val today = localDayStart(System.currentTimeMillis())
+                    st.copy(
+                        firstDataDay = firstDataDay,
+                        startDay = localDayStart(today - (days - 1) * DAY_MS),
+                        endDay = today
+                    )
+                }
+            }
             val prs = repository.getAllPersonalRecords()
             _state.update { it.copy(personalRecords = prs) }
             loadRecovery()
@@ -140,15 +183,15 @@ class ProgressViewModel @Inject constructor(
 
     private fun loadRanged() {
         viewModelScope.launch {
-            val rangeDays = _state.value.range.days
-            // Align the query to the same calendar-day boundaries the chart uses. Snap the result
-            // back to local midnight: fixed 24h steps drift by 1h across DST transitions.
-            val startDate = localDayStart(
-                localDayStart(System.currentTimeMillis()) - (rangeDays - 1) * 24L * 60 * 60 * 1000
-            )
-            val volume = repository.getVolumeByDate(startDate)
-            val muscle = repository.getMuscleVolume(startDate)
-            val perDay = repository.getWorkoutsPerDay(startDate)
+            // Align the query to the same calendar-day boundaries the chart uses. The end is the
+            // start of the day after endDay; +36h lands in that day even across a DST change.
+            val startDate = _state.value.startDay
+            val endDate = localDayStart(_state.value.endDay + DAY_MS + DAY_MS / 2)
+            val volume = repository.getVolumeByDate(startDate, endDate)
+            val muscle = repository.getMuscleVolume(startDate, endDate)
+            val perDay = repository.getWorkoutsPerDay(startDate, endDate)
+            val cardio = repository.getCardioSummary(startDate, endDate)
+            val prs = prsInRange(startDate, endDate)
             // Aggregate volume/sets per local calendar day so the chart can sit on a continuous
             // day axis (multiple workouts on one day collapse into a single point).
             val volumeByDay = volume
@@ -165,10 +208,42 @@ class ProgressViewModel @Inject constructor(
                 it.copy(
                     isLoading = false,
                     volumeByDay = volumeByDay,
-                    muscleVolume = muscle,
-                    workoutsPerDay = perDay
+                    muscleVolume = withPrCounts(muscle, prs),
+                    workoutsPerDay = perDay,
+                    prsPerDay = prs
+                        .groupBy { localDayStart(it.first) }
+                        .map { (day, dayPrs) -> PrsPerDay(day, dayPrs.size) }
+                        .sortedBy { it.dayStart },
+                    cardio = cardio
                 )
             }
         }
+    }
+
+    /**
+     * Every PR set in [startDate, endDate), paired with its workout's start time. PRs are judged
+     * against the whole history, so all rows are loaded and the range applied afterwards. Cardio
+     * stays out, like everywhere else on this tab.
+     */
+    private suspend fun prsInRange(startDate: Long, endDate: Long): List<Pair<Long, WorkoutPrInfo>> {
+        val rows = repository.getAllCompletedHistoryRows().first()
+        val startByWorkout = rows.associate { it.workoutId to it.workoutStartTime }
+        return computeAllWorkoutPrs(rows).flatMap { (workoutId, prs) ->
+            val start = startByWorkout[workoutId] ?: return@flatMap emptyList()
+            if (start < startDate || start >= endDate) return@flatMap emptyList()
+            prs.filter { it.muscleGroup != MuscleGroup.CARDIO.name }.map { start to it }
+        }
+    }
+
+    /** Adds each muscle's PR count; a workout's volume PR has no muscle and isn't counted here. */
+    private fun withPrCounts(
+        muscle: List<MuscleVolume>,
+        prs: List<Pair<Long, WorkoutPrInfo>>
+    ): List<MuscleVolume> {
+        val counts = prs.mapNotNull { it.second.muscleGroup }.groupingBy { it }.eachCount()
+        val withCounts = muscle.map { it.copy(prCount = counts[it.muscleGroup] ?: 0) }
+        val missing = counts.filterKeys { name -> muscle.none { it.muscleGroup == name } }
+            .map { (name, count) -> MuscleVolume(name, 0f, 0f, 0, prCount = count) }
+        return withCounts + missing
     }
 }

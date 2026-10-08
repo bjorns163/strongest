@@ -421,7 +421,14 @@ class ActiveWorkoutViewModel @Inject constructor(
         super.onCleared()
     }
 
+    // The screen re-runs its load effect every time it re-enters composition (e.g. back from the
+    // exercise picker). Reloading then races addExercises(): the DB read can pick up the freshly
+    // inserted rows before addExercises() appends them again, duplicating LazyColumn keys.
+    private var loadedWorkoutId: Long? = null
+
     fun loadWorkout(workoutId: Long) {
+        if (loadedWorkoutId == workoutId) return
+        loadedWorkoutId = workoutId
         viewModelScope.launch {
             _state.update { it.copy(workoutId = workoutId) }
             val workout = repository.getWorkoutById(workoutId)
@@ -688,7 +695,7 @@ class ActiveWorkoutViewModel @Inject constructor(
             )
             _state.update {
                 it.copy(
-                    workoutExercises = it.workoutExercises + newExercise
+                    workoutExercises = (it.workoutExercises + newExercise).distinctBy { e -> e.workoutExerciseId }
                 )
             }
             persistExerciseOrderAndIds()
@@ -749,7 +756,7 @@ class ActiveWorkoutViewModel @Inject constructor(
             }
             _state.update {
                 it.copy(
-                    workoutExercises = it.workoutExercises + newExercises
+                    workoutExercises = (it.workoutExercises + newExercises).distinctBy { e -> e.workoutExerciseId }
                 )
             }
             persistExerciseOrderAndIds()
@@ -1488,6 +1495,8 @@ class ActiveWorkoutViewModel @Inject constructor(
     }
 
     fun loadCompletedWorkout(workoutId: Long) {
+        if (loadedWorkoutId == workoutId) return
+        loadedWorkoutId = workoutId
         viewModelScope.launch {
             _state.update { it.copy(workoutId = workoutId, isViewMode = true) }
             val workout = repository.getWorkoutById(workoutId)

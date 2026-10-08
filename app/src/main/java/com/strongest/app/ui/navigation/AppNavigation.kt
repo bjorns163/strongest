@@ -110,7 +110,8 @@ fun AppNavigation(
                     onExercisesSelected = { _ ->
                         navController.popBackStack()
                     },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onViewExercise = { navController.navigate(Screen.ExerciseDetail.createRoute(it)) }
                 )
             }
             composable(Screen.Routines.route) {
@@ -158,7 +159,8 @@ fun AppNavigation(
                     onExercisesSelected = { _ ->
                         navController.popBackStack()
                     },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onViewExercise = { navController.navigate(Screen.ExerciseDetail.createRoute(it)) }
                 )
             }
             composable(Screen.History.route) {
@@ -170,7 +172,10 @@ fun AppNavigation(
                 backStackEntry.arguments?.getString("id")?.toLongOrNull()?.let { workoutId ->
                     com.strongest.app.ui.workout.ActiveWorkoutScreen(
                         onBack = { navController.popBackStack() },
-                        onAddExercise = {},
+                        // Only reachable while editing; the picker hands its result back through
+                        // ExercisePickerResultHolder, same as for an active workout.
+                        onAddExercise = { navController.navigate(Screen.ExercisePicker.route) },
+                        onNavigateToReplacePicker = { navController.navigate(Screen.ExercisePicker.route) },
                         onViewExerciseDetail = { exerciseId, _ ->
                             navController.navigate(Screen.ExerciseDetail.createRoute(exerciseId))
                         },

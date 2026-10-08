@@ -1,5 +1,6 @@
 package com.strongest.app.data.repository
 
+import com.strongest.app.data.db.CardioSummary
 import com.strongest.app.data.db.ExerciseDao
 import com.strongest.app.data.db.ExerciseHistoryEntry
 import com.strongest.app.data.db.ExerciseUsageCount
@@ -339,15 +340,22 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun getAllPersonalRecords(): List<PersonalRecord> = workoutDao.getAllPersonalRecords()
 
-    suspend fun getVolumeByDate(startDate: Long): List<VolumeByDate> = workoutDao.getVolumeByDate(startDate)
+    /** The ranged Progress queries cover workouts started in [startDate, endDate). */
+    suspend fun getVolumeByDate(startDate: Long, endDate: Long): List<VolumeByDate> =
+        workoutDao.getVolumeByDate(startDate, endDate)
+
+    suspend fun getCardioSummary(startDate: Long, endDate: Long): List<CardioSummary> =
+        workoutDao.getCardioSummary(startDate, endDate)
+
+    suspend fun getFirstWorkoutStart(): Long? = workoutDao.getFirstWorkoutStart()
 
     /**
      * Aggregates completed-set volume by muscle group, crediting each exercise's primary muscle
      * fully and every secondary muscle at [SECONDARY_MUSCLE_WEIGHT]. Because secondary muscles are
      * stored as a serialized list (not SQL-groupable), the weighting is done in memory.
      */
-    suspend fun getMuscleVolume(startDate: Long): List<MuscleVolume> {
-        val rows = workoutDao.getExerciseWorkoutVolume(startDate)
+    suspend fun getMuscleVolume(startDate: Long, endDate: Long): List<MuscleVolume> {
+        val rows = workoutDao.getExerciseWorkoutVolume(startDate, endDate)
         if (rows.isEmpty()) return emptyList()
 
         val musclesByExerciseId = exerciseDao.getAllExercisesList()
@@ -359,6 +367,8 @@ class WorkoutRepository @Inject constructor(
         for (row in rows) {
             val contributions = musclesByExerciseId[row.exerciseId] ?: continue
             for ((muscle, weight) in contributions) {
+                // Cardio has its own card; a CARDIO secondary on e.g. burpees isn't a muscle.
+                if (muscle == MuscleGroup.CARDIO) continue
                 val acc = byMuscle.getOrPut(muscle) { Acc() }
                 acc.sets += row.sets * weight
                 acc.volume += row.volumeKg * weight
@@ -381,9 +391,9 @@ class WorkoutRepository @Inject constructor(
     suspend fun getMuscleLastTrained(): List<com.strongest.app.data.db.MuscleLastTrained> =
         workoutDao.getMuscleLastTrained()
 
-    suspend fun getWorkoutsPerDay(startDate: Long): List<WorkoutsPerDay> {
+    suspend fun getWorkoutsPerDay(startDate: Long, endDate: Long): List<WorkoutsPerDay> {
         val tzOffsetMs = java.util.TimeZone.getDefault().getOffset(System.currentTimeMillis()).toLong()
-        return workoutDao.getWorkoutsPerDay(startDate, tzOffsetMs)
+        return workoutDao.getWorkoutsPerDay(startDate, endDate, tzOffsetMs)
     }
 
     fun getAllCompletedHistoryRows(): Flow<List<HistorySetRow>> = workoutDao.getAllCompletedHistoryRows()
@@ -450,6 +460,33 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun upsertNote(note: ExerciseNote) = exerciseDao.upsertNote(note)
 
+    /** Everything editing a finished workout can change, so the edit can be undone. */
+    suspend fun snapshotWorkout(workoutId: Long): WorkoutSnapshot? {
+        val workout = workoutDao.getWorkoutById(workoutId) ?: return null
+        val exercises = workoutDao.getWorkoutExercises(workoutId)
+        return WorkoutSnapshot(
+            workout = workout,
+            exercises = exercises,
+            sets = exercises.flatMap { workoutDao.getSetsForExercise(it.id) },
+            // Exercise notes are per exercise, not per workout, but they can be edited from here.
+            notes = exerciseDao.getAllNotes()
+        )
+    }
+
+    suspend fun restoreWorkout(snapshot: WorkoutSnapshot) {
+        workoutDao.restoreWorkout(snapshot.workout, snapshot.exercises, snapshot.sets)
+        val before = snapshot.notes.associateBy { it.exerciseId }
+        val now = exerciseDao.getAllNotes().associateBy { it.exerciseId }
+        for ((exerciseId, note) in now) {
+            val original = before[exerciseId]
+            if (original == null) exerciseDao.deleteNote(exerciseId)
+            else if (original != note) exerciseDao.upsertNote(original)
+        }
+        for ((exerciseId, original) in before) {
+            if (exerciseId !in now) exerciseDao.upsertNote(original)
+        }
+    }
+
     suspend fun getExerciseSettings(exerciseId: Long): ExerciseSettings? =
         exerciseDao.getExerciseSettings(exerciseId)
 
@@ -472,3 +509,11 @@ class WorkoutRepository @Inject constructor(
             it.copy(barWeightKg = barWeightKg, plateSingleSide = singleSide)
         }
 }
+
+/** A finished workout as it was before editing started; see [WorkoutRepository.restoreWorkout]. */
+data class WorkoutSnapshot(
+    val workout: Workout,
+    val exercises: List<WorkoutExercise>,
+    val sets: List<SetLog>,
+    val notes: List<ExerciseNote>
+)

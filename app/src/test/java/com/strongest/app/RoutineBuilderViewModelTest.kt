@@ -150,4 +150,44 @@ class RoutineBuilderViewModelTest {
         assertEquals(56f, sets[1].weight)
         assertEquals(5, sets[1].reps)
     }
+
+    @Test
+    fun `editing a warm-up set does not fill down to sets below`() = runTest(dispatcher) {
+        `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getNote(1L)).thenReturn(null)
+        val vm = RoutineBuilderViewModel(repository, settingsRepository)
+        advanceUntilIdle()
+
+        vm.addExercise(1L)
+        advanceUntilIdle()
+        val routineExerciseId = vm.state.value.exercises.single().routineExerciseId
+        vm.updateSet(routineExerciseId, 0, 100f, 5)
+        vm.toggleWarmUp(routineExerciseId, 0)
+
+        vm.updateSet(routineExerciseId, 0, 40f, 10)
+
+        val sets = vm.state.value.exercises.single().sets
+        assertEquals(40f, sets[0].weight)
+        assertEquals(10, sets[0].reps)
+        assertEquals(listOf(100f, 100f), sets.drop(1).map { it.weight })
+        assertEquals(listOf(5, 5), sets.drop(1).map { it.reps })
+    }
+
+    @Test
+    fun `editing a working set fills down to sets below`() = runTest(dispatcher) {
+        `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getNote(1L)).thenReturn(null)
+        val vm = RoutineBuilderViewModel(repository, settingsRepository)
+        advanceUntilIdle()
+
+        vm.addExercise(1L)
+        advanceUntilIdle()
+        val routineExerciseId = vm.state.value.exercises.single().routineExerciseId
+
+        vm.updateSet(routineExerciseId, 0, 100f, 5)
+
+        val sets = vm.state.value.exercises.single().sets
+        assertEquals(listOf(100f, 100f, 100f), sets.map { it.weight })
+        assertEquals(listOf(5, 5, 5), sets.map { it.reps })
+    }
 }

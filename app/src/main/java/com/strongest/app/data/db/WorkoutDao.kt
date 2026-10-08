@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.strongest.app.data.model.SetLog
 import com.strongest.app.data.model.SetType
@@ -42,7 +43,19 @@ data class MuscleVolume(
     val muscleGroup: String,
     val totalSets: Float,
     val totalVolumeKg: Float,
-    val workoutCount: Int
+    val workoutCount: Int,
+    /** PRs set on exercises with this primary muscle; filled in by the Progress tab. */
+    val prCount: Int = 0
+)
+
+/** One cardio exercise's totals over a range, for the Progress tab's cardio card. */
+data class CardioSummary(
+    val exerciseId: Long,
+    val exerciseName: String,
+    val sessions: Int,
+    val totalSeconds: Int,
+    val maxLevel: Float,
+    val lastDone: Long
 )
 
 /** Per-exercise, per-workout completed-set totals, used to weight secondary-muscle contributions. */
@@ -75,7 +88,8 @@ data class HistorySetRow(
     val setNumber: Int?,
     val weightKg: Float?,
     val reps: Int?,
-    val setType: String?
+    val setType: String?,
+    val workoutStartTime: Long = 0L
 )
 
 data class ExerciseUsageCount(
@@ -145,6 +159,25 @@ interface WorkoutDao {
     @Delete
     suspend fun deleteSet(setLog: SetLog)
 
+    @Query("DELETE FROM sets WHERE workoutExerciseId IN (SELECT id FROM workout_exercises WHERE workoutId = :workoutId)")
+    suspend fun deleteSetsForWorkout(workoutId: Long)
+
+    @Query("DELETE FROM workout_exercises WHERE workoutId = :workoutId")
+    suspend fun deleteWorkoutExercisesForWorkout(workoutId: Long)
+
+    /**
+     * Puts a workout back exactly as [workout], [exercises] and [sets] describe it, with their
+     * original ids: whatever was added since is removed and whatever was deleted comes back.
+     */
+    @Transaction
+    suspend fun restoreWorkout(workout: Workout, exercises: List<WorkoutExercise>, sets: List<SetLog>) {
+        deleteSetsForWorkout(workout.id)
+        deleteWorkoutExercisesForWorkout(workout.id)
+        updateWorkout(workout)
+        insertWorkoutExercises(exercises)
+        insertSets(sets)
+    }
+
     @Query("""
         SELECT w.startTime as workoutDate, e.name as exerciseName,
                s.weightKg, s.reps, s.rpe, s.setType, w.routineName
@@ -195,12 +228,14 @@ interface WorkoutDao {
                COUNT(s.id) as totalSets
         FROM workouts w
         JOIN workout_exercises we ON w.id = we.workoutId
+        JOIN exercises e ON we.exerciseId = e.id
         JOIN sets s ON we.id = s.workoutExerciseId
-        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND s.setType != 'WARM_UP'
+        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND w.startTime < :endDate AND s.setType != 'WARM_UP'
+          AND e.muscleGroup != 'CARDIO'
         GROUP BY w.startTime
         ORDER BY w.startTime ASC
     """)
-    suspend fun getVolumeByDate(startDate: Long): List<VolumeByDate>
+    suspend fun getVolumeByDate(startDate: Long, endDate: Long): List<VolumeByDate>
 
     @Query("""
         SELECT we.exerciseId AS exerciseId,
@@ -236,12 +271,35 @@ interface WorkoutDao {
                SUM(s.weightKg * s.reps) AS volumeKg
         FROM sets s
         JOIN workout_exercises we ON s.workoutExerciseId = we.id
+        JOIN exercises e ON we.exerciseId = e.id
         JOIN workouts w ON we.workoutId = w.id
-        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND s.completedAt > 0
-          AND s.setType != 'WARM_UP'
+        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND w.startTime < :endDate AND s.completedAt > 0
+          AND s.setType != 'WARM_UP' AND e.muscleGroup != 'CARDIO'
         GROUP BY we.exerciseId, w.id
     """)
-    suspend fun getExerciseWorkoutVolume(startDate: Long): List<ExerciseWorkoutVolume>
+    suspend fun getExerciseWorkoutVolume(startDate: Long, endDate: Long): List<ExerciseWorkoutVolume>
+
+    /**
+     * Per cardio exercise in range: how often it was done and for how long. Cardio sets keep the
+     * machine level in `weightKg` and the time in seconds in `reps`.
+     */
+    @Query("""
+        SELECT we.exerciseId AS exerciseId,
+               e.name AS exerciseName,
+               COUNT(DISTINCT w.id) AS sessions,
+               COALESCE(SUM(s.reps), 0) AS totalSeconds,
+               COALESCE(MAX(s.weightKg), 0) AS maxLevel,
+               MAX(w.startTime) AS lastDone
+        FROM sets s
+        JOIN workout_exercises we ON s.workoutExerciseId = we.id
+        JOIN exercises e ON we.exerciseId = e.id
+        JOIN workouts w ON we.workoutId = w.id
+        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND w.startTime < :endDate AND s.completedAt > 0
+          AND s.setType != 'WARM_UP' AND e.muscleGroup = 'CARDIO'
+        GROUP BY we.exerciseId
+        ORDER BY totalSeconds DESC
+    """)
+    suspend fun getCardioSummary(startDate: Long, endDate: Long): List<CardioSummary>
 
     @Query("""
         SELECT e.muscleGroup AS muscleGroup, MAX(w.startTime) AS lastTrained
@@ -254,6 +312,10 @@ interface WorkoutDao {
     """)
     suspend fun getMuscleLastTrained(): List<MuscleLastTrained>
 
+    /** Start time of the first finished workout, or null when there are none yet. */
+    @Query("SELECT MIN(startTime) FROM workouts WHERE isOngoing = 0")
+    suspend fun getFirstWorkoutStart(): Long?
+
     /**
      * Buckets workouts by local calendar day. The caller supplies [tzOffsetMs] (e.g.
      * `TimeZone.getDefault().getOffset(now)`) so the same workout is grouped under the same date
@@ -263,11 +325,11 @@ interface WorkoutDao {
         SELECT (((w.startTime + :tzOffsetMs) / 86400000) * 86400000) - :tzOffsetMs AS dayStart,
                COUNT(DISTINCT w.id) AS count
         FROM workouts w
-        WHERE w.isOngoing = 0 AND w.startTime >= :startDate
+        WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND w.startTime < :endDate
         GROUP BY dayStart
         ORDER BY dayStart ASC
     """)
-    suspend fun getWorkoutsPerDay(startDate: Long, tzOffsetMs: Long): List<WorkoutsPerDay>
+    suspend fun getWorkoutsPerDay(startDate: Long, endDate: Long, tzOffsetMs: Long): List<WorkoutsPerDay>
 
     @Query("""
         SELECT we.exerciseId AS exerciseId, COUNT(DISTINCT w.id) AS workoutCount
@@ -281,6 +343,7 @@ interface WorkoutDao {
 
     @Query("""
         SELECT we.workoutId AS workoutId,
+               w.startTime AS workoutStartTime,
                we.id AS workoutExerciseId,
                we.exerciseId AS exerciseId,
                e.name AS exerciseName,

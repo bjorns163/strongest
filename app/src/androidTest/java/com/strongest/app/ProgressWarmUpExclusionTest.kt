@@ -140,12 +140,12 @@ class ProgressWarmUpExclusionTest {
         )
 
         // Volume by date: only the 2 working sets count (100*5 + 102.5*3 = 807.5).
-        val volume = workoutDao.getVolumeByDate(0L)
+        val volume = workoutDao.getVolumeByDate(0L, Long.MAX_VALUE)
         assertEquals(1, volume.size)
         assertEquals(807.5f, volume[0].totalVolumeKg, 0.001f)
         assertEquals(2, volume[0].totalSets)
 
-        val perExercise = workoutDao.getExerciseWorkoutVolume(0L)
+        val perExercise = workoutDao.getExerciseWorkoutVolume(0L, Long.MAX_VALUE)
         assertEquals(1, perExercise.size)
         assertEquals(807.5f, perExercise[0].volumeKg, 0.001f)
         assertEquals(2, perExercise[0].sets)

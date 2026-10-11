@@ -1,6 +1,7 @@
 package com.strongest.app.ui.navigation
 
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
@@ -45,10 +46,13 @@ fun AppNavigation(
             navController = navController,
             startDestination = Screen.Workout.route,
             // Screens have their own Scaffolds; consuming the insets stops them padding for the
-            // status and navigation bars a second time.
+            // status and navigation bars a second time. Edge-to-edge means the keyboard no longer
+            // shrinks the window, so imePadding() keeps inputs above it — only by the part of the
+            // keyboard that rises past the bottom bar, since that space is already consumed.
             modifier = Modifier
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
+                .imePadding()
         ) {
             composable(Screen.Workout.route) {
                 WorkoutScreen(

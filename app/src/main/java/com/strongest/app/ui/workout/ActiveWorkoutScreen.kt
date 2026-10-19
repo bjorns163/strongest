@@ -1474,20 +1474,23 @@ fun PrSummaryCard(
             }
             Spacer(modifier = Modifier.height(8.dp))
             for (pr in prs) {
+                val name = pr.exerciseName ?: "?"
+                val w = com.strongest.app.utils.formatWeightForDisplay(pr.weightKg ?: 0f, weightUnit)
+                val r = pr.reps ?: 0
+                val vol = com.strongest.app.utils.formatWeightForDisplay(pr.volumeKg ?: 0f, weightUnit)
                 val text = when (pr.kind) {
-                    com.strongest.app.utils.PrKind.WEIGHT -> {
-                        val w = com.strongest.app.utils.formatWeightForDisplay(pr.weightKg ?: 0f, weightUnit)
-                        val r = pr.reps ?: 0
-                        if (pr.muscleGroup == "CARDIO") {
-                            "${pr.exerciseName ?: "?"} — best ${w} × ${r}"
-                        } else {
-                            "${pr.exerciseName ?: "?"} — heaviest set $w $unitLabel × $r"
-                        }
-                    }
+                    com.strongest.app.utils.PrKind.WEIGHT -> "$name — heaviest set $w $unitLabel × $r"
                     com.strongest.app.utils.PrKind.ONE_RM ->
-                        "${pr.exerciseName ?: "?"} — estimated 1RM ${com.strongest.app.utils.formatWeightForDisplay(pr.oneRmKg ?: 0f, weightUnit)} $unitLabel"
-                    com.strongest.app.utils.PrKind.VOLUME ->
-                        "Workout volume PR ${com.strongest.app.utils.formatWeightForDisplay(pr.volumeKg ?: 0f, weightUnit)} $unitLabel"
+                        "$name — estimated 1RM ${com.strongest.app.utils.formatWeightForDisplay(pr.oneRmKg ?: 0f, weightUnit)} $unitLabel"
+                    com.strongest.app.utils.PrKind.REPS_AT_WEIGHT -> "$name — most reps at $w $unitLabel: $r"
+                    com.strongest.app.utils.PrKind.MAX_REPS -> "$name — most reps: $r"
+                    com.strongest.app.utils.PrKind.SET_VOLUME -> "$name — best set $w $unitLabel × $r ($vol $unitLabel)"
+                    com.strongest.app.utils.PrKind.EXERCISE_VOLUME -> "$name — most volume $vol $unitLabel"
+                    com.strongest.app.utils.PrKind.CARDIO_DURATION ->
+                        "$name — longest session ${com.strongest.app.utils.formatDuration(r)}"
+                    com.strongest.app.utils.PrKind.CARDIO_LEVEL ->
+                        "$name — highest level $w (${com.strongest.app.utils.formatDuration(r)})"
+                    com.strongest.app.utils.PrKind.VOLUME -> "Workout volume PR $vol $unitLabel"
                 }
                 Text(
                     text = "• $text",

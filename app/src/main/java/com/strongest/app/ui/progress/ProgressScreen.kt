@@ -1208,6 +1208,8 @@ private fun PersonalRecordCard(
             Text(
                 text = if (pr.muscleGroup == "CARDIO") {
                     "Level ${formatWeightForDisplay(pr.maxWeightKg, weightUnit)} - ${formatDuration(pr.maxReps)}"
+                } else if (pr.maxWeightKg <= 0f) {
+                    "${pr.maxReps} reps"
                 } else {
                     "${formatWeightForDisplay(pr.maxWeightKg, weightUnit)} ${weightUnitLabel(weightUnit)} × ${pr.maxReps}"
                 },

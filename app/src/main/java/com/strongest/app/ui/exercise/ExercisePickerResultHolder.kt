@@ -14,8 +14,10 @@ import javax.inject.Singleton
  * screen — previously `var result` was captured by value at composition time, so updates were
  * only observed when the consuming composable happened to recompose for other reasons.
  *
- * [isReplaceMode] and [replacingExerciseId] are auxiliary flags read together with the result;
- * they are written from the picker host before navigation and cleared by the consumer after use.
+ * [isReplaceMode] and [replacingExerciseId] are read together with the result. Every way into
+ * the picker sets them through [startAdd] or [startReplace]: they used to be cleared only when a
+ * result came back, so backing out of a Replace left them set and the next "Add Exercise"
+ * silently replaced an exercise instead.
  */
 @Singleton
 class ExercisePickerResultHolder @Inject constructor() {
@@ -24,6 +26,19 @@ class ExercisePickerResultHolder @Inject constructor() {
 
     var isReplaceMode: Boolean = false
     var replacingExerciseId: Long? = null
+
+    /** Call before opening the picker to add exercises. */
+    fun startAdd() {
+        clearReplaceMode()
+        _result.value = null
+    }
+
+    /** Call before opening the picker to replace the exercise with id [exerciseId] (screen-specific id). */
+    fun startReplace(exerciseId: Long) {
+        isReplaceMode = true
+        replacingExerciseId = exerciseId
+        _result.value = null
+    }
 
     fun publish(ids: List<Long>) {
         _result.value = ids

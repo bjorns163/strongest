@@ -190,4 +190,43 @@ class RoutineBuilderViewModelTest {
         assertEquals(listOf(100f, 100f, 100f), sets.map { it.weight })
         assertEquals(listOf(5, 5, 5), sets.map { it.reps })
     }
+
+    /**
+     * Regression: the editor loaded the exercise list once when it opened, so an exercise created
+     * from the picker afterwards was silently dropped when added (or used as a replacement).
+     */
+    @Test
+    fun `an exercise created after the editor opened can be added`() = runTest(dispatcher) {
+        val vm = RoutineBuilderViewModel(repository, settingsRepository)
+        advanceUntilIdle()
+
+        `when`(repository.getExerciseById(99L)).thenReturn(exercise(99L, "Created On The Go"))
+        `when`(repository.getPreviousSessionSets(99L)).thenReturn(emptyList())
+        `when`(repository.getNote(99L)).thenReturn(null)
+        vm.addExercises(listOf(99L))
+        advanceUntilIdle()
+
+        assertEquals("Created On The Go", vm.state.value.exercises.single().exerciseName)
+    }
+
+    @Test
+    fun `an exercise created after the editor opened can replace one`() = runTest(dispatcher) {
+        `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getNote(1L)).thenReturn(null)
+        val vm = RoutineBuilderViewModel(repository, settingsRepository)
+        advanceUntilIdle()
+        vm.addExercise(1L)
+        advanceUntilIdle()
+        val routineExerciseId = vm.state.value.exercises.single().routineExerciseId
+
+        `when`(repository.getExerciseById(99L)).thenReturn(exercise(99L, "Created On The Go"))
+        `when`(repository.getPreviousSessionSets(99L)).thenReturn(emptyList())
+        `when`(repository.getNote(99L)).thenReturn(null)
+        vm.replaceExercise(routineExerciseId, 99L)
+        advanceUntilIdle()
+
+        val replaced = vm.state.value.exercises.single()
+        assertEquals(99L, replaced.exerciseId)
+        assertEquals("Created On The Go", replaced.exerciseName)
+    }
 }

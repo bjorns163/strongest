@@ -589,9 +589,7 @@ fun ActiveWorkoutScreen(
                         },
                         onRemoveExercise = { viewModel.removeExercise(exercise.workoutExerciseId) },
                         onReplaceExercise = { workoutExerciseId ->
-                            exercisePickerResultHolder.isReplaceMode = true
-                            exercisePickerResultHolder.replacingExerciseId = workoutExerciseId
-                            exercisePickerResultHolder.consume()
+                            exercisePickerResultHolder.startReplace(workoutExerciseId)
                             onNavigateToReplacePicker?.invoke()
                         },
                         onMoveUp = {
@@ -615,7 +613,10 @@ fun ActiveWorkoutScreen(
                 item {
                     if (!state.isViewMode) {
                         Button(
-                            onClick = onAddExercise,
+                            onClick = {
+                                exercisePickerResultHolder.startAdd()
+                                onAddExercise()
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp)

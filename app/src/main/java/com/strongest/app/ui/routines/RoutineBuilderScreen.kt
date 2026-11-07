@@ -249,9 +249,7 @@ fun RoutineBuilderScreen(
                         },
                         onRemoveExercise = { viewModel.removeExercise(exercise.routineExerciseId) },
                         onReplaceExercise = { routineExerciseId ->
-                            exercisePickerResultHolder.isReplaceMode = true
-                            exercisePickerResultHolder.replacingExerciseId = routineExerciseId
-                            exercisePickerResultHolder.consume()
+                            exercisePickerResultHolder.startReplace(routineExerciseId)
                             onNavigateToReplacePicker?.invoke()
                         },
                         onMoveUp = {
@@ -273,7 +271,10 @@ fun RoutineBuilderScreen(
 
                 item {
                     Button(
-                        onClick = onAddExercise,
+                        onClick = {
+                            exercisePickerResultHolder.startAdd()
+                            onAddExercise()
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp)

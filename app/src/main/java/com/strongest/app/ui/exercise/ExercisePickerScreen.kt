@@ -123,8 +123,9 @@ fun ExercisePickerScreen(
             ExercisePickerResultHolderEntryPoint::class.java
         ).exercisePickerResultHolder()
     }
-    // Snapshot once at entry; the host clears these via clearReplaceMode() after consuming the result.
-    val isReplaceMode = remember { holder.isReplaceMode }
+    // Snapshot once at entry (the host sets it via startAdd/startReplace). Saveable so a trip to an
+    // exercise's details and back keeps the mode.
+    val isReplaceMode = rememberSaveable { holder.isReplaceMode }
     val title = stringResource(if (isReplaceMode) R.string.replace_exercise else R.string.add_exercise)
 
     val filteredExercises = exercises.filter { exercise ->
@@ -299,7 +300,11 @@ fun ExercisePickerScreen(
                         context,
                         ExerciseRepositoryEntryPoint::class.java
                     ).workoutRepository()
-                    repo.insertCustomExercise(exercise)
+                    val newId = repo.insertCustomExercise(exercise)
+                    // Select what was just created: having to find and tick it led users to back
+                    // out of the picker instead.
+                    selectedExerciseIds.value =
+                        if (isReplaceMode) setOf(newId) else selectedExerciseIds.value + newId
                 }
             }
         )

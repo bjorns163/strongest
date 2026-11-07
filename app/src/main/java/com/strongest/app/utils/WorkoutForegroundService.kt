@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private const val CHANNEL_ID = "workout_active_channel_v2"
-private const val CHANNEL_NAME = "Active Workout"
 private const val NOTIFICATION_ID = 2001
 
 class WorkoutForegroundService : Service() {
@@ -42,10 +41,10 @@ class WorkoutForegroundService : Service() {
     private fun ensureChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            CHANNEL_NAME,
+            getString(R.string.active_workout),
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "Persistent notification during an active workout"
+            description = getString(R.string.notification_channel_desc)
             setShowBadge(false)
             setSound(null, null)
             enableVibration(false)
@@ -120,27 +119,43 @@ class WorkoutForegroundService : Service() {
 
         when (state) {
             null -> {
-                builder.setContentTitle("Workout").setContentText("Starting…")
+                builder.setContentTitle(getString(R.string.workout_default_name))
+                    .setContentText(getString(R.string.notification_starting))
             }
             is WorkoutNotificationState.WaitingForExercises -> {
                 builder.setContentTitle(state.workoutName)
-                    .setContentText("Tap to add exercises")
+                    .setContentText(getString(R.string.notification_tap_to_add))
             }
             is WorkoutNotificationState.SetReady -> {
                 val weightText = formatWeightForDisplay(state.weightKg, state.weightUnit)
                 val unitLabel = weightUnitLabel(state.weightUnit)
                 builder.setContentTitle(state.workoutName)
                     .setContentText(
-                        "${state.exerciseName} • Set ${state.setNumber}/${state.totalSetsInExercise} • ${weightText} ${unitLabel} × ${state.reps}"
+                        getString(
+                            R.string.notification_set_ready,
+                            state.exerciseName,
+                            state.setNumber,
+                            state.totalSetsInExercise,
+                            "$weightText $unitLabel",
+                            state.reps
+                        )
                     )
                     .setStyle(
                         NotificationCompat.BigTextStyle().bigText(
-                            "${state.exerciseName}\nSet ${state.setNumber} of ${state.totalSetsInExercise} • ${weightText} ${unitLabel} × ${state.reps} reps"
+                            resources.getQuantityString(
+                                R.plurals.notification_set_ready_long,
+                                state.reps,
+                                state.exerciseName,
+                                state.setNumber,
+                                state.totalSetsInExercise,
+                                "$weightText $unitLabel",
+                                state.reps
+                            )
                         )
                     )
                     .addAction(
                         0,
-                        "Complete set",
+                        getString(R.string.notification_complete_set),
                         broadcastPending(REQ_COMPLETE, ACTION_COMPLETE_SET)
                     )
             }
@@ -152,34 +167,40 @@ class WorkoutForegroundService : Service() {
                 val unitLabel = weightUnitLabel(state.weightUnit)
                 val progress =
                     if (state.totalSeconds > 0) state.remainingSeconds * 100 / state.totalSeconds else 0
-                builder.setContentTitle("Rest • $timeText")
+                builder.setContentTitle(getString(R.string.notification_rest, timeText))
                     .setContentText(
-                        "Next: ${state.nextExerciseName} • Set ${state.nextSetNumber} • ${nextWeightText} ${unitLabel} × ${state.nextReps}"
+                        getString(
+                            R.string.notification_next,
+                            state.nextExerciseName,
+                            state.nextSetNumber,
+                            "$nextWeightText $unitLabel",
+                            state.nextReps
+                        )
                     )
                     .setProgress(100, progress, false)
                     .addAction(
                         0,
-                        "-${state.adjustmentSeconds}s",
+                        "-" + getString(R.string.seconds_short, state.adjustmentSeconds),
                         broadcastPending(REQ_MINUS, ACTION_TIMER_SUBTRACT)
                     )
                     .addAction(
                         0,
-                        "Skip",
+                        getString(R.string.skip),
                         broadcastPending(REQ_SKIP, ACTION_SKIP_REST)
                     )
                     .addAction(
                         0,
-                        "+${state.adjustmentSeconds}s",
+                        "+" + getString(R.string.seconds_short, state.adjustmentSeconds),
                         broadcastPending(REQ_PLUS, ACTION_TIMER_ADD)
                     )
                 builder.setShortCriticalText(timeText)
             }
             is WorkoutNotificationState.AllDone -> {
                 builder.setContentTitle(state.workoutName)
-                    .setContentText("All sets done — tap finish to save")
+                    .setContentText(getString(R.string.notification_all_done))
                     .addAction(
                         0,
-                        "Complete workout",
+                        getString(R.string.notification_complete_workout),
                         broadcastPending(REQ_FINISH, ACTION_FINISH_WORKOUT)
                     )
             }

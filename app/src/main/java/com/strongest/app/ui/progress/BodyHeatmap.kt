@@ -29,7 +29,9 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.strongest.app.R
 import com.strongest.app.data.model.MuscleGroup
 import kotlin.math.sqrt
 
@@ -89,7 +91,7 @@ fun BodyHeatmap(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = if (view == BodyView.FRONT) "Front" else "Back",
+                        text = stringResource(if (view == BodyView.FRONT) R.string.body_front else R.string.body_back),
                         style = MaterialTheme.typography.labelMedium,
                         color = titleColor
                     )
@@ -179,7 +181,7 @@ private fun HeatmapLegend(coldColor: Color, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "Untrained",
+            text = stringResource(R.string.heatmap_untrained),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -193,7 +195,7 @@ private fun HeatmapLegend(coldColor: Color, modifier: Modifier = Modifier) {
                 .background(brush = brush, shape = RoundedCornerShape(5.dp))
         )
         Text(
-            text = "Most volume",
+            text = stringResource(R.string.heatmap_most_volume),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

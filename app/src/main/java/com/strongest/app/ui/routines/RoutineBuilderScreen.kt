@@ -61,6 +61,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -69,6 +71,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.R
 import com.strongest.app.data.model.RoutineGroup
 import com.strongest.app.data.model.SetType
 import com.strongest.app.ui.workout.exerciseSubtitle
@@ -164,15 +167,15 @@ fun RoutineBuilderScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Default.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
                     }
                     Text(
-                        text = if (routineId != null) "Edit Routine" else "New Routine",
+                        text = stringResource(if (routineId != null) R.string.edit_routine else R.string.new_routine),
                         style = MaterialTheme.typography.titleLarge
                     )
                     Row {
                         TextButton(onClick = onBack) {
-                            Text("Cancel", color = MaterialTheme.colorScheme.error)
+                            Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.error)
                         }
                         Spacer(modifier = Modifier.padding(horizontal = 4.dp))
                         Button(
@@ -180,7 +183,7 @@ fun RoutineBuilderScreen(
                             enabled = state.routineName.isNotBlank()
                         ) {
                             Icon(Icons.Default.Check, null, Modifier.padding(end = 4.dp))
-                            Text("Save")
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }
@@ -188,7 +191,7 @@ fun RoutineBuilderScreen(
                 OutlinedTextField(
                     value = state.routineName,
                     onValueChange = { viewModel.updateName(it) },
-                    placeholder = { Text("Routine name") },
+                    placeholder = { Text(stringResource(R.string.routine_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.titleSmall.copy(
@@ -198,7 +201,7 @@ fun RoutineBuilderScreen(
                 OutlinedTextField(
                     value = state.routineDescription,
                     onValueChange = { viewModel.updateDescription(it) },
-                    placeholder = { Text("Description (optional)") },
+                    placeholder = { Text(stringResource(R.string.description_optional)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp),
@@ -280,7 +283,7 @@ fun RoutineBuilderScreen(
                             .padding(16.dp)
                     ) {
                         Icon(Icons.Default.FitnessCenter, null, Modifier.padding(end = 8.dp))
-                        Text("Add Exercise")
+                        Text(stringResource(R.string.add_exercise))
                     }
                 }
             }
@@ -337,13 +340,13 @@ fun RoutineExerciseBlock(
                         onClick = onMoveUp,
                         enabled = index > 0
                     ) {
-                        Icon(Icons.Default.ArrowUpward, "Move up")
+                        Icon(Icons.Default.ArrowUpward, stringResource(R.string.move_up))
                     }
                     IconButton(
                         onClick = onMoveDown,
                         enabled = index < totalCount - 1
                     ) {
-                        Icon(Icons.Default.ArrowDownward, "Move down")
+                        Icon(Icons.Default.ArrowDownward, stringResource(R.string.move_down))
                     }
                     Column(
                         modifier = Modifier
@@ -366,14 +369,14 @@ fun RoutineExerciseBlock(
                 }
                 Box {
                     IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, "Options")
+                        Icon(Icons.Default.MoreVert, stringResource(R.string.options))
                     }
                     DropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Replace Exercise") },
+                            text = { Text(stringResource(R.string.replace_exercise)) },
                             onClick = {
                                 showMenu = false
                                 onReplaceExercise(exercise.routineExerciseId)
@@ -381,7 +384,7 @@ fun RoutineExerciseBlock(
                             leadingIcon = { Icon(Icons.Default.SwapHoriz, null) }
                         )
                         DropdownMenuItem(
-                            text = { Text(if (exercise.noteText.isEmpty()) "Add Note" else "Edit Note") },
+                            text = { Text(stringResource(if (exercise.noteText.isEmpty()) R.string.add_note else R.string.edit_note)) },
                             onClick = {
                                 showMenu = false
                                 showNoteDialog = true
@@ -389,7 +392,7 @@ fun RoutineExerciseBlock(
                             leadingIcon = { Icon(Icons.Default.Edit, null) }
                         )
                         DropdownMenuItem(
-                            text = { Text("Remove Exercise") },
+                            text = { Text(stringResource(R.string.remove_exercise)) },
                             onClick = {
                                 showMenu = false
                                 onRemoveExercise()
@@ -403,13 +406,13 @@ fun RoutineExerciseBlock(
             if (showNoteDialog) {
                 AlertDialog(
                     onDismissRequest = { showNoteDialog = false },
-                    title = { Text("Exercise Note") },
+                    title = { Text(stringResource(R.string.exercise_note)) },
                     text = {
                         Column {
                             OutlinedTextField(
                                 value = noteText,
                                 onValueChange = { noteText = it },
-                                label = { Text("Note") },
+                                label = { Text(stringResource(R.string.note)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 3,
                                 maxLines = 6
@@ -423,7 +426,7 @@ fun RoutineExerciseBlock(
                                     },
                                     modifier = Modifier.padding(top = 8.dp)
                                 ) {
-                                    Text("Remove Note", color = MaterialTheme.colorScheme.error)
+                                    Text(stringResource(R.string.remove_note), color = MaterialTheme.colorScheme.error)
                                 }
                             }
                         }
@@ -433,12 +436,12 @@ fun RoutineExerciseBlock(
                             onSaveNote(noteText)
                             showNoteDialog = false
                         }) {
-                            Text("Save")
+                            Text(stringResource(R.string.save))
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { showNoteDialog = false }) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.cancel))
                         }
                     }
                 )
@@ -467,21 +470,21 @@ fun RoutineExerciseBlock(
                         modifier = Modifier.size(12.dp)
                     )
                 }
-                Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
-                Text("Last", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f), textAlign = TextAlign.Center)
+                Text(stringResource(R.string.col_set), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
+                Text(stringResource(R.string.col_last), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f), textAlign = TextAlign.Center)
                 Text(
-                    if (isCardio) "Level" else weightUnitLabel(weightUnit),
+                    if (isCardio) stringResource(R.string.col_level) else weightUnitLabel(weightUnit),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    if (isCardio) "Duration" else "Reps",
+                    stringResource(if (isCardio) R.string.col_duration else R.string.col_reps),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center
                 )
-                Text("Rest", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f), textAlign = TextAlign.Center)
+                Text(stringResource(R.string.col_rest), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f), textAlign = TextAlign.Center)
                 Text("", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f))
             }
 
@@ -505,7 +508,7 @@ fun RoutineExerciseBlock(
                     .padding(top = 8.dp)
             ) {
                 Icon(Icons.Default.Add, null, Modifier.padding(end = 4.dp))
-                Text("Add Set")
+                Text(stringResource(R.string.add_set))
             }
         }
     }
@@ -569,7 +572,7 @@ fun SwipeableRoutineSetRow(
                 ) {
                     Icon(
                         Icons.Default.LocalFireDepartment,
-                        contentDescription = if (isWarmUp) "Warm-up set" else "Mark as warm-up set",
+                        contentDescription = stringResource(if (isWarmUp) R.string.warm_up_set else R.string.mark_as_warm_up),
                         tint = if (isWarmUp) {
                             MaterialTheme.colorScheme.tertiary
                         } else {
@@ -729,7 +732,7 @@ fun GroupSelector(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedName = groups.find { it.id == selectedGroupId }?.name ?: "Ungrouped"
+    val selectedName = groups.find { it.id == selectedGroupId }?.name ?: stringResource(R.string.ungrouped)
 
     Box(modifier = modifier) {
         Row(
@@ -742,7 +745,7 @@ fun GroupSelector(
         ) {
             Column {
                 Text(
-                    text = "Group",
+                    text = stringResource(R.string.group),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -751,14 +754,14 @@ fun GroupSelector(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            Icon(Icons.Default.ArrowDropDown, "Select group")
+            Icon(Icons.Default.ArrowDropDown, stringResource(R.string.select_group))
         }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
-                text = { Text("Ungrouped") },
+                text = { Text(stringResource(R.string.ungrouped)) },
                 onClick = {
                     onSelect(null)
                     expanded = false

@@ -78,8 +78,13 @@ import coil3.compose.SubcomposeAsyncImage
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import java.text.SimpleDateFormat
+import com.strongest.app.R
+import com.strongest.app.ui.components.label
+import com.strongest.app.utils.filterDecimalInput
+import com.strongest.app.utils.rememberLocalizedDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -112,21 +117,21 @@ fun ExerciseDetailScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Default.ArrowBack, "Back")
+                    Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
                 }
                 Text(
-                    text = "Exercise Details",
+                    text = stringResource(R.string.exercise_details),
                     style = MaterialTheme.typography.titleLarge
                 )
                 if (state.exercise?.isCustom == true) {
                     Row {
                         IconButton(onClick = { showEditDialog = true }) {
-                            Icon(Icons.Default.Edit, "Edit exercise")
+                            Icon(Icons.Default.Edit, stringResource(R.string.edit_exercise))
                         }
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(
                                 Icons.Default.Delete,
-                                "Delete exercise",
+                                stringResource(R.string.delete_exercise),
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -179,19 +184,19 @@ fun ExerciseDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete Exercise") },
-            text = { Text("Are you sure you want to delete this custom exercise? This cannot be undone.") },
+            title = { Text(stringResource(R.string.delete_exercise_title)) },
+            text = { Text(stringResource(R.string.delete_exercise_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteConfirm = false
                     viewModel.deleteExercise(onBack)
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -218,11 +223,11 @@ fun ExerciseDetailContent(
     var selectedTab by remember { mutableIntStateOf(0) }
     val isCardio = exercise.muscleGroup == com.strongest.app.data.model.MuscleGroup.CARDIO
     val tabs = buildList {
-        add("Details" to Icons.Default.Info)
-        add("History" to Icons.AutoMirrored.Filled.ShowChart)
+        add(R.string.tab_details to Icons.Default.Info)
+        add(R.string.history to Icons.AutoMirrored.Filled.ShowChart)
         if (!isCardio) {
-            add("1RM" to Icons.Default.Calculate)
-            add("Warm-up" to Icons.Default.LocalFireDepartment)
+            add(R.string.tab_1rm to Icons.Default.Calculate)
+            add(R.string.tab_warm_up to Icons.Default.LocalFireDepartment)
         }
     }
 
@@ -235,7 +240,7 @@ fun ExerciseDetailContent(
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(title) },
+                    text = { Text(stringResource(title)) },
                     icon = { Icon(imageVector = icon, contentDescription = null) }
                 )
             }
@@ -249,19 +254,21 @@ fun ExerciseDetailContent(
         val initialReps = bestWorkingSet?.reps ?: 0
 
         when (tabs[selectedTab].first) {
-            "Details" -> DetailsTab(exercise = exercise, noteText = noteText, onSaveNote = onSaveNote)
-            "History" -> HistoryTab(history, totalSets, totalWorkouts, maxWeight, rpeTrackingEnabled, isCardio = isCardio)
-            "1RM" -> OneRmTab(initialWeightKg = initialWeightKg, initialReps = initialReps)
-            "Warm-up" -> WarmupTab(
+            R.string.tab_details -> DetailsTab(exercise = exercise, noteText = noteText, onSaveNote = onSaveNote)
+            R.string.history -> HistoryTab(history, totalSets, totalWorkouts, maxWeight, rpeTrackingEnabled, isCardio = isCardio)
+            R.string.tab_1rm -> OneRmTab(initialWeightKg = initialWeightKg, initialReps = initialReps)
+            R.string.tab_warm_up -> WarmupTab(
                 initialWeightKg = initialWeightKg,
                 initialReps = initialReps,
                 warmUpSetCount = warmUpSetCount,
                 onWarmUpSetCountChange = onWarmUpSetCountChange,
-                addWarmUpSetsLabel = when {
-                    workoutExerciseId != null -> "Add warm-up sets to workout"
-                    routineExerciseId != null -> "Add warm-up sets to routine"
-                    else -> "Add warm-up sets"
-                },
+                addWarmUpSetsLabel = stringResource(
+                    when {
+                        workoutExerciseId != null -> R.string.add_warm_up_sets_to_workout
+                        routineExerciseId != null -> R.string.add_warm_up_sets_to_routine
+                        else -> R.string.add_warm_up_sets
+                    }
+                ),
                 addWarmUpSetsAction = when {
                     workoutExerciseId != null -> { sets ->
                         onAddWarmUpSets(AddWarmUpSetsRequest(workoutExerciseId = workoutExerciseId, sets = sets))
@@ -306,7 +313,7 @@ fun DetailsTab(
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() },
+                        text = exercise.muscleGroup.label(),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(
@@ -320,7 +327,7 @@ fun DetailsTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() },
+                        text = exercise.equipment.label(),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -338,9 +345,10 @@ fun DetailsTab(
                 if (exercise.secondaryMuscles.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Also works: " + exercise.secondaryMuscles.joinToString(" • ") { muscle ->
-                            muscle.name.lowercase().replaceFirstChar { it.uppercase() }
-                        },
+                        text = stringResource(
+                            R.string.also_works,
+                            exercise.secondaryMuscles.map { it.label() }.joinToString(" • ")
+                        ),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -360,7 +368,7 @@ fun DetailsTab(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Description",
+                            text = stringResource(R.string.description),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -387,7 +395,7 @@ fun DetailsTab(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "How to Perform",
+                            text = stringResource(R.string.how_to_perform),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -439,7 +447,7 @@ fun DetailsTab(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "My Note",
+                            text = stringResource(R.string.my_note),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -453,7 +461,7 @@ fun DetailsTab(
                             )
                         } else {
                             Text(
-                                text = "Tap to add a note...",
+                                text = stringResource(R.string.tap_to_add_note),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -467,12 +475,12 @@ fun DetailsTab(
     if (showNoteDialog) {
         AlertDialog(
             onDismissRequest = { showNoteDialog = false },
-            title = { Text("My Note") },
+            title = { Text(stringResource(R.string.my_note)) },
             text = {
                 OutlinedTextField(
                     value = editNoteText,
                     onValueChange = { editNoteText = it },
-                    label = { Text("Note") },
+                    label = { Text(stringResource(R.string.note)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     maxLines = 6
@@ -483,12 +491,12 @@ fun DetailsTab(
                     onSaveNote(editNoteText)
                     showNoteDialog = false
                 }) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showNoteDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -512,7 +520,7 @@ fun EditExerciseDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Exercise") },
+        title = { Text(stringResource(R.string.edit_exercise_title)) },
         text = {
             Column(
                 modifier = Modifier
@@ -523,7 +531,7 @@ fun EditExerciseDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Exercise Name") },
+                    label = { Text(stringResource(R.string.exercise_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -533,10 +541,10 @@ fun EditExerciseDialog(
                     onExpandedChange = { muscleExpanded = it }
                 ) {
                     OutlinedTextField(
-                        value = selectedMuscleGroup.name.lowercase().replaceFirstChar { it.uppercase() },
+                        value = selectedMuscleGroup.label(),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Muscle Group") },
+                        label = { Text(stringResource(R.string.muscle_group)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = muscleExpanded) },
                         modifier = Modifier.fillMaxWidth().menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                         colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
@@ -547,7 +555,7 @@ fun EditExerciseDialog(
                     ) {
                         MuscleGroup.entries.forEach { group ->
                             DropdownMenuItem(
-                                text = { Text(group.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                                text = { Text(group.label()) },
                                 onClick = {
                                     selectedMuscleGroup = group
                                     muscleExpanded = false
@@ -562,10 +570,10 @@ fun EditExerciseDialog(
                     onExpandedChange = { equipmentExpanded = it }
                 ) {
                     OutlinedTextField(
-                        value = selectedEquipment.name.lowercase().replaceFirstChar { it.uppercase() },
+                        value = selectedEquipment.label(),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Equipment") },
+                        label = { Text(stringResource(R.string.equipment)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = equipmentExpanded) },
                         modifier = Modifier.fillMaxWidth().menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                         colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
@@ -576,7 +584,7 @@ fun EditExerciseDialog(
                     ) {
                         Equipment.entries.forEach { eq ->
                             DropdownMenuItem(
-                                text = { Text(eq.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                                text = { Text(eq.label()) },
                                 onClick = {
                                     selectedEquipment = eq
                                     equipmentExpanded = false
@@ -594,7 +602,7 @@ fun EditExerciseDialog(
                 OutlinedTextField(
                     value = instructions,
                     onValueChange = { instructions = it },
-                    label = { Text("Instructions (optional)") },
+                    label = { Text(stringResource(R.string.instructions_optional)) },
                     minLines = 3,
                     maxLines = 6,
                     modifier = Modifier.fillMaxWidth()
@@ -616,12 +624,12 @@ fun EditExerciseDialog(
                 },
                 enabled = name.isNotBlank()
             ) {
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -674,7 +682,7 @@ fun HistoryTab(
     isCardio: Boolean = false,
 ) {
     val weightUnit by rememberWeightUnit()
-    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+    val dateFormat = rememberLocalizedDateFormat("MMMdyyyy")
 
     LazyColumn(
         modifier = Modifier.fillMaxSize()
@@ -687,17 +695,17 @@ fun HistoryTab(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 StatCard(
-                    label = "Total Sets",
+                    label = stringResource(R.string.total_sets),
                     value = totalSets.toString(),
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    label = "Workouts",
+                    label = stringResource(R.string.progress_metric_workouts),
                     value = totalWorkouts.toString(),
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    label = if (isCardio) "Max Level" else "Max Weight",
+                    label = stringResource(if (isCardio) R.string.max_level else R.string.max_weight),
                     value = if (isCardio) {
                         formatWeightForDisplay(maxWeight, weightUnit)
                     } else {
@@ -725,12 +733,12 @@ fun HistoryTab(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "No history yet",
+                            text = stringResource(R.string.no_history_yet),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "Complete a workout to see history here",
+                            text = stringResource(R.string.no_history_yet_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
@@ -762,7 +770,7 @@ fun HistoryTab(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "${entries.size} sets",
+                                text = pluralStringResource(R.plurals.set_count, entries.size, entries.size),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -782,7 +790,7 @@ fun HistoryTab(
                                     if (entry.setType == com.strongest.app.data.model.SetType.WARM_UP) {
                                         Icon(
                                             imageVector = Icons.Default.LocalFireDepartment,
-                                            contentDescription = "Warm-up set",
+                                            contentDescription = stringResource(R.string.warm_up_set),
                                             tint = MaterialTheme.colorScheme.tertiary,
                                             modifier = Modifier
                                                 .padding(end = 4.dp)
@@ -802,7 +810,7 @@ fun HistoryTab(
                                     text = if (isCardio) {
                                         formatDuration(entry.reps)
                                     } else {
-                                        "\u00d7 ${entry.reps} reps"
+                                        pluralStringResource(R.plurals.times_reps, entry.reps, entry.reps)
                                     },
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -810,7 +818,7 @@ fun HistoryTab(
                                 // Cardio sets carry no RPE, so the column stays out of their history too.
                                 if (rpeTrackingEnabled && !isCardio && entry.rpe != null) {
                                     Text(
-                                        text = "RPE ${formatDisplayValue(entry.rpe)}",
+                                        text = stringResource(R.string.rpe_value, formatDisplayValue(entry.rpe)),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -866,17 +874,20 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
             .padding(16.dp)
     ) {
         Text(
-            text = "Estimated One-Rep Max",
+            text = stringResource(R.string.estimated_one_rep_max),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Formula: " + when (formula) {
-                OneRmFormula.EPLEY -> "Epley"
-                OneRmFormula.BRZYCKI -> "Brzycki"
-                OneRmFormula.BOTH -> "Epley + Brzycki (avg)"
-            } + " — change in Settings.",
+            text = stringResource(
+                R.string.formula_change_in_settings,
+                when (formula) {
+                    OneRmFormula.EPLEY -> stringResource(R.string.formula_epley)
+                    OneRmFormula.BRZYCKI -> stringResource(R.string.formula_brzycki)
+                    OneRmFormula.BOTH -> stringResource(R.string.formula_both_short)
+                }
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -885,8 +896,8 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = weightText,
-                onValueChange = { input -> weightText = input.filter { it.isDigit() || it == '.' } },
-                label = { Text("Weight ($unitLabel)") },
+                onValueChange = { input -> weightText = filterDecimalInput(input) },
+                label = { Text(stringResource(R.string.weight_with_unit, unitLabel)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f)
@@ -894,7 +905,7 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
             OutlinedTextField(
                 value = repsText,
                 onValueChange = { input -> repsText = input.filter { it.isDigit() } },
-                label = { Text("Reps") },
+                label = { Text(stringResource(R.string.reps)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f)
@@ -905,7 +916,7 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
 
         if (weight <= 0f || reps <= 0) {
             Text(
-                text = "Enter weight and reps to see your estimated 1RM.",
+                text = stringResource(R.string.one_rm_enter_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -932,14 +943,18 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "Estimated 1RM",
+                    text = stringResource(R.string.estimated_1rm),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 if (formula == OneRmFormula.BOTH) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Epley: ${formatDisplayValue(epley)} $unitLabel  •  Brzycki: ${formatDisplayValue(brzycki)} $unitLabel",
+                        text = stringResource(
+                            R.string.epley_brzycki_values,
+                            "${formatDisplayValue(epley)} $unitLabel",
+                            "${formatDisplayValue(brzycki)} $unitLabel"
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -949,13 +964,13 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
 
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Weight you can do for…",
+            text = stringResource(R.string.weight_you_can_do_for),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = "Estimated max weight for each rep count, based on your 1RM.",
+            text = stringResource(R.string.rep_max_table_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -978,7 +993,7 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "$targetReps rep${if (targetReps > 1) "s" else ""}",
+                    text = pluralStringResource(R.plurals.rep_count, targetReps, targetReps),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -999,7 +1014,7 @@ fun WarmupTab(
     warmUpSetCount: Int = 3,
     onWarmUpSetCountChange: (Int) -> Unit = {},
     addWarmUpSetsAction: ((List<WarmUpSetSpec>) -> Unit)? = null,
-    addWarmUpSetsLabel: String = "Add warm-up sets"
+    addWarmUpSetsLabel: String = stringResource(R.string.add_warm_up_sets)
 ) {
     val weightUnit by rememberWeightUnit()
     val unitLabel = weightUnitLabel(weightUnit)
@@ -1038,15 +1053,13 @@ fun WarmupTab(
             .padding(16.dp)
     ) {
         Text(
-            text = "Warm-up sets",
+            text = stringResource(R.string.warm_up_sets),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Do all warm-up sets in order before your working set — each builds on the previous one. " +
-                "Rest 30–60 seconds between warm-ups, then take your normal rest before the working set. " +
-                "Reps drop as the weight climbs because heavier warm-ups are just for priming, not for fatigue.",
+            text = stringResource(R.string.warm_up_explanation),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -1055,8 +1068,8 @@ fun WarmupTab(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = workingText,
-                onValueChange = { input -> workingText = input.filter { it.isDigit() || it == '.' } },
-                label = { Text("Working ($unitLabel)") },
+                onValueChange = { input -> workingText = filterDecimalInput(input) },
+                label = { Text(stringResource(R.string.working_with_unit, unitLabel)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f)
@@ -1064,7 +1077,7 @@ fun WarmupTab(
             OutlinedTextField(
                 value = repsText,
                 onValueChange = { input -> repsText = input.filter { it.isDigit() } },
-                label = { Text("Reps") },
+                label = { Text(stringResource(R.string.reps)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f)
@@ -1074,7 +1087,7 @@ fun WarmupTab(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Number of warm-up sets",
+            text = stringResource(R.string.number_of_warm_up_sets),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold
         )
@@ -1102,16 +1115,16 @@ fun WarmupTab(
         }
         Text(
             text = when {
-                maxSets == 0 -> "This weight is too light to warm up to — just do your working set."
-                maxSets == 1 -> "This weight only supports 1 warm-up set."
-                else -> "$count warm-up set${if (count != 1) "s" else ""}"
+                maxSets == 0 -> stringResource(R.string.warm_up_too_light)
+                maxSets == 1 -> stringResource(R.string.warm_up_only_one)
+                else -> pluralStringResource(R.plurals.warm_up_set_count, count, count)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (hasInput && maxSets in 1 until WarmUpCalculator.MAX_SETS) {
             Text(
-                text = "Lighter working weights leave less room to ramp up.",
+                text = stringResource(R.string.warm_up_lighter_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1121,7 +1134,7 @@ fun WarmupTab(
 
         if (working <= 0f || reps <= 0) {
             Text(
-                text = "Enter your working weight and reps to see warm-up suggestions.",
+                text = stringResource(R.string.warm_up_enter_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1145,7 +1158,7 @@ fun WarmupTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (isWorking) "Working set" else "Warm-up ${idx + 1}",
+                            text = if (isWorking) stringResource(R.string.working_set) else stringResource(R.string.warm_up_n, idx + 1),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isWorking) FontWeight.Bold else FontWeight.Normal,
                             color = if (isWorking) MaterialTheme.colorScheme.primary

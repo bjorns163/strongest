@@ -5,10 +5,12 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.strongest.app.R
 import com.strongest.app.data.db.HistorySetRow
 import com.strongest.app.data.model.Workout
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.ui.components.labelRes
 import com.strongest.app.utils.Cell
 import com.strongest.app.utils.WorkoutPrInfo
 import com.strongest.app.utils.XlsxWriter
@@ -147,10 +149,13 @@ class HistoryViewModel @Inject constructor(
         weightUnit: WeightUnit
     ): android.net.Uri? {
         val header = listOf(
-                "Date", "Workout Name", "Routine", "Duration (min)",
-                "Exercise", "Muscle Group", "Equipment",
-                "Set #", "Weight (${weightUnitLabel(weightUnit)})", "Reps", "RPE", "Set Type", "Completed At"
-            )
+                R.string.xlsx_date, R.string.xlsx_workout_name, R.string.xlsx_routine, R.string.xlsx_duration_min,
+                R.string.xlsx_exercise, R.string.muscle_group, R.string.equipment,
+                R.string.xlsx_set_number
+            ).map { context.getString(it) } +
+                context.getString(R.string.weight_with_unit, weightUnitLabel(weightUnit)) +
+                listOf(R.string.reps, R.string.col_rpe, R.string.xlsx_set_type, R.string.xlsx_completed_at)
+                    .map { context.getString(it) }
 
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
             val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
@@ -182,9 +187,9 @@ class HistoryViewModel @Inject constructor(
 
                 for (ex in details.exercises) {
                     val exercise = repository.getExerciseById(ex.workoutExercise.exerciseId)
-                    val exName = exercise?.name ?: "Unknown"
-                    val muscle = exercise?.muscleGroup?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: ""
-                    val equipment = exercise?.equipment?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: ""
+                    val exName = exercise?.name ?: context.getString(R.string.unknown_exercise)
+                    val muscle = exercise?.muscleGroup?.let { context.getString(it.labelRes) } ?: ""
+                    val equipment = exercise?.equipment?.let { context.getString(it.labelRes) } ?: ""
 
                     if (ex.sets.isEmpty()) {
                         rows.add(listOf(
@@ -215,7 +220,7 @@ class HistoryViewModel @Inject constructor(
                             Cell.Num(displayWeight.toDouble()),
                             Cell.Num(set.reps.toDouble()),
                             if (set.rpe != null) Cell.Num(set.rpe.toDouble()) else Cell.Str(""),
-                            Cell.Str(set.setType.name),
+                            Cell.Str(context.getString(set.setType.labelRes)),
                             Cell.Str(if (set.completedAt > 0) timeFormat.format(Date(set.completedAt)) else "")
                         ))
                     }
@@ -226,7 +231,7 @@ class HistoryViewModel @Inject constructor(
         val filename = "strongest_history_${System.currentTimeMillis()}.xlsx"
         val file = File(exportsDir, filename)
         file.outputStream().use { out ->
-            XlsxWriter.write(out, "Workout History", header, rows)
+            XlsxWriter.write(out, context.getString(R.string.xlsx_sheet_name), header, rows)
         }
 
         return FileProvider.getUriForFile(
@@ -240,10 +245,10 @@ class HistoryViewModel @Inject constructor(
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "Strongest Workout History")
+            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_history_subject))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(shareIntent, "Share Workout History").apply {
+        val chooser = Intent.createChooser(shareIntent, context.getString(R.string.share_history)).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(chooser)

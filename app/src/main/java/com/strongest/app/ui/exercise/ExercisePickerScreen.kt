@@ -44,12 +44,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.R
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.WorkoutRepository
+import com.strongest.app.ui.components.label
 import com.strongest.app.ui.workout.WorkoutViewModel
 import kotlinx.coroutines.launch
 import dagger.hilt.EntryPoint
@@ -121,7 +125,7 @@ fun ExercisePickerScreen(
     }
     // Snapshot once at entry; the host clears these via clearReplaceMode() after consuming the result.
     val isReplaceMode = remember { holder.isReplaceMode }
-    val title = if (isReplaceMode) "Replace Exercise" else "Add Exercise"
+    val title = stringResource(if (isReplaceMode) R.string.replace_exercise else R.string.add_exercise)
 
     val filteredExercises = exercises.filter { exercise ->
         val matchesSearch = searchQuery.isEmpty() || exercise.name.contains(searchQuery, ignoreCase = true)
@@ -143,14 +147,15 @@ fun ExercisePickerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Default.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
                     }
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleLarge
                     )
                     if (selectedExerciseIds.value.isNotEmpty()) {
-                        val buttonText = if (isReplaceMode) "Replace" else "Add (${selectedExerciseIds.value.size})"
+                        val buttonText = if (isReplaceMode) stringResource(R.string.replace)
+                        else stringResource(R.string.add_count, selectedExerciseIds.value.size)
                         Button(
                             onClick = {
                                 holder.publish(selectedExerciseIds.value.toList())
@@ -177,7 +182,7 @@ fun ExercisePickerScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Search exercises...") },
+                placeholder = { Text(stringResource(R.string.search_exercises)) },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 singleLine = true
             )
@@ -189,11 +194,11 @@ fun ExercisePickerScreen(
                     .padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
                 Icon(Icons.Default.Add, null, Modifier.padding(end = 4.dp))
-                Text("Create Custom Exercise")
+                Text(stringResource(R.string.create_custom_exercise))
             }
 
             Text(
-                text = "Muscle Group",
+                text = stringResource(R.string.muscle_group),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -207,20 +212,20 @@ fun ExercisePickerScreen(
                     FilterChip(
                         selected = selectedMuscleGroup == null,
                         onClick = { selectedMuscleGroup = null },
-                        label = { Text("All") }
+                        label = { Text(stringResource(R.string.filter_all)) }
                     )
                 }
                 items(FILTERABLE_MUSCLE_GROUPS) { group ->
                     FilterChip(
                         selected = selectedMuscleGroup == group,
                         onClick = { selectedMuscleGroup = group },
-                        label = { Text(group.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                        label = { Text(group.label()) }
                     )
                 }
             }
 
             Text(
-                text = "Equipment",
+                text = stringResource(R.string.equipment),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -234,14 +239,14 @@ fun ExercisePickerScreen(
                     FilterChip(
                         selected = selectedEquipment == null,
                         onClick = { selectedEquipment = null },
-                        label = { Text("All") }
+                        label = { Text(stringResource(R.string.filter_all)) }
                     )
                 }
                 items(FILTERABLE_EQUIPMENT) { eq ->
                     FilterChip(
                         selected = selectedEquipment == eq,
                         onClick = { selectedEquipment = eq },
-                        label = { Text(eq.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                        label = { Text(eq.label()) }
                     )
                 }
             }
@@ -252,7 +257,7 @@ fun ExercisePickerScreen(
                 if (filteredExercises.isEmpty()) {
                     item {
                         Text(
-                            text = "No exercises found",
+                            text = stringResource(R.string.no_exercises_found),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(32.dp)
@@ -365,7 +370,7 @@ fun ExercisePickerCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() },
+                            text = exercise.muscleGroup.label(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -375,7 +380,7 @@ fun ExercisePickerCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() },
+                            text = exercise.equipment.label(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

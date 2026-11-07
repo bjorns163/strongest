@@ -62,9 +62,13 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.R
 import com.strongest.app.ThemeMode
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.CaliperMode
@@ -76,6 +80,7 @@ import com.strongest.app.data.repository.exerciseSeedData
 import com.strongest.app.data.repository.WeightUnit
 import java.util.Locale
 import com.strongest.app.ui.components.DurationInputField
+import com.strongest.app.ui.components.label
 import com.strongest.app.ui.workout.STANDARD_KG_PLATES
 import com.strongest.app.ui.workout.STANDARD_LBS_PLATES
 import com.strongest.app.utils.formatDuration
@@ -117,19 +122,24 @@ fun SettingsScreen(
     }
 
     val context = LocalContext.current
+    val resources = LocalResources.current
     val exportImportResult by viewModel.exportImportResult.collectAsState()
     var showImportConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(exportImportResult) {
         when (val result = exportImportResult) {
             is ExportImportResult.ExportSuccess -> {
-                snackbarHostState.showSnackbar("Data exported successfully")
+                snackbarHostState.showSnackbar(resources.getString(R.string.data_exported))
                 viewModel.resetExportImportResult()
             }
             is ExportImportResult.ImportSuccess -> {
-                snackbarHostState.showSnackbar(
-                    "Imported ${result.workoutCount} workouts, ${result.exerciseCount} exercises"
+                val workouts = resources.getQuantityString(
+                    R.plurals.workout_count, result.workoutCount, result.workoutCount
                 )
+                val exercises = resources.getQuantityString(
+                    R.plurals.exercise_count, result.exerciseCount, result.exerciseCount
+                )
+                snackbarHostState.showSnackbar(resources.getString(R.string.data_imported, workouts, exercises))
                 viewModel.resetExportImportResult()
             }
             is ExportImportResult.Error -> {
@@ -177,27 +187,35 @@ fun SettingsScreen(
         ) {
             item {
                 Text(
-                    text = "Settings",
+                    text = stringResource(R.string.nav_settings),
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp)
                 )
             }
 
             item {
-                SettingsGroup(title = "General") {
+                SettingsGroup(title = stringResource(R.string.settings_general)) {
                     SettingsChoiceRow(
-                        title = "Theme",
+                        title = stringResource(R.string.settings_theme),
                         selected = uiState.themeMode,
                         options = ThemeMode.entries,
-                        optionLabel = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } },
+                        optionLabel = { mode ->
+                            stringResource(
+                                when (mode) {
+                                    ThemeMode.LIGHT -> R.string.theme_light
+                                    ThemeMode.DARK -> R.string.theme_dark
+                                    ThemeMode.SYSTEM -> R.string.theme_system
+                                }
+                            )
+                        },
                         onSelect = { viewModel.setThemeMode(it) }
                     )
                     SettingsChoiceRow(
-                        title = "Weight unit",
-                        description = "Used for every weight you enter and see.",
+                        title = stringResource(R.string.settings_weight_unit),
+                        description = stringResource(R.string.settings_weight_unit_desc),
                         selected = uiState.weightUnit,
                         options = listOf(WeightUnit.KG, WeightUnit.LBS),
-                        optionLabel = { if (it == WeightUnit.KG) "Kilograms (kg)" else "Pounds (lbs)" },
+                        optionLabel = { stringResource(if (it == WeightUnit.KG) R.string.kilograms else R.string.pounds) },
                         valueLabel = { weightUnitLabel(it) },
                         onSelect = { viewModel.setWeightUnit(it) }
                     )
@@ -206,9 +224,9 @@ fun SettingsScreen(
 
             item {
                 // The alert sound belongs with the timer it fires for, not with the workout toggles.
-                SettingsGroup(title = "Rest timer") {
+                SettingsGroup(title = stringResource(R.string.settings_rest_timer)) {
                     SettingsRow(
-                        title = "Default rest",
+                        title = stringResource(R.string.settings_default_rest),
                         onClick = {
                             timerSecondsInput = uiState.defaultRestSeconds
                             showTimerDialog = true
@@ -216,8 +234,8 @@ fun SettingsScreen(
                         trailing = { SettingsValue(formatDuration(uiState.defaultRestSeconds)) }
                     )
                     SettingsRow(
-                        title = "Last set rest",
-                        description = "Applied to the final set of an exercise.",
+                        title = stringResource(R.string.settings_last_set_rest),
+                        description = stringResource(R.string.settings_last_set_rest_desc),
                         onClick = {
                             lastSetTimerSecondsInput = uiState.lastSetRestSeconds
                             showLastSetTimerDialog = true
@@ -225,17 +243,18 @@ fun SettingsScreen(
                         trailing = { SettingsValue(formatDuration(uiState.lastSetRestSeconds)) }
                     )
                     SettingsRow(
-                        title = "Adjustment step",
-                        description = "How much the +/- buttons move a running timer.",
+                        title = stringResource(R.string.settings_adjustment_step),
+                        description = stringResource(R.string.settings_adjustment_step_desc),
                         onClick = { showAdjustDialog = true },
-                        trailing = { SettingsValue("${uiState.timerAdjustmentSeconds}s") }
+                        trailing = { SettingsValue(stringResource(R.string.seconds_short, uiState.timerAdjustmentSeconds)) }
                     )
+                    val soundPickerTitle = stringResource(R.string.select_timer_sound)
                     SettingsRow(
-                        title = "Alert sound",
+                        title = stringResource(R.string.settings_alert_sound),
                         onClick = {
                             val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
                                 putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Select Timer Sound")
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, soundPickerTitle)
                                 putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, uiState.notificationSoundUri?.toUri())
                                 putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
                                 putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
@@ -243,29 +262,29 @@ fun SettingsScreen(
                             soundPickerLauncher.launch(intent)
                         },
                         trailing = {
-                            SettingsValue(if (uiState.notificationSoundUri != null) "Custom" else "Default")
+                            SettingsValue(stringResource(if (uiState.notificationSoundUri != null) R.string.sound_custom else R.string.sound_default))
                         }
                     )
                 }
             }
 
             item {
-                SettingsGroup(title = "Workout") {
+                SettingsGroup(title = stringResource(R.string.nav_workout)) {
                     SettingsSwitchRow(
-                        title = "Keep screen on",
-                        description = "Stops the screen sleeping during an active workout.",
+                        title = stringResource(R.string.settings_keep_screen_on),
+                        description = stringResource(R.string.settings_keep_screen_on_desc),
                         checked = uiState.keepScreenOn,
                         onCheckedChange = { viewModel.setKeepScreenOn(it) }
                     )
                     SettingsSwitchRow(
-                        title = "Rate sets with RPE",
-                        description = "Rate each set 1–10 for perceived exertion. Cardio sets are excluded.",
+                        title = stringResource(R.string.settings_rpe),
+                        description = stringResource(R.string.settings_rpe_desc),
                         checked = uiState.rpeTrackingEnabled,
                         onCheckedChange = { viewModel.setRpeTrackingEnabled(it) }
                     )
                     SettingsSwitchRow(
-                        title = "Notification bar",
-                        description = "Shows workout progress, the rest timer and quick controls while you train.",
+                        title = stringResource(R.string.settings_notification),
+                        description = stringResource(R.string.settings_notification_desc),
                         checked = uiState.workoutNotificationEnabled,
                         onCheckedChange = { viewModel.setWorkoutNotificationEnabled(it) }
                     )
@@ -273,24 +292,24 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsGroup(title = "Calculators") {
+                SettingsGroup(title = stringResource(R.string.settings_calculators)) {
                     SettingsChoiceRow(
-                        title = "1RM formula",
-                        description = "Used by the 1RM calculator on the exercise detail screen.",
+                        title = stringResource(R.string.settings_1rm_formula),
+                        description = stringResource(R.string.settings_1rm_formula_desc),
                         selected = uiState.oneRmFormula,
                         options = OneRmFormula.entries,
                         optionLabel = { formula ->
                             when (formula) {
-                                OneRmFormula.EPLEY -> "Epley"
-                                OneRmFormula.BRZYCKI -> "Brzycki"
-                                OneRmFormula.BOTH -> "Both (average)"
+                                OneRmFormula.EPLEY -> stringResource(R.string.formula_epley)
+                                OneRmFormula.BRZYCKI -> stringResource(R.string.formula_brzycki)
+                                OneRmFormula.BOTH -> stringResource(R.string.formula_both)
                             }
                         },
                         onSelect = { viewModel.setOneRmFormula(it) }
                     )
                     SettingsExpanderRow(
-                        title = "Available plates",
-                        description = "How many of each plate your gym has. The calculator only loads plates you own.",
+                        title = stringResource(R.string.settings_available_plates),
+                        description = stringResource(R.string.settings_available_plates_desc),
                         expanded = platesExpanded,
                         onToggle = { platesExpanded = !platesExpanded }
                     )
@@ -306,10 +325,10 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsGroup(title = "Recovery") {
+                SettingsGroup(title = stringResource(R.string.settings_recovery)) {
                     SettingsExpanderRow(
-                        title = "Recovery windows",
-                        description = "How long each muscle needs before it counts as fresh on the Progress tab.",
+                        title = stringResource(R.string.settings_recovery_windows),
+                        description = stringResource(R.string.settings_recovery_windows_desc),
                         expanded = recoveryExpanded,
                         onToggle = { recoveryExpanded = !recoveryExpanded }
                     )
@@ -318,13 +337,13 @@ fun SettingsScreen(
                         RECOVERABLE_MUSCLE_GROUPS.forEach { muscle ->
                             val hours = uiState.recoveryHoursByMuscle[muscle] ?: defaultRecoveryHours(muscle)
                             SettingsRow(
-                                title = muscleLabel(muscle),
+                                title = muscle.label(),
                                 dense = true,
                                 onClick = {
                                     recoveryInput = hours.toString()
                                     editingRecoveryMuscle = muscle
                                 },
-                                trailing = { SettingsValue("${hours}h") }
+                                trailing = { SettingsValue(stringResource(R.string.hours_short, hours)) }
                             )
                         }
                     }
@@ -332,40 +351,40 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsGroup(title = "Profile") {
+                SettingsGroup(title = stringResource(R.string.settings_profile)) {
                     SettingsChoiceRow(
-                        title = "Gender",
+                        title = stringResource(R.string.settings_gender),
                         selected = uiState.userSex,
                         options = listOf(Sex.MALE, Sex.FEMALE, Sex.UNSET),
                         optionLabel = { sex ->
                             when (sex) {
-                                Sex.MALE -> "Male"
-                                Sex.FEMALE -> "Female"
-                                Sex.UNSET -> "Not set"
+                                Sex.MALE -> stringResource(R.string.sex_male)
+                                Sex.FEMALE -> stringResource(R.string.sex_female)
+                                Sex.UNSET -> stringResource(R.string.not_set)
                             }
                         },
                         onSelect = { viewModel.setUserSex(it) }
                     )
                     SettingsRow(
-                        title = "Birth year",
+                        title = stringResource(R.string.birth_year),
                         onClick = { showBirthYearDialog = true },
                         trailing = {
-                            SettingsValue(if (uiState.birthYear > 0) uiState.birthYear.toString() else "Not set")
+                            SettingsValue(if (uiState.birthYear > 0) uiState.birthYear.toString() else stringResource(R.string.not_set))
                         }
                     )
                     SettingsChoiceRow(
-                        title = "Caliper method",
-                        description = "Skinfold protocol used by the guided body-fat measurement.",
+                        title = stringResource(R.string.settings_caliper_method),
+                        description = stringResource(R.string.settings_caliper_method_desc),
                         selected = uiState.caliperMode,
                         options = CaliperMode.entries,
-                        optionLabel = { it.label },
+                        optionLabel = { stringResource(it.labelRes) },
                         onSelect = { viewModel.setCaliperMode(it) }
                     )
                 }
             }
 
             item {
-                SettingsGroup(title = "Data") {
+                SettingsGroup(title = stringResource(R.string.settings_data)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -383,7 +402,7 @@ fun SettingsScreen(
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Text("Export")
+                                Text(stringResource(R.string.export))
                             }
                         }
                         OutlinedButton(
@@ -391,22 +410,22 @@ fun SettingsScreen(
                             modifier = Modifier.weight(1f),
                             enabled = exportImportResult !is ExportImportResult.InProgress
                         ) {
-                            Text("Import")
+                            Text(stringResource(R.string.import_label))
                         }
                     }
                 }
             }
 
             item {
-                SettingsGroup(title = "About") {
+                SettingsGroup(title = stringResource(R.string.settings_about)) {
                     SettingsRow(
-                        title = "Strongest",
-                        description = "Free workout tracker with ${exerciseSeedData.size} exercises.",
+                        title = stringResource(R.string.app_name),
+                        description = pluralStringResource(R.plurals.settings_about_desc, exerciseSeedData.size, exerciseSeedData.size),
                         trailing = { SettingsValue("v${BuildConfig.VERSION_NAME}") }
                     )
                     SettingsRow(
-                        title = "Support development",
-                        description = "Opens the project on GitHub.",
+                        title = stringResource(R.string.settings_support),
+                        description = stringResource(R.string.settings_support_desc),
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, "https://github.com/bjorns163/strongest".toUri())
                             context.startActivity(intent)
@@ -424,12 +443,12 @@ fun SettingsScreen(
     if (showTimerDialog) {
         AlertDialog(
             onDismissRequest = { showTimerDialog = false },
-            title = { Text("Default Rest Timer") },
+            title = { Text(stringResource(R.string.default_rest_timer_title)) },
             text = {
                 DurationInputField(
                     totalSeconds = timerSecondsInput,
                     onValueChange = { timerSecondsInput = it },
-                    label = "Rest (mm:ss)"
+                    label = stringResource(R.string.rest_mm_ss)
                 )
             },
             confirmButton = {
@@ -439,12 +458,12 @@ fun SettingsScreen(
                         showTimerDialog = false
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTimerDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -453,12 +472,12 @@ fun SettingsScreen(
     editingRecoveryMuscle?.let { muscle ->
         AlertDialog(
             onDismissRequest = { editingRecoveryMuscle = null },
-            title = { Text("${muscleLabel(muscle)} recovery") },
+            title = { Text(stringResource(R.string.muscle_recovery_title, muscle.label())) },
             text = {
                 OutlinedTextField(
                     value = recoveryInput,
                     onValueChange = { recoveryInput = it.filter { c -> c.isDigit() } },
-                    label = { Text("Hours") },
+                    label = { Text(stringResource(R.string.hours)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -474,12 +493,12 @@ fun SettingsScreen(
                         editingRecoveryMuscle = null
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { editingRecoveryMuscle = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -488,12 +507,12 @@ fun SettingsScreen(
     if (showBirthYearDialog) {
         AlertDialog(
             onDismissRequest = { showBirthYearDialog = false },
-            title = { Text("Birth Year") },
+            title = { Text(stringResource(R.string.birth_year_title)) },
             text = {
                 OutlinedTextField(
                     value = birthYearInput,
                     onValueChange = { birthYearInput = it.filter { c -> c.isDigit() }.take(4) },
-                    label = { Text("Year (e.g. 1990)") },
+                    label = { Text(stringResource(R.string.year_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -510,12 +529,12 @@ fun SettingsScreen(
                         showBirthYearDialog = false
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showBirthYearDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -524,12 +543,12 @@ fun SettingsScreen(
     if (showAdjustDialog) {
         AlertDialog(
             onDismissRequest = { showAdjustDialog = false },
-            title = { Text("Timer Adjustment Step") },
+            title = { Text(stringResource(R.string.timer_adjustment_title)) },
             text = {
                 OutlinedTextField(
                     value = adjustInput,
                     onValueChange = { adjustInput = it.filter { c -> c.isDigit() } },
-                    label = { Text("Seconds") },
+                    label = { Text(stringResource(R.string.seconds)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -545,12 +564,12 @@ fun SettingsScreen(
                         showAdjustDialog = false
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAdjustDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -559,12 +578,12 @@ fun SettingsScreen(
     if (showLastSetTimerDialog) {
         AlertDialog(
             onDismissRequest = { showLastSetTimerDialog = false },
-            title = { Text("Last Set Rest Timer") },
+            title = { Text(stringResource(R.string.last_set_rest_title)) },
             text = {
                 DurationInputField(
                     totalSeconds = lastSetTimerSecondsInput,
                     onValueChange = { lastSetTimerSecondsInput = it },
-                    label = "Rest (mm:ss)"
+                    label = stringResource(R.string.rest_mm_ss)
                 )
             },
             confirmButton = {
@@ -574,12 +593,12 @@ fun SettingsScreen(
                         showLastSetTimerDialog = false
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLastSetTimerDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -588,12 +607,10 @@ fun SettingsScreen(
     if (showImportConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showImportConfirmDialog = false },
-            title = { Text("Import Data") },
+            title = { Text(stringResource(R.string.import_data_title)) },
             text = {
                 Text(
-                    "This will REPLACE all existing data in the app with the imported data. " +
-                    "This cannot be undone. Make sure you have exported your current data first " +
-                    "if you want to keep it.\n\nContinue?"
+                    stringResource(R.string.import_data_message)
                 )
             },
             confirmButton = {
@@ -603,12 +620,12 @@ fun SettingsScreen(
                         importLauncher.launch(arrayOf("application/json", "*/*"))
                     }
                 ) {
-                    Text("Continue")
+                    Text(stringResource(R.string.continue_label))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showImportConfirmDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -737,10 +754,10 @@ private fun <T> SettingsChoiceRow(
     title: String,
     selected: T,
     options: List<T>,
-    optionLabel: (T) -> String,
+    optionLabel: @Composable (T) -> String,
     onSelect: (T) -> Unit,
     description: String? = null,
-    valueLabel: (T) -> String = optionLabel
+    valueLabel: @Composable (T) -> String = optionLabel
 ) {
     var expanded by remember { mutableStateOf(false) }
     SettingsRow(
@@ -775,7 +792,7 @@ private fun <T> SettingsChoiceRow(
                                 if (option == selected) {
                                     Icon(
                                         Icons.Default.Check,
-                                        contentDescription = "Selected",
+                                        contentDescription = stringResource(R.string.selected),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -803,7 +820,7 @@ private fun SettingsExpanderRow(
         trailing = {
             Icon(
                 imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (expanded) "Collapse" else "Expand",
+                contentDescription = stringResource(if (expanded) R.string.collapse else R.string.expand),
                 tint = MaterialTheme.colorScheme.primary
             )
         }
@@ -839,7 +856,7 @@ private fun PlateInventory(
     SettingsSubDivider()
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(
-            text = "999 means unlimited. For a barbell the calculator loads a pair at a time.",
+            text = stringResource(R.string.plates_unlimited_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 4.dp)
@@ -901,10 +918,6 @@ private fun PlateInventory(
         }
     }
 }
-
-/** "LOWER_BACK" as "Lower back". */
-private fun muscleLabel(muscle: MuscleGroup): String =
-    muscle.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " ")
 
 /**
  * Formats a plate weight for display, trimming trailing zeros (2.5 not 2.50).

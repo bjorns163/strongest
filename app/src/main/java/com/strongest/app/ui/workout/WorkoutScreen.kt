@@ -39,11 +39,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.R
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.MuscleGroup
+import com.strongest.app.ui.components.label
 import com.strongest.app.ui.exercise.AddCustomExerciseDialog
 import com.strongest.app.ui.exercise.ExerciseRepositoryEntryPoint
 import com.strongest.app.ui.exercise.ExerciseThumbnail
@@ -86,9 +89,9 @@ fun WorkoutScreen(
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 if (uiState.ongoingWorkoutId != null) {
-                    Icon(Icons.Default.PlayArrow, "Resume Workout")
+                    Icon(Icons.Default.PlayArrow, stringResource(R.string.resume_workout))
                 } else {
-                    Icon(Icons.Default.Add, "Start Workout")
+                    Icon(Icons.Default.Add, stringResource(R.string.start_workout))
                 }
             }
         }
@@ -105,12 +108,12 @@ fun WorkoutScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = "Strongest",
+                        text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.headlineLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Your workout tracker",
+                        text = stringResource(R.string.app_tagline),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -122,7 +125,7 @@ fun WorkoutScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.FitnessCenter, null, Modifier.padding(end = 8.dp))
-                        Text("Start Empty Workout")
+                        Text(stringResource(R.string.start_empty_workout))
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -134,7 +137,7 @@ fun WorkoutScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(Icons.Default.PlayArrow, null, Modifier.padding(end = 8.dp))
-                            Text("Resume Workout")
+                            Text(stringResource(R.string.resume_workout))
                         }
                     }
                 }
@@ -143,7 +146,7 @@ fun WorkoutScreen(
             if (routines.isNotEmpty()) {
                 item {
                     Text(
-                        text = "Your Routines",
+                        text = stringResource(R.string.your_routines),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
@@ -180,7 +183,7 @@ fun WorkoutScreen(
                     if (routineGroups.isNotEmpty()) {
                         item(key = "wg-header-ungrouped") {
                             Text(
-                                text = "Ungrouped",
+                                text = stringResource(R.string.ungrouped),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -196,7 +199,7 @@ fun WorkoutScreen(
 
             item {
                 Text(
-                    text = "Exercises",
+                    text = stringResource(R.string.exercises),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
@@ -211,7 +214,7 @@ fun WorkoutScreen(
                         FilterChip(
                             selected = uiState.selectedMuscleGroup == null,
                             onClick = { viewModel.setMuscleGroup(null) },
-                            label = { Text("All") }
+                            label = { Text(stringResource(R.string.filter_all)) }
                         )
                     }
                     val filterableGroups = MuscleGroup.entries.filter {
@@ -222,7 +225,7 @@ fun WorkoutScreen(
                         FilterChip(
                             selected = uiState.selectedMuscleGroup == group,
                             onClick = { viewModel.setMuscleGroup(group) },
-                            label = { Text(group.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                            label = { Text(group.label()) }
                         )
                     }
                 }
@@ -237,7 +240,7 @@ fun WorkoutScreen(
                         FilterChip(
                             selected = uiState.selectedEquipment == null,
                             onClick = { viewModel.setEquipment(null) },
-                            label = { Text("All") }
+                            label = { Text(stringResource(R.string.filter_all)) }
                         )
                     }
                     items(FILTERABLE_EQUIPMENT.size) { index ->
@@ -245,7 +248,7 @@ fun WorkoutScreen(
                         FilterChip(
                             selected = uiState.selectedEquipment == eq,
                             onClick = { viewModel.setEquipment(eq) },
-                            label = { Text(eq.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                            label = { Text(eq.label()) }
                         )
                     }
                 }
@@ -262,7 +265,7 @@ fun WorkoutScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    placeholder = { Text("Search exercises...") },
+                    placeholder = { Text(stringResource(R.string.search_exercises)) },
                     leadingIcon = { Icon(Icons.Default.Search, null) },
                     singleLine = true
                 )
@@ -276,7 +279,7 @@ fun WorkoutScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     Icon(Icons.Default.Add, null, Modifier.padding(end = 4.dp))
-                    Text("Create Custom Exercise")
+                    Text(stringResource(R.string.create_custom_exercise))
                 }
             }
 
@@ -380,7 +383,7 @@ fun ExerciseListCard(
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "${exercise.muscleGroup.name.lowercase().replaceFirstChar { it.uppercase() }} \u2022 ${exercise.equipment.name.lowercase().replaceFirstChar { it.uppercase() }} \u2022 ${exercise.type.label()}",
+                    text = "${exercise.muscleGroup.label()} \u2022 ${exercise.equipment.label()} \u2022 ${exercise.type.label()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

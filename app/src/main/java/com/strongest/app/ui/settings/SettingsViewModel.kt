@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
+import com.strongest.app.R
 import com.strongest.app.ThemeMode
 import com.strongest.app.data.db.ExerciseDao
 import com.strongest.app.data.db.MeasurementEntryDao
@@ -211,12 +212,15 @@ class SettingsViewModel @Inject constructor(
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(outputUri)?.use { stream ->
                         stream.write(json.toByteArray(Charsets.UTF_8))
-                    } ?: throw Exception("Could not open output file")
+                    } ?: throw Exception(context.getString(R.string.error_open_output_file))
                 }
                 _exportImportResult.value = ExportImportResult.ExportSuccess
             } catch (e: Exception) {
                 _exportImportResult.value = ExportImportResult.Error(
-                    "Export failed: ${e.localizedMessage ?: "Unknown error"}"
+                    context.getString(
+                        R.string.export_failed,
+                        e.localizedMessage ?: context.getString(R.string.unknown_error)
+                    )
                 )
             }
         }
@@ -229,10 +233,10 @@ class SettingsViewModel @Inject constructor(
                 val json = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(inputUri)?.use { stream ->
                         stream.bufferedReader(Charsets.UTF_8).readText()
-                    } ?: throw Exception("Could not open input file")
+                    } ?: throw Exception(context.getString(R.string.error_open_input_file))
                 }
                 val exportData = json.parseExportData()
-                    ?: throw Exception("Invalid or corrupted export file")
+                    ?: throw Exception(context.getString(R.string.error_invalid_export_file))
 
                 withContext(Dispatchers.IO) {
                     importExportData(exportData)
@@ -244,7 +248,10 @@ class SettingsViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 _exportImportResult.value = ExportImportResult.Error(
-                    "Import failed: ${e.localizedMessage ?: "Unknown error"}"
+                    context.getString(
+                        R.string.import_failed,
+                        e.localizedMessage ?: context.getString(R.string.unknown_error)
+                    )
                 )
             }
         }

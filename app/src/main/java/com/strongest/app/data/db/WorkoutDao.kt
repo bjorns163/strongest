@@ -317,19 +317,14 @@ interface WorkoutDao {
     suspend fun getFirstWorkoutStart(): Long?
 
     /**
-     * Buckets workouts by local calendar day. The caller supplies [tzOffsetMs] (e.g.
-     * `TimeZone.getDefault().getOffset(now)`) so the same workout is grouped under the same date
-     * the user actually sees in their UI, regardless of which side of UTC midnight it sits on.
+     * Start times of finished workouts in [startDate, endDate). Bucketing into local days happens
+     * in Kotlin, because SQLite can't apply the DST offset that was in effect at each timestamp.
      */
     @Query("""
-        SELECT (((w.startTime + :tzOffsetMs) / 86400000) * 86400000) - :tzOffsetMs AS dayStart,
-               COUNT(DISTINCT w.id) AS count
-        FROM workouts w
+        SELECT w.startTime FROM workouts w
         WHERE w.isOngoing = 0 AND w.startTime >= :startDate AND w.startTime < :endDate
-        GROUP BY dayStart
-        ORDER BY dayStart ASC
     """)
-    suspend fun getWorkoutsPerDay(startDate: Long, endDate: Long, tzOffsetMs: Long): List<WorkoutsPerDay>
+    suspend fun getWorkoutStartTimes(startDate: Long, endDate: Long): List<Long>
 
     @Query("""
         SELECT we.exerciseId AS exerciseId, COUNT(DISTINCT w.id) AS workoutCount

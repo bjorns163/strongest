@@ -1,23 +1,31 @@
 package com.strongest.app.utils
 
 import com.github.mikephil.charting.data.Entry
-import java.util.TimeZone
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 const val DAY_MS = 24L * 60 * 60 * 1000
 
-/**
- * Start of the local calendar day containing [timestamp]. Uses the timezone offset at the
- * timestamp itself so DST transitions stay correct, and matches how the WorkoutDao buckets
- * workouts by day.
- */
-fun localDayStart(timestamp: Long): Long {
-    val offset = TimeZone.getDefault().getOffset(timestamp)
-    return ((timestamp + offset) / DAY_MS) * DAY_MS - offset
-}
+private fun localDate(timestamp: Long): LocalDate =
+    Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate()
 
-/** Number of calendar days between two day-aligned timestamps, inclusive. */
+private fun LocalDate.startMillis(): Long =
+    atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+/**
+ * Start of the local calendar day containing [timestamp]. Every chart key and data bucket goes
+ * through this (or [addDays]) so they always agree, including on DST transition days.
+ */
+fun localDayStart(timestamp: Long): Long = localDate(timestamp).startMillis()
+
+/** Local midnight [days] calendar days after (or before, if negative) the day containing [day]. */
+fun addDays(day: Long, days: Int): Long = localDate(day).plusDays(days.toLong()).startMillis()
+
+/** Number of calendar days between two timestamps' days, inclusive. */
 fun daySlotCount(startDay: Long, lastDay: Long): Int =
-    ((localDayStart(lastDay) - localDayStart(startDay)) / DAY_MS + 1).toInt()
+    (ChronoUnit.DAYS.between(localDate(startDay), localDate(lastDay)) + 1).toInt()
 
 /**
  * Builds line-chart entries for a continuous day axis: each day from [startDay] that has a value
@@ -26,9 +34,8 @@ fun daySlotCount(startDay: Long, lastDay: Long): Int =
  */
 fun dailyEntries(startDay: Long, lastDay: Long, valueForDay: (Long) -> Float?): List<Entry> =
     List(daySlotCount(startDay, lastDay)) { idx ->
-        // Snap each slot to its true local midnight: adding fixed 24h steps drifts across DST
-        // transitions (23h/25h days), which would make the slot keys mismatch the
-        // localDayStart() keys used for data lookup and silently empty the chart.
-        val day = localDayStart(startDay + idx * DAY_MS)
+        // Slot keys must equal the localDayStart() keys used for data lookup, or the chart
+        // silently empties; addDays keeps them aligned across DST transitions.
+        val day = addDays(startDay, idx)
         valueForDay(day)?.let { Entry(idx.toFloat(), it) }
     }.filterNotNull()

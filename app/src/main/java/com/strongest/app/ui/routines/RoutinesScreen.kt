@@ -41,8 +41,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.R
 import com.strongest.app.data.model.Routine
 import com.strongest.app.data.model.RoutineGroup
 import kotlinx.coroutines.launch
@@ -59,6 +61,9 @@ fun RoutinesScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var showGroupsDialog by remember { mutableStateOf(false) }
+    val importedMessage = stringResource(R.string.routine_imported)
+    val importFailedMessage = stringResource(R.string.routine_import_failed)
+    val ungroupedTitle = stringResource(R.string.ungrouped)
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -70,9 +75,9 @@ fun RoutinesScreen(
                     val jsonString = inputStream?.bufferedReader()?.readText() ?: ""
                     inputStream?.close()
                     viewModel.importRoutine(jsonString)
-                    snackbarHostState.showSnackbar("Routine imported successfully")
+                    snackbarHostState.showSnackbar(importedMessage)
                 } catch (e: Exception) {
-                    snackbarHostState.showSnackbar("Failed to import routine")
+                    snackbarHostState.showSnackbar(importFailedMessage)
                 }
             }
         }
@@ -92,7 +97,7 @@ fun RoutinesScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = onCreateNew) {
-                Icon(Icons.Default.Add, "Create Routine")
+                Icon(Icons.Default.Add, stringResource(R.string.create_routine))
             }
         }
     ) { padding ->
@@ -111,11 +116,11 @@ fun RoutinesScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Routines",
+                        text = stringResource(R.string.nav_routines),
                         style = MaterialTheme.typography.headlineSmall
                     )
                     IconButton(onClick = { showGroupsDialog = true }) {
-                        Icon(Icons.Default.Folder, "Manage groups")
+                        Icon(Icons.Default.Folder, stringResource(R.string.manage_groups))
                     }
                 }
             }
@@ -127,7 +132,7 @@ fun RoutinesScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     Icon(Icons.Default.Add, null, Modifier.padding(end = 8.dp))
-                    Text("Create Routine")
+                    Text(stringResource(R.string.create_routine))
                 }
             }
             item {
@@ -138,7 +143,7 @@ fun RoutinesScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     Icon(Icons.Default.FileDownload, null, Modifier.padding(end = 8.dp))
-                    Text("Import Routine")
+                    Text(stringResource(R.string.import_routine))
                 }
             }
 
@@ -151,19 +156,19 @@ fun RoutinesScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "No Routines Yet",
+                            text = stringResource(R.string.no_routines_yet),
                             style = MaterialTheme.typography.headlineSmall,
                             modifier = Modifier.padding(32.dp)
                         )
                         Text(
-                            text = "Create your first routine to get started",
+                            text = stringResource(R.string.no_routines_yet_hint),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             } else {
-                val sections = buildRoutineSections(routines, groups)
+                val sections = buildRoutineSections(routines, groups, ungroupedTitle)
                 sections.forEach { section ->
                     if (section.title != null) {
                         item(key = "header-${section.key}") {
@@ -193,7 +198,8 @@ private data class RoutineSection(
 
 private fun buildRoutineSections(
     routines: List<Routine>,
-    groups: List<RoutineGroup>
+    groups: List<RoutineGroup>,
+    ungroupedTitle: String
 ): List<RoutineSection> {
     if (groups.isEmpty()) {
         return listOf(RoutineSection(key = "all", title = null, routines = routines))
@@ -220,7 +226,7 @@ private fun buildRoutineSections(
         )
     }
     if (ungrouped.isNotEmpty()) {
-        result.add(RoutineSection(key = "ungrouped", title = "Ungrouped", routines = ungrouped))
+        result.add(RoutineSection(key = "ungrouped", title = ungroupedTitle, routines = ungrouped))
     }
     return result
 }
@@ -252,30 +258,30 @@ private fun ManageGroupsDialog(
         val target = pendingDelete!!
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete Group") },
-            text = { Text("Delete \"${target.name}\"? Routines in this group will become ungrouped.") },
+            title = { Text(stringResource(R.string.delete_group_title)) },
+            text = { Text(stringResource(R.string.delete_group_message, target.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete(target.id)
                     pendingDelete = null
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Routine Groups") },
+        title = { Text(stringResource(R.string.routine_groups)) },
         text = {
             Column {
                 if (groups.isEmpty()) {
                     Text(
-                        text = "No groups yet. Create one below.",
+                        text = stringResource(R.string.no_groups_yet),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 4.dp)
@@ -298,8 +304,8 @@ private fun ManageGroupsDialog(
                                 TextButton(onClick = {
                                     onRename(group.id, renameText)
                                     renamingId = null
-                                }) { Text("Save") }
-                                TextButton(onClick = { renamingId = null }) { Text("Cancel") }
+                                }) { Text(stringResource(R.string.save)) }
+                                TextButton(onClick = { renamingId = null }) { Text(stringResource(R.string.cancel)) }
                             }
                         } else {
                             Row(
@@ -318,12 +324,12 @@ private fun ManageGroupsDialog(
                                     renamingId = group.id
                                     renameText = group.name
                                 }) {
-                                    Icon(Icons.Default.Edit, "Rename")
+                                    Icon(Icons.Default.Edit, stringResource(R.string.rename))
                                 }
                                 IconButton(onClick = { pendingDelete = group }) {
                                     Icon(
                                         Icons.Default.Delete,
-                                        "Delete",
+                                        stringResource(R.string.delete),
                                         tint = MaterialTheme.colorScheme.error
                                     )
                                 }
@@ -342,7 +348,7 @@ private fun ManageGroupsDialog(
                         value = newGroupName,
                         onValueChange = { newGroupName = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("New group name") },
+                        placeholder = { Text(stringResource(R.string.new_group_name)) },
                         singleLine = true
                     )
                     TextButton(
@@ -351,12 +357,12 @@ private fun ManageGroupsDialog(
                             newGroupName = ""
                         },
                         enabled = newGroupName.isNotBlank()
-                    ) { Text("Add") }
+                    ) { Text(stringResource(R.string.add)) }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         }
     )
 }
@@ -373,19 +379,19 @@ fun RoutineCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Routine") },
-            text = { Text("Delete \"${routine.name}\"? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.delete_routine_title)) },
+            text = { Text(stringResource(R.string.delete_routine_message, routine.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete()
                     showDeleteDialog = false
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -420,10 +426,10 @@ fun RoutineCard(
                 }
             }
             IconButton(onClick = onShare) {
-                Icon(Icons.Default.Share, "Share routine")
+                Icon(Icons.Default.Share, stringResource(R.string.share_routine))
             }
             IconButton(onClick = { showDeleteDialog = true }) {
-                Icon(Icons.Default.Delete, "Delete routine")
+                Icon(Icons.Default.Delete, stringResource(R.string.delete_routine))
             }
         }
     }

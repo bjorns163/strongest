@@ -10,3 +10,11 @@ package com.strongest.app.utils
  */
 fun parseDecimalInput(text: String): Float? =
     text.trim().replace(',', '.').toFloatOrNull()
+
+/**
+ * Strips everything but digits and decimal separators from text typed into a decimal field.
+ * Keeps the comma too: fields are prefilled with locale-formatted numbers ("72,5"), and dropping
+ * the comma on the next keystroke would silently turn that into 725.
+ */
+fun filterDecimalInput(text: String): String =
+    text.filter { it.isDigit() || it == '.' || it == ',' }

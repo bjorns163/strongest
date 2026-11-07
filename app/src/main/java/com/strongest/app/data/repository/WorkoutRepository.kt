@@ -24,6 +24,7 @@ import com.strongest.app.data.model.SECONDARY_MUSCLE_WEIGHT
 import com.strongest.app.data.model.SetLog
 import com.strongest.app.data.model.Workout
 import com.strongest.app.data.model.WorkoutExercise
+import com.strongest.app.utils.localDayStart
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -391,10 +392,12 @@ class WorkoutRepository @Inject constructor(
     suspend fun getMuscleLastTrained(): List<com.strongest.app.data.db.MuscleLastTrained> =
         workoutDao.getMuscleLastTrained()
 
-    suspend fun getWorkoutsPerDay(startDate: Long, endDate: Long): List<WorkoutsPerDay> {
-        val tzOffsetMs = java.util.TimeZone.getDefault().getOffset(System.currentTimeMillis()).toLong()
-        return workoutDao.getWorkoutsPerDay(startDate, endDate, tzOffsetMs)
-    }
+    suspend fun getWorkoutsPerDay(startDate: Long, endDate: Long): List<WorkoutsPerDay> =
+        workoutDao.getWorkoutStartTimes(startDate, endDate)
+            .groupingBy { localDayStart(it) }
+            .eachCount()
+            .map { (day, count) -> WorkoutsPerDay(day, count) }
+            .sortedBy { it.dayStart }
 
     fun getAllCompletedHistoryRows(): Flow<List<HistorySetRow>> = workoutDao.getAllCompletedHistoryRows()
 

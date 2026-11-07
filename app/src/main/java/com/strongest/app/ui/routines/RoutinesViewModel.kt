@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.strongest.app.R
 import com.strongest.app.data.db.RoutineWithExercisesAndSets
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.Routine
@@ -73,9 +74,9 @@ class RoutinesViewModel @Inject constructor(
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/json"
                 putExtra(Intent.EXTRA_TEXT, json)
-                putExtra(Intent.EXTRA_SUBJECT, "Strongest Routine: ${routine.name}")
+                putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_routine_subject, routine.name))
             }
-            val chooser = Intent.createChooser(shareIntent, "Share Routine")
+            val chooser = Intent.createChooser(shareIntent, context.getString(R.string.share_routine))
             context.startActivity(chooser)
         }
     }

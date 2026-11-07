@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.strongest.app.R
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.ExerciseType
@@ -336,7 +337,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     private fun publishNotificationState() {
         val s = _state.value
         if (s.workoutId == null || s.isViewMode || s.isFinished || isFinishing) return
-        val name = s.workoutName?.takeIf { it.isNotBlank() } ?: "Workout"
+        val name = s.workoutName?.takeIf { it.isNotBlank() } ?: context.getString(R.string.workout_default_name)
 
         if (s.isTimerRunning && s.timerRemainingSeconds > 0) {
             val next = findNextUncompletedSet()
@@ -473,11 +474,13 @@ class ActiveWorkoutViewModel @Inject constructor(
 
             val calendar = java.util.Calendar.getInstance()
             val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
-            val defaultName = when (hour) {
-                in 5..11 -> "Morning Workout"
-                in 12..16 -> "Afternoon Workout"
-                else -> "Evening Workout"
-            }
+            val defaultName = context.getString(
+                when (hour) {
+                    in 5..11 -> R.string.workout_name_morning
+                    in 12..16 -> R.string.workout_name_afternoon
+                    else -> R.string.workout_name_evening
+                }
+            )
             val startTime = System.currentTimeMillis()
             val workoutId = repository.startWorkout(null, null, defaultName)
             _state.update { it.copy(workoutId = workoutId, workoutName = defaultName, startTime = startTime) }
@@ -527,13 +530,16 @@ class ActiveWorkoutViewModel @Inject constructor(
             val routine = full?.routine
             val routineExercises = full?.exercises ?: emptyList()
             val routineSets = full?.sets ?: emptyMap()
-            val routineName = routine?.name ?: "Workout"
+            val routineName = routine?.name ?: context.getString(R.string.workout_default_name)
             val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-            val workoutName = when (hour) {
-                in 5..11 -> "Morning $routineName"
-                in 12..16 -> "Afternoon $routineName"
-                else -> "Evening $routineName"
-            }
+            val workoutName = context.getString(
+                when (hour) {
+                    in 5..11 -> R.string.routine_workout_name_morning
+                    in 12..16 -> R.string.routine_workout_name_afternoon
+                    else -> R.string.routine_workout_name_evening
+                },
+                routineName
+            )
             val startTime = System.currentTimeMillis()
             val workoutId = repository.startWorkout(routineId, routineName, workoutName)
 
@@ -578,7 +584,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                     WorkoutExerciseUi(
                         exerciseId = re.exerciseId,
                         workoutExerciseId = workoutExerciseId,
-                        exerciseName = exercise?.name ?: "Unknown",
+                        exerciseName = exercise?.name ?: context.getString(R.string.unknown_exercise),
                         muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                         equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                         type = exercise?.type ?: ExerciseType.ISOLATION,
@@ -628,7 +634,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                 WorkoutExerciseUi(
                     exerciseId = exerciseWithSets.workoutExercise.exerciseId,
                     workoutExerciseId = exerciseWithSets.workoutExercise.id,
-                    exerciseName = exercise?.name ?: "Unknown",
+                    exerciseName = exercise?.name ?: context.getString(R.string.unknown_exercise),
                     muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                     equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                     type = exercise?.type ?: ExerciseType.ISOLATION,
@@ -694,7 +700,7 @@ class ActiveWorkoutViewModel @Inject constructor(
             val newExercise = WorkoutExerciseUi(
                 exerciseId = exerciseId,
                 workoutExerciseId = workoutExerciseId,
-                exerciseName = exercise?.name ?: "Unknown",
+                exerciseName = exercise?.name ?: context.getString(R.string.unknown_exercise),
                 muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                 equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                 type = exercise?.type ?: ExerciseType.ISOLATION,
@@ -753,7 +759,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                     WorkoutExerciseUi(
                         exerciseId = exerciseId,
                         workoutExerciseId = workoutExerciseId,
-                        exerciseName = exercise?.name ?: "Unknown",
+                        exerciseName = exercise?.name ?: context.getString(R.string.unknown_exercise),
                         muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                         equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                         type = exercise?.type ?: ExerciseType.ISOLATION,

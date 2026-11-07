@@ -1,6 +1,7 @@
 package com.strongest.app
 
 import com.strongest.app.utils.DAY_MS
+import com.strongest.app.utils.addDays
 import com.strongest.app.utils.dailyEntries
 import com.strongest.app.utils.daySlotCount
 import com.strongest.app.utils.localDayStart
@@ -79,7 +80,7 @@ class DayAxisTest {
                 set(Calendar.MILLISECOND, 0)
             }.timeInMillis
             // 181 days back from Aug 16 2026 crosses the Mar 29 2026 spring-forward exactly once.
-            val startDay = lastDay - 181 * DAY_MS
+            val startDay = addDays(lastDay, -181)
 
             assertEquals(182, daySlotCount(startDay, lastDay))
             val values = mapOf(lastDay to 42f)
@@ -88,6 +89,58 @@ class DayAxisTest {
             assertEquals(1, entries.size)
             assertEquals(181f, entries[0].x, 0f)
             assertEquals(42f, entries[0].y, 0f)
+        } finally {
+            TimeZone.setDefault(tz)
+        }
+    }
+
+    @Test
+    fun dailyEntries_keepsTodayAcrossDstFallBack() {
+        // Regression: after a fall-back (25h day), midnight-before + n*24h lands at 23:00 the day
+        // before, so every later slot snapped to the previous day and today's data never showed
+        // (30d/90d/6m charts empty in November).
+        val tz = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Amsterdam"))
+        try {
+            val lastDay = Calendar.getInstance().apply {
+                set(2026, Calendar.NOVEMBER, 7, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            // 30 days ending Nov 7 2026 crosses the Oct 25 2026 fall-back once.
+            val startDay = addDays(lastDay, -29)
+
+            assertEquals(Calendar.getInstance().apply {
+                set(2026, Calendar.OCTOBER, 9, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis, startDay)
+            assertEquals(30, daySlotCount(startDay, lastDay))
+            val entries = dailyEntries(startDay, lastDay) { if (it == lastDay) 42f else null }
+
+            assertEquals(1, entries.size)
+            assertEquals(29f, entries[0].x, 0f)
+        } finally {
+            TimeZone.setDefault(tz)
+        }
+    }
+
+    @Test
+    fun addDays_landsOnMidnightAcrossBothDstTransitions() {
+        val tz = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Amsterdam"))
+        try {
+            val start = Calendar.getInstance().apply {
+                set(2026, Calendar.JANUARY, 1, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val cal = Calendar.getInstance()
+            for (n in 0..364) {
+                val day = addDays(start, n)
+                cal.timeInMillis = day
+                assertEquals(0, cal.get(Calendar.HOUR_OF_DAY))
+                assertEquals(n + 1, cal.get(Calendar.DAY_OF_YEAR))
+                assertEquals(start, addDays(day, -n))
+                assertEquals(n + 1, daySlotCount(start, day))
+            }
         } finally {
             TimeZone.setDefault(tz)
         }

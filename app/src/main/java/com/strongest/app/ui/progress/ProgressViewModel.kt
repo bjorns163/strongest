@@ -1,7 +1,9 @@
 package com.strongest.app.ui.progress
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.strongest.app.R
 import com.strongest.app.data.db.CardioSummary
 import com.strongest.app.data.db.MuscleVolume
 import com.strongest.app.data.db.PersonalRecord
@@ -12,8 +14,8 @@ import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.data.repository.WorkoutRepository
-import com.strongest.app.utils.DAY_MS
 import com.strongest.app.utils.WorkoutPrInfo
+import com.strongest.app.utils.addDays
 import com.strongest.app.utils.computeAllWorkoutPrs
 import com.strongest.app.utils.localDayStart
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,19 +32,19 @@ import kotlin.math.ceil
 import javax.inject.Inject
 
 /** A preset counts back [days] from today; [CUSTOM] uses the days the user picked. */
-enum class ProgressRange(val days: Int?, val label: String) {
-    DAYS_7(7, "7d"),
-    DAYS_30(30, "30d"),
-    DAYS_182(182, "6m"),
-    DAYS_365(365, "1y"),
-    CUSTOM(null, "Custom")
+enum class ProgressRange(val days: Int?, @StringRes val labelRes: Int) {
+    DAYS_7(7, R.string.range_7d),
+    DAYS_30(30, R.string.range_30d),
+    DAYS_182(182, R.string.range_6m),
+    DAYS_365(365, R.string.range_1y),
+    CUSTOM(null, R.string.range_custom)
 }
 
-enum class ProgressMetric(val label: String) {
-    SETS("Sets"),
-    WEIGHT("Weight"),
-    WORKOUTS("Workouts"),
-    PRS("PRs")
+enum class ProgressMetric(@StringRes val labelRes: Int) {
+    SETS(R.string.progress_metric_sets),
+    WEIGHT(R.string.progress_metric_weight),
+    WORKOUTS(R.string.progress_metric_workouts),
+    PRS(R.string.progress_metric_prs)
 }
 
 /** How many PRs were set on one local calendar day. */
@@ -103,8 +105,7 @@ class ProgressViewModel @Inject constructor(
         val days = range.days ?: return // CUSTOM goes through setCustomRange
         if (range == _state.value.range) return
         val today = localDayStart(System.currentTimeMillis())
-        // Snap back to local midnight: fixed 24h steps drift by 1h across DST transitions.
-        val start = localDayStart(today - (days - 1) * DAY_MS)
+        val start = addDays(today, -(days - 1))
         _state.update { it.copy(range = range, startDay = start, endDay = today) }
         loadRanged()
     }
@@ -147,7 +148,7 @@ class ProgressViewModel @Inject constructor(
                     val today = localDayStart(System.currentTimeMillis())
                     st.copy(
                         firstDataDay = firstDataDay,
-                        startDay = localDayStart(today - (days - 1) * DAY_MS),
+                        startDay = addDays(today, -(days - 1)),
                         endDay = today
                     )
                 }
@@ -184,9 +185,9 @@ class ProgressViewModel @Inject constructor(
     private fun loadRanged() {
         viewModelScope.launch {
             // Align the query to the same calendar-day boundaries the chart uses. The end is the
-            // start of the day after endDay; +36h lands in that day even across a DST change.
+            // start of the day after endDay.
             val startDate = _state.value.startDay
-            val endDate = localDayStart(_state.value.endDay + DAY_MS + DAY_MS / 2)
+            val endDate = addDays(_state.value.endDay, 1)
             val volume = repository.getVolumeByDate(startDate, endDate)
             val muscle = repository.getMuscleVolume(startDate, endDate)
             val perDay = repository.getWorkoutsPerDay(startDate, endDate)

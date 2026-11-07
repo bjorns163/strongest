@@ -113,8 +113,14 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.strongest.app.R
+import com.strongest.app.ui.components.label
+import com.strongest.app.utils.rememberLocalizedDateFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -244,12 +250,10 @@ fun ActiveWorkoutScreen(
                 showNotificationRationale = false
                 canStartWorkout = true
             },
-            title = { Text("Notification Permission") },
+            title = { Text(stringResource(R.string.notification_permission_title)) },
             text = {
                 Text(
-                    "Strongest uses the notification bar to show your active workout progress, " +
-                    "rest timer, and quick controls. Grant notification permission to see these " +
-                    "updates even when the app is in the background."
+                    stringResource(R.string.notification_permission_message)
                 )
             },
             confirmButton = {
@@ -258,7 +262,7 @@ fun ActiveWorkoutScreen(
                     requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     canStartWorkout = true
                 }) {
-                    Text("Allow")
+                    Text(stringResource(R.string.allow))
                 }
             },
             dismissButton = {
@@ -266,7 +270,7 @@ fun ActiveWorkoutScreen(
                     showNotificationRationale = false
                     canStartWorkout = true
                 }) {
-                    Text("Not Now")
+                    Text(stringResource(R.string.not_now))
                 }
             }
         )
@@ -280,8 +284,8 @@ fun ActiveWorkoutScreen(
     if (showCancelDialog) {
         AlertDialog(
             onDismissRequest = { showCancelDialog = false },
-            title = { Text("Cancel Workout") },
-            text = { Text("Are you sure you want to cancel this workout? All progress will be lost.") },
+            title = { Text(stringResource(R.string.cancel_workout)) },
+            text = { Text(stringResource(R.string.cancel_workout_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -289,12 +293,12 @@ fun ActiveWorkoutScreen(
                         viewModel.cancelWorkout(onCancelled = onBack)
                     }
                 ) {
-                    Text("Cancel Workout", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.cancel_workout), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCancelDialog = false }) {
-                    Text("Continue Workout")
+                    Text(stringResource(R.string.continue_workout))
                 }
             }
         )
@@ -303,18 +307,18 @@ fun ActiveWorkoutScreen(
     if (state.showFinishDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissFinishDialog() },
-            title = { Text("Finish Workout") },
+            title = { Text(stringResource(R.string.finish_workout)) },
             text = {
-                Text("You have ${state.uncompletedSetsCount} uncompleted set(s). What would you like to do?")
+                Text(pluralStringResource(R.plurals.uncompleted_sets_message, state.uncompletedSetsCount, state.uncompletedSetsCount))
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.markUncompletedAsDone() }) {
-                    Text("Mark All Completed")
+                    Text(stringResource(R.string.mark_all_completed))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.discardUncompletedSets() }) {
-                    Text("Discard Unfinished", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.discard_unfinished), color = MaterialTheme.colorScheme.error)
                 }
             }
         )
@@ -323,16 +327,16 @@ fun ActiveWorkoutScreen(
     if (state.showExistingWorkoutDialog) {
         AlertDialog(
             onDismissRequest = { onBack() },
-            title = { Text("Active Workout Found") },
-            text = { Text("You already have an active workout. Do you want to resume it or cancel it and start a new one?") },
+            title = { Text(stringResource(R.string.active_workout_found)) },
+            text = { Text(stringResource(R.string.active_workout_found_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.resumeExistingWorkout() }) {
-                    Text("Resume")
+                    Text(stringResource(R.string.resume))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.discardExistingAndStartNew() }) {
-                    Text("Cancel & Start New", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.cancel_and_start_new), color = MaterialTheme.colorScheme.error)
                 }
             }
         )
@@ -342,7 +346,7 @@ fun ActiveWorkoutScreen(
         val fromRoutine = state.sourceRoutineId != null && state.sourceRoutineExists
         AlertDialog(
             onDismissRequest = { viewModel.dismissRoutineSaveDialog() },
-            title = { Text(if (fromRoutine) "Save Routine Changes?" else "Save as Routine?") },
+            title = { Text(stringResource(if (fromRoutine) R.string.save_routine_changes else R.string.save_as_routine)) },
             text = {
                 Column {
                     if (fromRoutine) {
@@ -351,14 +355,14 @@ fun ActiveWorkoutScreen(
                                 onClick = { viewModel.updateRoutineSetsOnlyAndFinish() },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Update Sets/Reps/Weight Only", modifier = Modifier.fillMaxWidth())
+                                Text(stringResource(R.string.update_sets_only), modifier = Modifier.fillMaxWidth())
                             }
                         } else {
                             TextButton(
                                 onClick = { viewModel.updateRoutineFullAndFinish() },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Update Full Routine", modifier = Modifier.fillMaxWidth())
+                                Text(stringResource(R.string.update_full_routine), modifier = Modifier.fillMaxWidth())
                             }
                         }
                     }
@@ -366,14 +370,14 @@ fun ActiveWorkoutScreen(
                         onClick = { viewModel.showSaveAsNewRoutineDialog() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Save as New Routine", modifier = Modifier.fillMaxWidth())
+                        Text(stringResource(R.string.save_as_new_routine), modifier = Modifier.fillMaxWidth())
                     }
                 }
             },
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissRoutineSaveDialog() }) {
-                    Text("Just Finish")
+                    Text(stringResource(R.string.just_finish))
                 }
             }
         )
@@ -383,12 +387,12 @@ fun ActiveWorkoutScreen(
         var newRoutineName by remember { mutableStateOf(state.workoutName ?: "") }
         AlertDialog(
             onDismissRequest = { viewModel.dismissNewRoutineNameDialog() },
-            title = { Text("Save as New Routine") },
+            title = { Text(stringResource(R.string.save_as_new_routine)) },
             text = {
                 OutlinedTextField(
                     value = newRoutineName,
                     onValueChange = { newRoutineName = it },
-                    label = { Text("Routine name") },
+                    label = { Text(stringResource(R.string.routine_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -398,12 +402,12 @@ fun ActiveWorkoutScreen(
                     onClick = { viewModel.saveAsNewRoutineAndFinish(newRoutineName) },
                     enabled = newRoutineName.isNotBlank()
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissNewRoutineNameDialog() }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -425,18 +429,18 @@ fun ActiveWorkoutScreen(
     pendingDiscard?.let { afterDiscard ->
         AlertDialog(
             onDismissRequest = { pendingDiscard = null },
-            title = { Text("Discard changes?") },
-            text = { Text("Your changes to this workout won't be saved.") },
+            title = { Text(stringResource(R.string.discard_changes_title)) },
+            text = { Text(stringResource(R.string.discard_changes_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     pendingDiscard = null
                     viewModel.cancelHistoryEdit(afterDiscard)
                 }) {
-                    Text("Discard", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.discard), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDiscard = null }) { Text("Keep editing") }
+                TextButton(onClick = { pendingDiscard = null }) { Text(stringResource(R.string.keep_editing)) }
             }
         )
     }
@@ -456,13 +460,13 @@ fun ActiveWorkoutScreen(
                     IconButton(onClick = {
                         if (state.isEditingHistory) requestDiscard(onBack) else onBack()
                     }) {
-                        Icon(Icons.AutoMirrored.Default.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
                     }
                     Text(
                         text = when {
-                            state.isEditingHistory -> "Edit Workout"
-                            state.isViewMode -> "Workout Details"
-                            else -> "Active Workout"
+                            state.isEditingHistory -> stringResource(R.string.edit_workout)
+                            state.isViewMode -> stringResource(R.string.workout_details)
+                            else -> stringResource(R.string.active_workout)
                         },
                         style = MaterialTheme.typography.titleLarge
                     )
@@ -470,27 +474,27 @@ fun ActiveWorkoutScreen(
                         state.isEditingHistory -> {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 TextButton(onClick = { requestDiscard {} }) {
-                                    Text("Cancel", color = MaterialTheme.colorScheme.error)
+                                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.error)
                                 }
                                 Button(onClick = { viewModel.exitHistoryEditMode() }) {
                                     Icon(Icons.Default.Check, null, Modifier.padding(end = 4.dp))
-                                    Text("Save")
+                                    Text(stringResource(R.string.save))
                                 }
                             }
                         }
                         state.isViewMode -> {
                             Button(onClick = { viewModel.enterHistoryEditMode() }) {
                                 Icon(Icons.Default.Edit, null, Modifier.padding(end = 4.dp))
-                                Text("Edit")
+                                Text(stringResource(R.string.edit))
                             }
                         }
                         else -> {
                             TextButton(onClick = { showCancelDialog = true }) {
-                                Text("Cancel", color = MaterialTheme.colorScheme.error)
+                                Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.error)
                             }
                             Button(onClick = { viewModel.finishWorkout() }) {
                                 Icon(Icons.Default.Check, null, Modifier.padding(end = 4.dp))
-                                Text("Finish")
+                                Text(stringResource(R.string.finish))
                             }
                         }
                     }
@@ -509,7 +513,7 @@ fun ActiveWorkoutScreen(
                     SelectableTextField(
                         value = state.workoutName ?: "",
                         onValueChange = { viewModel.updateWorkoutName(it) },
-                        placeholder = "Workout name",
+                        placeholder = stringResource(R.string.workout_name),
                         modifier = Modifier.fillMaxWidth(),
                         textStyle = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.Normal,
@@ -606,7 +610,7 @@ fun ActiveWorkoutScreen(
                                 .padding(16.dp)
                         ) {
                             Icon(Icons.Default.FitnessCenter, null, Modifier.padding(end = 8.dp))
-                            Text("Add Exercise")
+                            Text(stringResource(R.string.add_exercise))
                         }
                     }
                 }
@@ -750,13 +754,13 @@ fun ExerciseBlock(
                             onClick = onMoveUp,
                             enabled = index > 0
                         ) {
-                            Icon(Icons.Default.ArrowUpward, "Move up")
+                            Icon(Icons.Default.ArrowUpward, stringResource(R.string.move_up))
                         }
                         IconButton(
                             onClick = onMoveDown,
                             enabled = index < totalCount - 1
                         ) {
-                            Icon(Icons.Default.ArrowDownward, "Move down")
+                            Icon(Icons.Default.ArrowDownward, stringResource(R.string.move_down))
                         }
                     }
                     Column(
@@ -779,14 +783,14 @@ fun ExerciseBlock(
                 if (!isViewMode) {
                     Box {
                         IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, "Options")
+                            Icon(Icons.Default.MoreVert, stringResource(R.string.options))
                         }
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Replace Exercise") },
+                                text = { Text(stringResource(R.string.replace_exercise)) },
                                 onClick = {
                                     showMenu = false
                                     onReplaceExercise(exercise.workoutExerciseId)
@@ -794,7 +798,7 @@ fun ExerciseBlock(
                                 leadingIcon = { Icon(Icons.Default.SwapHoriz, null) }
                             )
                             DropdownMenuItem(
-                                text = { Text(if (exercise.noteText.isEmpty()) "Add Note" else "Edit Note") },
+                                text = { Text(stringResource(if (exercise.noteText.isEmpty()) R.string.add_note else R.string.edit_note)) },
                                 onClick = {
                                     showMenu = false
                                     showNoteDialog = true
@@ -802,7 +806,7 @@ fun ExerciseBlock(
                                 leadingIcon = { Icon(Icons.Default.Edit, null) }
                             )
                             DropdownMenuItem(
-                                text = { Text("Plate Calculator") },
+                                text = { Text(stringResource(R.string.plate_calculator)) },
                                 onClick = {
                                     showMenu = false
                                     showPlateCalc = true
@@ -810,7 +814,7 @@ fun ExerciseBlock(
                                 leadingIcon = { Icon(Icons.Default.FitnessCenter, null) }
                             )
                             DropdownMenuItem(
-                                text = { Text("Remove Exercise") },
+                                text = { Text(stringResource(R.string.remove_exercise)) },
                                 onClick = {
                                     showMenu = false
                                     onRemoveExercise()
@@ -825,13 +829,13 @@ fun ExerciseBlock(
             if (showNoteDialog) {
                 AlertDialog(
                     onDismissRequest = { showNoteDialog = false },
-                    title = { Text("Exercise Note") },
+                    title = { Text(stringResource(R.string.exercise_note)) },
                     text = {
                         Column {
                             OutlinedTextField(
                                 value = noteText,
                                 onValueChange = { noteText = it },
-                                label = { Text("Note") },
+                                label = { Text(stringResource(R.string.note)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 3,
                                 maxLines = 6
@@ -845,7 +849,7 @@ fun ExerciseBlock(
                                     },
                                     modifier = Modifier.padding(top = 8.dp)
                                 ) {
-                                    Text("Remove Note", color = MaterialTheme.colorScheme.error)
+                                    Text(stringResource(R.string.remove_note), color = MaterialTheme.colorScheme.error)
                                 }
                             }
                         }
@@ -855,12 +859,12 @@ fun ExerciseBlock(
                             onSaveNote(noteText)
                             showNoteDialog = false
                         }) {
-                            Text("Save")
+                            Text(stringResource(R.string.save))
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { showNoteDialog = false }) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.cancel))
                         }
                     }
                 )
@@ -889,23 +893,23 @@ fun ExerciseBlock(
                         modifier = Modifier.size(12.dp)
                     )
                 }
-                Text("Set", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
-                Text("Last", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f), textAlign = TextAlign.Center)
+                Text(stringResource(R.string.col_set), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
+                Text(stringResource(R.string.col_last), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f), textAlign = TextAlign.Center)
                 Text(
-                    if (isCardio) "Level" else weightUnitLabel(weightUnit),
+                    if (isCardio) stringResource(R.string.col_level) else weightUnitLabel(weightUnit),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    if (isCardio) "Duration" else "Reps",
+                    stringResource(if (isCardio) R.string.col_duration else R.string.col_reps),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center
                 )
-                Text("Rest", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f), textAlign = TextAlign.Center)
+                Text(stringResource(R.string.col_rest), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f), textAlign = TextAlign.Center)
                 if (showRpe) {
-                    Text("RPE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.5f), textAlign = TextAlign.Center)
+                    Text(stringResource(R.string.col_rpe), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.5f), textAlign = TextAlign.Center)
                 }
                 Text("", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.3f))
             }
@@ -935,7 +939,7 @@ fun ExerciseBlock(
                         .padding(top = 8.dp)
                 ) {
                     Icon(Icons.Default.Add, null, Modifier.padding(end = 4.dp))
-                    Text("Add Set")
+                    Text(stringResource(R.string.add_set))
                 }
             }
         }
@@ -964,22 +968,22 @@ fun RestTimerBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Rest: ${formatDuration(secondsRemaining)}",
+                text = stringResource(R.string.rest_countdown, formatDuration(secondsRemaining)),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = { onAdjustTimer(-timerAdjustmentSeconds) }) {
-                    Text("-${timerAdjustmentSeconds}s")
+                    Text("-" + stringResource(R.string.seconds_short, timerAdjustmentSeconds))
                 }
                 TextButton(onClick = { onAdjustTimer(timerAdjustmentSeconds) }) {
-                    Text("+${timerAdjustmentSeconds}s")
+                    Text("+" + stringResource(R.string.seconds_short, timerAdjustmentSeconds))
                 }
             }
             TextButton(onClick = onSkip) {
                 Icon(Icons.Default.SkipNext, null, Modifier.padding(end = 4.dp))
-                Text("Skip")
+                Text(stringResource(R.string.skip))
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -1039,8 +1043,8 @@ fun SwipeableSetRow(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete Completed Set") },
-            text = { Text("This set is already completed. Are you sure you want to delete it?") },
+            title = { Text(stringResource(R.string.delete_completed_set_title)) },
+            text = { Text(stringResource(R.string.delete_completed_set_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1048,12 +1052,12 @@ fun SwipeableSetRow(
                         onDeleteSet(index)
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -1096,7 +1100,7 @@ fun SwipeableSetRow(
                     if (isWarmUp) {
                         Icon(
                             Icons.Default.LocalFireDepartment,
-                            "Warm-up set",
+                            stringResource(R.string.warm_up_set),
                             tint = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(16.dp)
                         )
@@ -1108,7 +1112,7 @@ fun SwipeableSetRow(
                     ) {
                         Icon(
                             Icons.Default.LocalFireDepartment,
-                            contentDescription = if (isWarmUp) "Warm-up set" else "Mark as warm-up set",
+                            contentDescription = stringResource(if (isWarmUp) R.string.warm_up_set else R.string.mark_as_warm_up),
                             tint = if (isWarmUp) {
                                 MaterialTheme.colorScheme.tertiary
                             } else {
@@ -1182,7 +1186,7 @@ fun SwipeableSetRow(
             if (set.isCompleted || isViewMode) {
                 Icon(
                     Icons.Default.Check,
-                    "Completed",
+                    stringResource(R.string.completed),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(0.3f)
                 )
@@ -1196,7 +1200,7 @@ fun SwipeableSetRow(
                     },
                     modifier = Modifier.weight(0.3f)
                 ) {
-                    Icon(Icons.Default.Check, "Log set")
+                    Icon(Icons.Default.Check, stringResource(R.string.log_set))
                 }
             }
         }
@@ -1311,19 +1315,19 @@ fun WorkoutFinishedScreen(onBack: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Workout Complete!",
+            text = stringResource(R.string.workout_complete),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Great job! Keep up the progress.",
+            text = stringResource(R.string.workout_complete_message),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(32.dp))
         Button(onClick = onBack) {
-            Text("Back to Workouts")
+            Text(stringResource(R.string.back_to_workouts))
         }
     }
 }
@@ -1365,7 +1369,7 @@ fun StartTimeEditor(
 ) {
     var showDate by remember { mutableStateOf(false) }
     var showTime by remember { mutableStateOf(false) }
-    val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy", androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
+    val dateFormat = rememberLocalizedDateFormat("MMMdyyyy")
     val timeFormat = java.text.SimpleDateFormat("HH:mm", androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
     val date = java.util.Date(if (startTime > 0L) startTime else System.currentTimeMillis())
 
@@ -1384,10 +1388,10 @@ fun StartTimeEditor(
                         onChange(cal.timeInMillis)
                     }
                     showDate = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDate = false }) { Text("Cancel") }
+                TextButton(onClick = { showDate = false }) { Text(stringResource(R.string.cancel)) }
             }
         ) {
             DatePicker(state = datePickerState)
@@ -1403,7 +1407,7 @@ fun StartTimeEditor(
         )
         AlertDialog(
             onDismissRequest = { showTime = false },
-            title = { Text("Pick start time") },
+            title = { Text(stringResource(R.string.pick_start_time)) },
             text = { TimePicker(state = timeState) },
             confirmButton = {
                 TextButton(onClick = {
@@ -1413,10 +1417,10 @@ fun StartTimeEditor(
                     c.set(java.util.Calendar.SECOND, 0)
                     onChange(c.timeInMillis)
                     showTime = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showTime = false }) { Text("Cancel") }
+                TextButton(onClick = { showTime = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -1429,7 +1433,7 @@ fun StartTimeEditor(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "Started:",
+            text = stringResource(R.string.started_label),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -1466,7 +1470,7 @@ fun PrSummaryCard(
                     modifier = Modifier.padding(end = 4.dp)
                 )
                 Text(
-                    text = "${prs.size} Personal Record${if (prs.size > 1) "s" else ""}",
+                    text = pluralStringResource(R.plurals.personal_record_count, prs.size, prs.size),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1479,18 +1483,22 @@ fun PrSummaryCard(
                 val r = pr.reps ?: 0
                 val vol = com.strongest.app.utils.formatWeightForDisplay(pr.volumeKg ?: 0f, weightUnit)
                 val text = when (pr.kind) {
-                    com.strongest.app.utils.PrKind.WEIGHT -> "$name — heaviest set $w $unitLabel × $r"
+                    com.strongest.app.utils.PrKind.WEIGHT -> stringResource(R.string.pr_heaviest_set, name, "$w $unitLabel", r)
                     com.strongest.app.utils.PrKind.ONE_RM ->
-                        "$name — estimated 1RM ${com.strongest.app.utils.formatWeightForDisplay(pr.oneRmKg ?: 0f, weightUnit)} $unitLabel"
-                    com.strongest.app.utils.PrKind.REPS_AT_WEIGHT -> "$name — most reps at $w $unitLabel: $r"
-                    com.strongest.app.utils.PrKind.MAX_REPS -> "$name — most reps: $r"
-                    com.strongest.app.utils.PrKind.SET_VOLUME -> "$name — best set $w $unitLabel × $r ($vol $unitLabel)"
-                    com.strongest.app.utils.PrKind.EXERCISE_VOLUME -> "$name — most volume $vol $unitLabel"
+                        stringResource(
+                            R.string.pr_estimated_1rm,
+                            name,
+                            "${com.strongest.app.utils.formatWeightForDisplay(pr.oneRmKg ?: 0f, weightUnit)} $unitLabel"
+                        )
+                    com.strongest.app.utils.PrKind.REPS_AT_WEIGHT -> stringResource(R.string.pr_reps_at_weight, name, "$w $unitLabel", r)
+                    com.strongest.app.utils.PrKind.MAX_REPS -> stringResource(R.string.pr_max_reps, name, r)
+                    com.strongest.app.utils.PrKind.SET_VOLUME -> stringResource(R.string.pr_set_volume, name, "$w $unitLabel", r, "$vol $unitLabel")
+                    com.strongest.app.utils.PrKind.EXERCISE_VOLUME -> stringResource(R.string.pr_exercise_volume, name, "$vol $unitLabel")
                     com.strongest.app.utils.PrKind.CARDIO_DURATION ->
-                        "$name — longest session ${com.strongest.app.utils.formatDuration(r)}"
+                        stringResource(R.string.pr_longest_session, name, com.strongest.app.utils.formatDuration(r))
                     com.strongest.app.utils.PrKind.CARDIO_LEVEL ->
-                        "$name — highest level $w (${com.strongest.app.utils.formatDuration(r)})"
-                    com.strongest.app.utils.PrKind.VOLUME -> "Workout volume PR $vol $unitLabel"
+                        stringResource(R.string.pr_highest_level, name, w, com.strongest.app.utils.formatDuration(r))
+                    com.strongest.app.utils.PrKind.VOLUME -> stringResource(R.string.pr_workout_volume, "$vol $unitLabel")
                 }
                 Text(
                     text = "• $text",
@@ -1503,17 +1511,18 @@ fun PrSummaryCard(
     }
 }
 
+@Composable
 internal fun rpeDescription(value: Int): String = when (value) {
-    10 -> "Max effort — no reps left in the tank"
-    9 -> "Very hard — 1 rep left in reserve"
-    8 -> "Hard — 2 reps left in reserve"
-    7 -> "Moderately hard — 3 reps left in reserve"
-    6 -> "Moderate — 4 reps left in reserve"
-    5 -> "Somewhat easy — 5+ reps in reserve"
-    4 -> "Light effort"
-    3 -> "Easy"
-    2 -> "Very light"
-    1 -> "Little to no effort"
+    10 -> stringResource(R.string.rpe_10)
+    9 -> stringResource(R.string.rpe_9)
+    8 -> stringResource(R.string.rpe_8)
+    7 -> stringResource(R.string.rpe_7)
+    6 -> stringResource(R.string.rpe_6)
+    5 -> stringResource(R.string.rpe_5)
+    4 -> stringResource(R.string.rpe_4)
+    3 -> stringResource(R.string.rpe_3)
+    2 -> stringResource(R.string.rpe_2)
+    1 -> stringResource(R.string.rpe_1)
     else -> ""
 }
 
@@ -1527,11 +1536,11 @@ fun RpePickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rate this set (RPE)") },
+        title = { Text(stringResource(R.string.rate_this_set)) },
         text = {
             Column {
                 Text(
-                    text = "How hard did this set feel?",
+                    text = stringResource(R.string.how_hard_did_it_feel),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1571,24 +1580,25 @@ fun RpePickerDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(R.string.close))
             }
         },
         dismissButton = {
             if (currentRpe != null) {
                 TextButton(onClick = { onSelect(null) }) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.clear), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
     )
 }
 
+@Composable
 internal fun exerciseSubtitle(exercise: WorkoutExerciseUi): String =
     exerciseSubtitle(exercise.muscleGroup.name, exercise.equipment, exercise.type)
 
+@Composable
 internal fun exerciseSubtitle(muscleGroup: String, equipment: Equipment, type: ExerciseType): String {
-    val muscle = muscleGroup.lowercase().replaceFirstChar { it.uppercase() }
-    val equipmentLabel = equipment.name.lowercase().replaceFirstChar { it.uppercase() }
-    return "$muscle • $equipmentLabel • ${type.label()}"
+    val muscle = MuscleGroup.entries.firstOrNull { it.name == muscleGroup }?.label() ?: muscleGroup
+    return "$muscle • ${equipment.label()} • ${type.label()}"
 }

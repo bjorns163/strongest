@@ -1,5 +1,6 @@
 package com.strongest.app.ui.progress
 
+import android.content.res.Resources
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +42,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -67,27 +70,28 @@ import com.github.mikephil.charting.data.RadarDataSet
 import com.github.mikephil.charting.data.RadarEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
+import com.strongest.app.R
 import com.strongest.app.data.db.CardioSummary
 import com.strongest.app.data.db.MuscleVolume
 import com.strongest.app.data.db.PersonalRecord
 import com.strongest.app.data.db.VolumeByDate
 import com.strongest.app.data.db.WorkoutsPerDay
-import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.SECONDARY_MUSCLE_WEIGHT
 import com.strongest.app.data.repository.WeightUnit
+import com.strongest.app.ui.components.label
 import com.strongest.app.ui.exercise.FILTERABLE_EQUIPMENT
 import com.strongest.app.ui.exercise.FILTERABLE_MUSCLE_GROUPS
-import com.strongest.app.utils.DAY_MS
+import com.strongest.app.utils.addDays
 import com.strongest.app.utils.dailyEntries
 import com.strongest.app.utils.daySlotCount
 import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.localDayStart
+import com.strongest.app.utils.rememberLocalizedDateFormat
 import com.strongest.app.utils.weightUnitLabel
 import java.util.Locale
-import java.text.SimpleDateFormat
 import java.util.Date
 import kotlin.math.roundToInt
 
@@ -116,7 +120,7 @@ fun ProgressScreen(
         ) {
             item {
                 Text(
-                    text = "Progress",
+                    text = stringResource(R.string.nav_progress),
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.padding(16.dp)
                 )
@@ -125,7 +129,7 @@ fun ProgressScreen(
                     onClick = onMeasurementsClick,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
-                    Text("View Body Measurements →")
+                    Text(stringResource(R.string.view_body_measurements))
                 }
             }
 
@@ -148,14 +152,15 @@ fun ProgressScreen(
                     // Carries the focused muscle's exact value, which the radar and the
                     // heatmap cannot show themselves.
                     val focused = state.selectedMuscle
+                    val resources = LocalResources.current
                     val focusedValue = focused?.let { mg ->
                         state.muscleVolume.firstOrNull { it.muscleGroup == mg.name }
-                            ?.let { formatMetricValue(metricValue(it, state.metric, weightUnit), state.metric, weightUnit) }
-                            ?: "nothing in range"
+                            ?.let { formatMetricValue(resources, metricValue(it, state.metric, weightUnit), state.metric, weightUnit) }
+                            ?: stringResource(R.string.nothing_in_range)
                     }
                     Text(
-                        text = if (focused == null) "Focus a muscle"
-                        else "${muscleLabel(focused.name)}  ·  $focusedValue — tap again to clear",
+                        text = if (focused == null) stringResource(R.string.focus_a_muscle)
+                        else stringResource(R.string.focused_muscle_value, focused.label(), focusedValue.orEmpty()),
                         style = MaterialTheme.typography.labelMedium,
                         color = if (focused == null) MaterialTheme.colorScheme.onSurfaceVariant
                         else MaterialTheme.colorScheme.primary,
@@ -170,7 +175,7 @@ fun ProgressScreen(
                             FilterChip(
                                 selected = state.selectedMuscle == mg,
                                 onClick = { viewModel.selectMuscle(mg) },
-                                label = { Text(muscleLabel(mg.name)) }
+                                label = { Text(mg.label()) }
                             )
                         }
                     }
@@ -193,7 +198,7 @@ fun ProgressScreen(
                 )
             }
 
-            item { SectionHeader("Recovery") }
+            item { SectionHeader(stringResource(R.string.settings_recovery)) }
             item {
                 RecoveryCard(
                     recovering = state.recoveringMuscles,
@@ -225,7 +230,7 @@ fun ProgressScreen(
                 )
             }
 
-            item { SectionHeader("Muscle Balance") }
+            item { SectionHeader(stringResource(R.string.muscle_balance)) }
             item {
                 MuscleRadarCard(
                     metric = state.metric,
@@ -239,7 +244,7 @@ fun ProgressScreen(
                 )
             }
 
-            item { SectionHeader("Muscle Heatmap") }
+            item { SectionHeader(stringResource(R.string.muscle_heatmap)) }
             item {
                 BodyHeatmapCard(
                     metric = state.metric,
@@ -254,7 +259,7 @@ fun ProgressScreen(
                 )
             }
 
-            item { SectionHeader("Cardio") }
+            item { SectionHeader(stringResource(R.string.muscle_cardio)) }
             item {
                 CardioCard(
                     cardio = state.cardio,
@@ -265,10 +270,10 @@ fun ProgressScreen(
                 )
             }
 
-            item { SectionHeader("Personal Records") }
+            item { SectionHeader(stringResource(R.string.personal_records)) }
             item {
                 Text(
-                    text = "Equipment",
+                    text = stringResource(R.string.equipment),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -283,7 +288,7 @@ fun ProgressScreen(
                         FilterChip(
                             selected = state.prEquipmentFilter == null,
                             onClick = { viewModel.setPrEquipmentFilter(null) },
-                            label = { Text("All") }
+                            label = { Text(stringResource(R.string.filter_all)) }
                         )
                     }
                     items(FILTERABLE_EQUIPMENT.size) { idx ->
@@ -291,7 +296,7 @@ fun ProgressScreen(
                         FilterChip(
                             selected = state.prEquipmentFilter == eq,
                             onClick = { viewModel.setPrEquipmentFilter(eq) },
-                            label = { Text(eq.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                            label = { Text(eq.label()) }
                         )
                     }
                 }
@@ -306,9 +311,9 @@ fun ProgressScreen(
                 item {
                     Text(
                         text = if (state.personalRecords.isEmpty()) {
-                            "Complete workouts to see your personal records"
+                            stringResource(R.string.no_prs_yet)
                         } else {
-                            "No records match the selected filters"
+                            stringResource(R.string.no_prs_match)
                         },
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -327,49 +332,47 @@ fun ProgressScreen(
 /** Cardio isn't a muscle on this tab — it has its own card — so it can't be focused. */
 private val PROGRESS_MUSCLE_GROUPS = FILTERABLE_MUSCLE_GROUPS.filter { it != MuscleGroup.CARDIO }
 
-private fun perDayTitle(metric: ProgressMetric): String = when (metric) {
-    ProgressMetric.WEIGHT -> "Volume per Day"
-    ProgressMetric.SETS -> "Sets per Day"
-    ProgressMetric.WORKOUTS -> "Workouts per Day"
-    ProgressMetric.PRS -> "PRs per Day"
-}
+@Composable
+private fun perDayTitle(metric: ProgressMetric): String = stringResource(
+    when (metric) {
+        ProgressMetric.WEIGHT -> R.string.volume_per_day
+        ProgressMetric.SETS -> R.string.sets_per_day
+        ProgressMetric.WORKOUTS -> R.string.workouts_per_day
+        ProgressMetric.PRS -> R.string.prs_per_day
+    }
+)
 
 /** How each metric is credited to muscles — the "0.5 sets" otherwise looks like a bug. */
+@Composable
 private fun muscleInfo(metric: ProgressMetric, weightUnit: WeightUnit): String {
     val secondary = SECONDARY_MUSCLE_WEIGHT.toString().removeSuffix(".0")
     val unit = weightUnitLabel(weightUnit)
-    val shared = "\n\nMuscle Balance and the Muscle Heatmap use the same numbers. " +
-        "Warm-up sets and cardio are not counted."
+    val shared = stringResource(R.string.muscle_info_shared)
     return when (metric) {
         ProgressMetric.SETS ->
-            "Every exercise has one main muscle and can work other muscles too. " +
-                "A set counts as 1 set for the main muscle and $secondary set for each other muscle " +
-                "it works.\n\nFor example, 1 set of Barbell Flat Bench Press counts as 1 set for " +
-                "Chest, and $secondary set each for Triceps and Shoulders. That's why you can see " +
-                "halves like 7.5 sets." + shared
+            stringResource(R.string.muscle_info_sets, secondary) + "\n\n" + shared
         ProgressMetric.WEIGHT ->
-            "Volume is weight × reps. The main muscle of an exercise gets all of it, and each " +
-                "other muscle it works gets ${(SECONDARY_MUSCLE_WEIGHT * 100).toInt()}%.\n\n" +
-                "For example, 100 $unit × 10 on Barbell Flat Bench Press adds 1000 $unit to Chest, " +
-                "and ${(1000 * SECONDARY_MUSCLE_WEIGHT).toInt()} $unit each to Triceps and Shoulders." + shared
+            stringResource(
+                R.string.muscle_info_volume,
+                (SECONDARY_MUSCLE_WEIGHT * 100).toInt(),
+                unit,
+                (1000 * SECONDARY_MUSCLE_WEIGHT).toInt()
+            ) + "\n\n" + shared
         ProgressMetric.WORKOUTS ->
-            "The number of workouts in which a muscle was trained, as the main muscle or as one " +
-                "the exercise also works. A workout counts once per muscle, however many " +
-                "exercises hit it." + shared
-        ProgressMetric.PRS ->
-            "PRs are counted for the main muscle of the exercise only. A workout's total " +
-                "volume PR belongs to no single muscle, so it only shows under PRs per Day." +
-                "\n\nMuscle Balance and the Muscle Heatmap use the same numbers. " +
-                "Cardio is not counted."
+            stringResource(R.string.muscle_info_workouts) + "\n\n" + shared
+        ProgressMetric.PRS -> stringResource(R.string.muscle_info_prs)
     }
 }
 
-private fun muscleTitle(metric: ProgressMetric): String = when (metric) {
-    ProgressMetric.WEIGHT -> "Volume by Muscle Group"
-    ProgressMetric.SETS -> "Sets by Muscle Group"
-    ProgressMetric.WORKOUTS -> "Workouts by Muscle Group"
-    ProgressMetric.PRS -> "PRs by Muscle Group"
-}
+@Composable
+private fun muscleTitle(metric: ProgressMetric): String = stringResource(
+    when (metric) {
+        ProgressMetric.WEIGHT -> R.string.volume_by_muscle_group
+        ProgressMetric.SETS -> R.string.sets_by_muscle_group
+        ProgressMetric.WORKOUTS -> R.string.workouts_by_muscle_group
+        ProgressMetric.PRS -> R.string.prs_by_muscle_group
+    }
+)
 
 @Composable
 private fun SectionHeader(text: String, infoTitle: String? = null, infoText: String? = null) {
@@ -391,7 +394,7 @@ private fun SectionHeader(text: String, infoTitle: String? = null, infoText: Str
     ) {
         Text(text = text, style = MaterialTheme.typography.titleMedium)
         IconButton(onClick = { showInfo = true }) {
-            Icon(Icons.Default.Info, "How this is counted")
+            Icon(Icons.Default.Info, stringResource(R.string.how_this_is_counted))
         }
     }
     if (showInfo) {
@@ -400,7 +403,7 @@ private fun SectionHeader(text: String, infoTitle: String? = null, infoText: Str
             title = { Text(infoTitle ?: text) },
             text = { Text(infoText) },
             confirmButton = {
-                TextButton(onClick = { showInfo = false }) { Text("Got it") }
+                TextButton(onClick = { showInfo = false }) { Text(stringResource(R.string.got_it)) }
             }
         )
     }
@@ -421,19 +424,19 @@ private fun RecoveryCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Recovering muscles",
+                text = stringResource(R.string.recovering_muscles),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
             if (recovering.isEmpty()) {
                 Text(
-                    text = "All trained muscles are recovered — ready to train.",
+                    text = stringResource(R.string.all_recovered),
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
                 recovering.forEach { item ->
-                    val name = muscleLabel(item.muscleGroup.name)
+                    val name = item.muscleGroup.label()
                     val isFocused = selected == item.muscleGroup
                     Row(
                         modifier = Modifier
@@ -454,7 +457,7 @@ private fun RecoveryCard(
                             fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal
                         )
                         Text(
-                            text = "${item.hoursRemaining}h left",
+                            text = stringResource(R.string.hours_left, item.hoursRemaining),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
@@ -492,7 +495,7 @@ private fun CardioCard(
         Column(modifier = Modifier.padding(16.dp)) {
             if (cardio.isEmpty()) {
                 Text(
-                    text = "No cardio in this range",
+                    text = stringResource(R.string.no_cardio_in_range),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -500,15 +503,15 @@ private fun CardioCard(
             }
             val totalSeconds = cardio.sumOf { it.totalSeconds }
             val maxSeconds = cardio.maxOf { it.totalSeconds }.coerceAtLeast(1)
-            val dateFormat = SimpleDateFormat("MMM d", LocalConfiguration.current.locales[0])
+            val dateFormat = rememberLocalizedDateFormat("MMMd")
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                CardioStat(label = "Total time", value = formatDuration(totalSeconds))
-                CardioStat(label = "Sessions", value = cardio.sumOf { it.sessions }.toString())
-                CardioStat(label = "Exercises", value = cardio.size.toString())
+                CardioStat(label = stringResource(R.string.total_time), value = formatDuration(totalSeconds))
+                CardioStat(label = stringResource(R.string.sessions), value = cardio.sumOf { it.sessions }.toString())
+                CardioStat(label = stringResource(R.string.exercises), value = cardio.size.toString())
             }
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -524,12 +527,12 @@ private fun CardioCard(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
-                        val sessions = if (item.sessions == 1) "1 session" else "${item.sessions} sessions"
+                        val sessions = pluralStringResource(R.plurals.session_count, item.sessions, item.sessions)
                         val level = if (item.maxLevel > 0f) {
-                            "  ·  max level ${formatWeightForDisplay(item.maxLevel, weightUnit)}"
+                            "  ·  " + stringResource(R.string.max_level_value, formatWeightForDisplay(item.maxLevel, weightUnit))
                         } else ""
                         Text(
-                            text = "$sessions$level  ·  last ${dateFormat.format(Date(item.lastDone))}",
+                            text = "$sessions$level  ·  " + stringResource(R.string.last_done, dateFormat.format(Date(item.lastDone))),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -581,7 +584,7 @@ private fun RangePicker(
     modifier: Modifier = Modifier
 ) {
     var showCustom by remember { mutableStateOf(false) }
-    val dateFormat = SimpleDateFormat("MMM d", LocalConfiguration.current.locales[0])
+    val dateFormat = rememberLocalizedDateFormat("MMMd")
     LazyRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -597,7 +600,7 @@ private fun RangePicker(
                     Text(
                         if (isCustom && current == range) {
                             "${dateFormat.format(Date(startDay))} – ${dateFormat.format(Date(endDay))}"
-                        } else range.label
+                        } else stringResource(range.labelRes)
                     )
                 },
                 leadingIcon = if (isCustom) {
@@ -633,11 +636,10 @@ private fun CustomRangeDialog(
     onDismiss: () -> Unit
 ) {
     val today = localDayStart(System.currentTimeMillis())
-    val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
+    val dateFormat = rememberLocalizedDateFormat("MMMdyyyy")
     val first = firstDataDay?.coerceAtMost(today)
     val lastIndex = first?.let { daySlotCount(it, today) - 1 } ?: 0
-    // Day index -> local midnight. The half-day nudge keeps DST's 23h/25h days from drifting.
-    fun dayAt(index: Int): Long = localDayStart(first!! + index * DAY_MS + DAY_MS / 2)
+    fun dayAt(index: Int): Long = addDays(first!!, index)
     fun indexOf(day: Long): Int =
         if (first == null) 0 else (daySlotCount(first, day.coerceIn(first, today)) - 1).coerceIn(0, lastIndex)
 
@@ -649,10 +651,10 @@ private fun CustomRangeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Custom range") },
+        title = { Text(stringResource(R.string.custom_range)) },
         text = {
             if (first == null) {
-                Text("Finish a workout to pick a range from your data.")
+                Text(stringResource(R.string.custom_range_no_data))
             } else Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -660,7 +662,7 @@ private fun CustomRangeDialog(
                 ) {
                     Column {
                         Text(
-                            "From",
+                            stringResource(R.string.from),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -672,7 +674,7 @@ private fun CustomRangeDialog(
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            "To",
+                            stringResource(R.string.to),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -702,14 +704,14 @@ private fun CustomRangeDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "Today",
+                            stringResource(R.string.today),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
                     Text(
-                        "All your workouts are from today.",
+                        stringResource(R.string.all_workouts_today),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -717,7 +719,7 @@ private fun CustomRangeDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 val days = endIdx - startIdx + 1
                 Text(
-                    if (days == 1) "1 day" else "$days days",
+                    pluralStringResource(R.plurals.day_count, days, days),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -727,10 +729,10 @@ private fun CustomRangeDialog(
             TextButton(
                 onClick = { onApply(dayAt(startIdx), dayAt(endIdx)) },
                 enabled = first != null
-            ) { Text("Apply") }
+            ) { Text(stringResource(R.string.apply)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -749,7 +751,7 @@ private fun MetricPicker(
             FilterChip(
                 selected = current == metric,
                 onClick = { onSelect(metric) },
-                label = { Text(metric.label) }
+                label = { Text(stringResource(metric.labelRes)) }
             )
         }
     }
@@ -772,7 +774,7 @@ private fun PerWorkoutChartCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        val dateFormat = SimpleDateFormat("MMM d", LocalConfiguration.current.locales[0])
+        val dateFormat = rememberLocalizedDateFormat("MMMd")
         val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
         val primary = MaterialTheme.colorScheme.primary.toArgb()
         val markerBg = MaterialTheme.colorScheme.surfaceContainerHighest.toArgb()
@@ -796,12 +798,7 @@ private fun PerWorkoutChartCard(
             return@Card
         }
         val slotCount = daySlotCount(startDay, lastDay)
-        val dsLabel = when (metric) {
-            ProgressMetric.WEIGHT -> "Volume (${weightUnitLabel(weightUnit)})"
-            ProgressMetric.SETS -> "Sets"
-            ProgressMetric.WORKOUTS -> "Workouts"
-            ProgressMetric.PRS -> "PRs"
-        }
+        val dsLabel = metricAxisLabel(metric, weightUnit)
 
         AndroidView(
             modifier = Modifier
@@ -844,7 +841,7 @@ private fun PerWorkoutChartCard(
                     override fun getFormattedValue(value: Float): String {
                         val idx = value.toInt()
                         if (idx < 0 || idx >= slotCount) return ""
-                        return dateFormat.format(Date(localDayStart(startDay + idx * DAY_MS)))
+                        return dateFormat.format(Date(addDays(startDay, idx)))
                     }
                 }
                 chart.xAxis.axisMinimum = 0f
@@ -852,8 +849,8 @@ private fun PerWorkoutChartCard(
                 chart.xAxis.labelCount = 6
                 // Tap a point to read its exact value.
                 chart.marker = ChartMarkerView(chart.context, onSurface, markerBg, markerStroke) { entry, _ ->
-                    val day = localDayStart(startDay + entry.x.toLong() * DAY_MS)
-                    "${dateFormat.format(Date(day))}  ·  ${formatMetricValue(entry.y, metric, weightUnit)}"
+                    val day = addDays(startDay, entry.x.toInt())
+                    "${dateFormat.format(Date(day))}  ·  ${formatMetricValue(chart.context.resources, entry.y, metric, weightUnit)}"
                 }.apply { chartView = chart }
                 chart.notifyDataSetChanged()
                 chart.invalidate()
@@ -899,12 +896,7 @@ private fun MuscleChartCard(
         val entries = sorted.mapIndexed { idx, mv ->
             BarEntry(idx.toFloat(), metricValue(mv, metric, weightUnit))
         }
-        val dsLabel = when (metric) {
-            ProgressMetric.WEIGHT -> "Volume (${weightUnitLabel(weightUnit)})"
-            ProgressMetric.SETS -> "Sets"
-            ProgressMetric.WORKOUTS -> "Workouts"
-            ProgressMetric.PRS -> "PRs"
-        }
+        val dsLabel = metricAxisLabel(metric, weightUnit)
         val chartHeight = (60 + sorted.size * 28).coerceIn(180, 480).dp
 
         AndroidView(
@@ -965,7 +957,7 @@ private fun MuscleChartCard(
                 )
                 chart.marker = ChartMarkerView(chart.context, onSurface, markerBg, markerStroke) { entry, _ ->
                     val name = labels.getOrNull(entry.x.toInt()).orEmpty()
-                    "$name  ·  ${formatMetricValue(entry.y, metric, weightUnit)}"
+                    "$name  ·  ${formatMetricValue(chart.context.resources, entry.y, metric, weightUnit)}"
                 }.apply { chartView = chart }
                 // Tapping a bar focuses that muscle across the whole tab.
                 chart.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
@@ -1016,12 +1008,7 @@ private fun MuscleRadarCard(
         val labels = sorted.map { muscleLabel(it.muscleGroup) }
         val selectedIndex = sorted.indexOfFirst { selected != null && it.muscleGroup == selected.name }
         val entries = sorted.map { RadarEntry(metricValue(it, metric, weightUnit)) }
-        val dsLabel = when (metric) {
-            ProgressMetric.WEIGHT -> "Volume (${weightUnitLabel(weightUnit)})"
-            ProgressMetric.SETS -> "Sets"
-            ProgressMetric.WORKOUTS -> "Workouts"
-            ProgressMetric.PRS -> "PRs"
-        }
+        val dsLabel = metricAxisLabel(metric, weightUnit)
 
         AndroidView(
             modifier = Modifier
@@ -1070,7 +1057,7 @@ private fun MuscleRadarCard(
                 chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
                 chart.marker = ChartMarkerView(chart.context, onSurface, markerBg, markerStroke) { entry, highlight ->
                     val name = labels.getOrNull(highlight?.x?.toInt() ?: -1).orEmpty()
-                    "$name  ·  ${formatMetricValue(entry.y, metric, weightUnit)}"
+                    "$name  ·  ${formatMetricValue(chart.context.resources, entry.y, metric, weightUnit)}"
                 }.apply { chartView = chart }
                 chart.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
                     override fun onValueSelected(e: Entry?, h: Highlight?) {
@@ -1095,21 +1082,33 @@ private fun MuscleRadarCard(
     }
 }
 
-/** The exact value, with its unit, for a tooltip or caption. */
-private fun formatMetricValue(value: Float, metric: ProgressMetric, weightUnit: WeightUnit): String {
+@Composable
+private fun metricAxisLabel(metric: ProgressMetric, weightUnit: WeightUnit): String = when (metric) {
+    ProgressMetric.WEIGHT -> stringResource(R.string.volume_with_unit, weightUnitLabel(weightUnit))
+    else -> stringResource(metric.labelRes)
+}
+
+/**
+ * The exact value, with its unit, for a tooltip or caption. Takes [Resources] rather than being
+ * composable because chart markers call it from outside composition.
+ */
+private fun formatMetricValue(res: Resources, value: Float, metric: ProgressMetric, weightUnit: WeightUnit): String {
     val rounded = if (value % 1f == 0f) value.toInt().toString()
     else String.format(Locale.getDefault(), "%.1f", value)
+    // Fractional counts (half sets from secondary muscles) always take the plural form.
+    val quantity = if (value % 1f == 0f) value.toInt() else Int.MAX_VALUE
     return when (metric) {
         ProgressMetric.WEIGHT -> "$rounded ${weightUnitLabel(weightUnit)}"
-        ProgressMetric.SETS -> if (value == 1f) "1 set" else "$rounded sets"
-        ProgressMetric.WORKOUTS -> if (value == 1f) "1 workout" else "$rounded workouts"
-        ProgressMetric.PRS -> if (value == 1f) "1 PR" else "$rounded PRs"
+        ProgressMetric.SETS -> res.getQuantityString(R.plurals.set_count_value, quantity, rounded)
+        ProgressMetric.WORKOUTS -> res.getQuantityString(R.plurals.workout_count_value, quantity, rounded)
+        ProgressMetric.PRS -> res.getQuantityString(R.plurals.pr_count_value, quantity, rounded)
     }
 }
 
-/** "LOWER_BACK" -> "Lower back". */
+/** Display name for a muscle group stored by its enum name ("LOWER_BACK"). */
+@Composable
 private fun muscleLabel(raw: String): String =
-    raw.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " ")
+    MuscleGroup.entries.firstOrNull { it.name == raw }?.label() ?: raw
 
 private fun metricValue(mv: MuscleVolume, metric: ProgressMetric, weightUnit: WeightUnit): Float =
     when (metric) {
@@ -1166,7 +1165,7 @@ private fun ChartEmpty() {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "No data in this range",
+            text = stringResource(R.string.no_data_in_range),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -1178,7 +1177,7 @@ private fun PersonalRecordCard(
     pr: PersonalRecord,
     weightUnit: WeightUnit
 ) {
-    val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
+    val dateFormat = rememberLocalizedDateFormat("MMMdyyyy")
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1207,9 +1206,9 @@ private fun PersonalRecordCard(
             }
             Text(
                 text = if (pr.muscleGroup == "CARDIO") {
-                    "Level ${formatWeightForDisplay(pr.maxWeightKg, weightUnit)} - ${formatDuration(pr.maxReps)}"
+                    stringResource(R.string.cardio_level_duration, formatWeightForDisplay(pr.maxWeightKg, weightUnit), formatDuration(pr.maxReps))
                 } else if (pr.maxWeightKg <= 0f) {
-                    "${pr.maxReps} reps"
+                    pluralStringResource(R.plurals.rep_count, pr.maxReps, pr.maxReps)
                 } else {
                     "${formatWeightForDisplay(pr.maxWeightKg, weightUnit)} ${weightUnitLabel(weightUnit)} × ${pr.maxReps}"
                 },

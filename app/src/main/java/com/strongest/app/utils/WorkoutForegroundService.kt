@@ -83,15 +83,23 @@ class WorkoutForegroundService : Service() {
             WorkoutNotificationBus.attached.value,
             RestTimer.state.value
         )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                initial,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, initial)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    initial,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, initial)
+            }
+        } catch (_: IllegalStateException) {
+            // ForegroundServiceStartNotAllowedException (Android 12+): the app is in the
+            // background, e.g. battery-restricted. Crash reports showed this killing the app;
+            // without the foreground slot there is nothing to show, so just stop.
+            stopSelf()
+            return START_NOT_STICKY
         }
 
         if (collectorJob == null) {
@@ -111,7 +119,10 @@ class WorkoutForegroundService : Service() {
             }
         }
 
-        return START_STICKY
+        // Not sticky: after the process dies the workout state lives only in the database, so a
+        // system restart would have nothing to show, and from the background Android 12+ refuses
+        // to promote it to the foreground anyway.
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
@@ -280,10 +291,11 @@ class WorkoutForegroundService : Service() {
 
         fun start(context: Context) {
             val intent = Intent(context, WorkoutForegroundService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
                 context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            } catch (_: IllegalStateException) {
+                // Android 12+ refuses when the app is already in the background (a workout load
+                // can finish after the user left). The notification is skipped, the workout isn't.
             }
         }
 

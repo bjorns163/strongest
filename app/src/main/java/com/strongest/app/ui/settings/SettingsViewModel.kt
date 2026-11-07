@@ -30,6 +30,8 @@ import com.strongest.app.data.repository.Sex
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.data.repository.defaultRecoveryHoursMap
 import com.strongest.app.utils.ExportData
+import com.strongest.app.utils.RestTimer
+import com.strongest.app.utils.WorkoutNotificationBus
 import com.strongest.app.utils.parseExportData
 import com.strongest.app.utils.toJson
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -341,6 +343,11 @@ class SettingsViewModel @Inject constructor(
                 measurementDao.insertEntry(entry)
             }
         }
+
+        // Every workout was just replaced, including one that may still be in progress: its rest
+        // timer and notification would otherwise outlive it when no workout screen is open.
+        RestTimer.cancel()
+        WorkoutNotificationBus.clear()
 
         // Settings live in DataStore, outside the database transaction, so they are only applied
         // once the data import has actually committed.

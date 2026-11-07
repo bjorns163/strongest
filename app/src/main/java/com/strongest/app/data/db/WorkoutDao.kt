@@ -120,6 +120,10 @@ interface WorkoutDao {
     @Query("SELECT * FROM workouts WHERE id = :id")
     suspend fun getWorkoutById(id: Long): Workout?
 
+    /** Emits null once the workout is deleted. */
+    @Query("SELECT * FROM workouts WHERE id = :id")
+    fun observeWorkout(id: Long): Flow<Workout?>
+
     @Query("SELECT * FROM workout_exercises WHERE workoutId = :workoutId ORDER BY orderIndex ASC")
     suspend fun getWorkoutExercises(workoutId: Long): List<WorkoutExercise>
 

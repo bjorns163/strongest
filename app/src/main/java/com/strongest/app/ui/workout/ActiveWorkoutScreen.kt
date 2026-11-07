@@ -65,6 +65,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -160,8 +161,14 @@ fun ActiveWorkoutScreen(
         ActivityResultContracts.RequestPermission()
     ) { _ -> }
 
+    // The workout was deleted while this screen sat in a tab's back stack: leave rather than
+    // fall through to the start-a-new-workout branch below.
+    LaunchedEffect(state.workoutDeleted) {
+        if (state.workoutDeleted) onBack()
+    }
+
     LaunchedEffect(canStartWorkout) {
-        if (!canStartWorkout) return@LaunchedEffect
+        if (!canStartWorkout || state.workoutDeleted) return@LaunchedEffect
         if (resumeWorkoutId != null) {
             viewModel.loadWorkout(resumeWorkoutId)
         } else if (initialWorkoutId != null) {
@@ -916,20 +923,24 @@ fun ExerciseBlock(
             }
 
             exercise.sets.forEachIndexed { setIndex, set ->
-                SwipeableSetRow(
-                    set = set,
-                    weightUnit = weightUnit,
-                    index = setIndex,
-                    rpeTrackingEnabled = showRpe,
-                    isCardio = isCardio,
-                    onUpdateSet = onUpdateSet,
-                    onUpdateRest = { restSec -> onUpdateSetRest(setIndex, restSec) },
-                    onUpdateRpe = { rpe -> onUpdateSetRpe(setIndex, rpe) },
-                    onToggleWarmUp = { onToggleWarmUp(setIndex) },
-                    onLogSet = onLogSet,
-                    onDeleteSet = onDeleteSet,
-                    isViewMode = isViewMode
-                )
+                // Keyed so a deleted set takes its own row (and swipe state) with it; positional
+                // rows shifted state between sets and were tied to a Compose layout crash.
+                key(set.uiKey) {
+                    SwipeableSetRow(
+                        set = set,
+                        weightUnit = weightUnit,
+                        index = setIndex,
+                        rpeTrackingEnabled = showRpe,
+                        isCardio = isCardio,
+                        onUpdateSet = onUpdateSet,
+                        onUpdateRest = { restSec -> onUpdateSetRest(setIndex, restSec) },
+                        onUpdateRpe = { rpe -> onUpdateSetRpe(setIndex, rpe) },
+                        onToggleWarmUp = { onToggleWarmUp(setIndex) },
+                        onLogSet = onLogSet,
+                        onDeleteSet = onDeleteSet,
+                        isViewMode = isViewMode
+                    )
+                }
             }
 
             if (!isViewMode) {
@@ -1075,14 +1086,14 @@ fun SwipeableSetRow(
                     state = draggableState,
                     orientation = Orientation.Horizontal,
                     onDragStopped = {
-                        if (offsetX <= -deleteThreshold && !isViewMode) {
-                            if (set.isCompleted) {
-                                showDeleteConfirm = true
-                            } else {
-                                onDeleteSet(index)
-                            }
+                        if (offsetX <= -deleteThreshold && !isViewMode && !set.isCompleted) {
+                            // The row is about to be removed: moving it back now would queue a
+                            // re-placement for a node that is being detached.
+                            onDeleteSet(index)
+                        } else {
+                            if (offsetX <= -deleteThreshold && !isViewMode) showDeleteConfirm = true
+                            offsetX = 0f
                         }
-                        offsetX = 0f
                     }
                 )
                 .background(

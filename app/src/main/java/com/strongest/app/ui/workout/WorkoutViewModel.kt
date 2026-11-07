@@ -44,12 +44,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 data class WorkoutUiState(
@@ -148,6 +151,8 @@ data class ActiveWorkoutState(
     val workoutName: String? = null,
     val workoutExercises: List<WorkoutExerciseUi> = emptyList(),
     val isFinished: Boolean = false,
+    /** The workout was deleted from elsewhere (e.g. a data import) while this screen was alive. */
+    val workoutDeleted: Boolean = false,
     val isViewMode: Boolean = false,
     val isEditingHistory: Boolean = false,
     val startTime: Long = 0L,
@@ -186,6 +191,8 @@ data class WorkoutExerciseUi(
     val noteText: String = ""
 )
 
+private val setUiKeys = AtomicLong()
+
 data class SetUi(
     val setId: Long? = null,
     val setNumber: Int,
@@ -196,7 +203,9 @@ data class SetUi(
     val isCompleted: Boolean = false,
     val completedAt: Long = 0L,
     val restSeconds: Int = 90,
-    val previousSetInfo: PreviousSetInfo? = null
+    val previousSetInfo: PreviousSetInfo? = null,
+    /** Stable row identity for the UI (setId stays null until the set is saved). */
+    val uiKey: Long = setUiKeys.incrementAndGet()
 )
 
 data class PreviousSetInfo(
@@ -229,6 +238,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     // True once the user has committed to finishing; stops the state collector from re-publishing
     // the ongoing-workout notification while a post-workout (e.g. routine-save) dialog is shown.
     private var isFinishing = false
+    private var isCancelling = false
     private val persistOrderMutex = Mutex()
 
     private fun ensureWorkoutActionsReceiverRegistered() {
@@ -397,6 +407,26 @@ class ActiveWorkoutViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _state.collect { publishNotificationState() }
+        }
+        viewModelScope.launch {
+            // This screen can sit in a tab's saved back stack while its workout is deleted
+            // elsewhere (Settings → Import replaces every workout). Any later write then failed
+            // the workout's foreign key and crashed the app, so close the screen instead.
+            _state.map { it.workoutId }.distinctUntilChanged().collectLatest { id ->
+                if (id == null) return@collectLatest
+                val deleted = repository.observeWorkout(id).map { it == null }.firstOrNull { it } == true
+                if (deleted && !isCancelling) onWorkoutDeletedElsewhere(id)
+            }
+        }
+    }
+
+    private fun onWorkoutDeletedElsewhere(workoutId: Long) {
+        RestTimer.cancelFor(workoutId)
+        stopServiceAndClearNotification()
+        unregisterWorkoutActionsReceiver()
+        loadedWorkoutId = null
+        _state.update {
+            it.copy(workoutId = null, workoutExercises = emptyList(), workoutDeleted = true)
         }
     }
 
@@ -1580,6 +1610,8 @@ class ActiveWorkoutViewModel @Inject constructor(
     }
 
     fun cancelWorkout(onCancelled: () -> Unit) {
+        // Deleting below would otherwise also trip the deleted-elsewhere watcher.
+        isCancelling = true
         cancelRestTimer()
         stopServiceAndClearNotification()
         unregisterWorkoutActionsReceiver()

@@ -403,6 +403,8 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun updateWorkout(workout: Workout) = workoutDao.updateWorkout(workout)
 
+    fun observeWorkout(id: Long): Flow<Workout?> = workoutDao.observeWorkout(id)
+
     suspend fun getWorkoutById(id: Long): Workout? =
         workoutDao.getWorkoutById(id)
 

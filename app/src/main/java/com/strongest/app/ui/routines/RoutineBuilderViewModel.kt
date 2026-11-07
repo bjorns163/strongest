@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 data class RoutineExerciseUi(
@@ -37,13 +38,17 @@ data class RoutineExerciseUi(
     val previousSets: List<com.strongest.app.ui.workout.PreviousSetInfo> = emptyList()
 )
 
+private val routineSetUiKeys = AtomicLong()
+
 data class RoutineSetUi(
     val setNumber: Int,
     val weight: Float = 0f,
     val reps: Int = 10,
     val restSeconds: Int = 90,
     val setType: SetType = SetType.NORMAL,
-    val previousSetInfo: com.strongest.app.ui.workout.PreviousSetInfo? = null
+    val previousSetInfo: com.strongest.app.ui.workout.PreviousSetInfo? = null,
+    /** Stable row identity for the UI, so a deleted set's row goes with it. */
+    val uiKey: Long = routineSetUiKeys.incrementAndGet()
 )
 
 data class RoutineBuilderState(

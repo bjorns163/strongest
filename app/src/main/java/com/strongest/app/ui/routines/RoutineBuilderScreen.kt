@@ -51,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -489,16 +490,19 @@ fun RoutineExerciseBlock(
             }
 
             exercise.sets.forEachIndexed { setIndex, set ->
-                SwipeableRoutineSetRow(
-                    set = set,
-                    weightUnit = weightUnit,
-                    index = setIndex,
-                    isCardio = isCardio,
-                    onUpdateSet = onUpdateSet,
-                    onUpdateRest = { restSec -> onUpdateSetRest(setIndex, restSec) },
-                    onToggleWarmUp = { onToggleWarmUp(setIndex) },
-                    onDeleteSet = onDeleteSet
-                )
+                // Keyed so a deleted set takes its own row (and swipe state) with it.
+                key(set.uiKey) {
+                    SwipeableRoutineSetRow(
+                        set = set,
+                        weightUnit = weightUnit,
+                        index = setIndex,
+                        isCardio = isCardio,
+                        onUpdateSet = onUpdateSet,
+                        onUpdateRest = { restSec -> onUpdateSetRest(setIndex, restSec) },
+                        onToggleWarmUp = { onToggleWarmUp(setIndex) },
+                        onDeleteSet = onDeleteSet
+                    )
+                }
             }
 
             Button(
@@ -549,9 +553,11 @@ fun SwipeableRoutineSetRow(
                     orientation = Orientation.Horizontal,
                     onDragStopped = {
                         if (offsetX <= -deleteThreshold) {
+                            // Removed next frame; don't queue a re-placement for it now.
                             onDeleteSet(index)
+                        } else {
+                            offsetX = 0f
                         }
-                        offsetX = 0f
                     }
                 )
                 .background(

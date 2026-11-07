@@ -79,6 +79,9 @@ import com.strongest.app.ui.workout.exerciseSubtitle
 import com.strongest.app.utils.formatDecimal
 import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.data.repository.WeightUnit
+import com.strongest.app.ui.components.AdaptiveTopBar
+import com.strongest.app.ui.components.TopBarCancelAction
+import com.strongest.app.ui.components.TopBarConfirmAction
 import com.strongest.app.ui.components.DurationTextField
 import com.strongest.app.ui.components.reopenKeyboardOnTap
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
@@ -162,31 +165,23 @@ fun RoutineBuilderScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
+                AdaptiveTopBar(
+                    title = stringResource(if (routineId != null) R.string.edit_routine else R.string.new_routine),
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
+                        }
                     }
-                    Text(
-                        text = stringResource(if (routineId != null) R.string.edit_routine else R.string.new_routine),
-                        style = MaterialTheme.typography.titleLarge
+                ) { compaction ->
+                    TopBarCancelAction(compact = compaction.compactCancel, onClick = onBack)
+                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                    TopBarConfirmAction(
+                        compact = compaction.compactConfirm,
+                        icon = Icons.Default.Check,
+                        label = stringResource(R.string.save),
+                        onClick = { viewModel.saveRoutine(); onBack() },
+                        enabled = state.routineName.isNotBlank()
                     )
-                    Row {
-                        TextButton(onClick = onBack) {
-                            Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.error)
-                        }
-                        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                        Button(
-                            onClick = { viewModel.saveRoutine(); onBack() },
-                            enabled = state.routineName.isNotBlank()
-                        ) {
-                            Icon(Icons.Default.Check, null, Modifier.padding(end = 4.dp))
-                            Text(stringResource(R.string.save))
-                        }
-                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(

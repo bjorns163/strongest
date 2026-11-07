@@ -92,6 +92,9 @@ import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.model.SetType
 import com.strongest.app.data.repository.WeightUnit
+import com.strongest.app.ui.components.AdaptiveTopBar
+import com.strongest.app.ui.components.TopBarCancelAction
+import com.strongest.app.ui.components.TopBarConfirmAction
 import com.strongest.app.ui.components.DurationTextField
 import com.strongest.app.ui.components.reopenKeyboardOnTap
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
@@ -460,50 +463,50 @@ fun ActiveWorkoutScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = {
-                        if (state.isEditingHistory) requestDiscard(onBack) else onBack()
-                    }) {
-                        Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
+                AdaptiveTopBar(
+                    title = when {
+                        state.isEditingHistory -> stringResource(R.string.edit_workout)
+                        state.isViewMode -> stringResource(R.string.workout_details)
+                        else -> stringResource(R.string.active_workout)
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            if (state.isEditingHistory) requestDiscard(onBack) else onBack()
+                        }) {
+                            Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
+                        }
                     }
-                    Text(
-                        text = when {
-                            state.isEditingHistory -> stringResource(R.string.edit_workout)
-                            state.isViewMode -> stringResource(R.string.workout_details)
-                            else -> stringResource(R.string.active_workout)
-                        },
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                ) { compaction ->
                     when {
                         state.isEditingHistory -> {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                TextButton(onClick = { requestDiscard {} }) {
-                                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.error)
-                                }
-                                Button(onClick = { viewModel.exitHistoryEditMode() }) {
-                                    Icon(Icons.Default.Check, null, Modifier.padding(end = 4.dp))
-                                    Text(stringResource(R.string.save))
-                                }
-                            }
+                            TopBarCancelAction(compact = compaction.compactCancel, onClick = { requestDiscard {} })
+                            TopBarConfirmAction(
+                                compact = compaction.compactConfirm,
+                                icon = Icons.Default.Check,
+                                label = stringResource(R.string.save),
+                                onClick = { viewModel.exitHistoryEditMode() }
+                            )
                         }
                         state.isViewMode -> {
-                            Button(onClick = { viewModel.enterHistoryEditMode() }) {
-                                Icon(Icons.Default.Edit, null, Modifier.padding(end = 4.dp))
-                                Text(stringResource(R.string.edit))
-                            }
+                            TopBarConfirmAction(
+                                compact = compaction.compactConfirm,
+                                icon = Icons.Default.Edit,
+                                label = stringResource(R.string.edit),
+                                onClick = { viewModel.enterHistoryEditMode() }
+                            )
                         }
                         else -> {
-                            TextButton(onClick = { showCancelDialog = true }) {
-                                Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.error)
-                            }
-                            Button(onClick = { viewModel.finishWorkout() }) {
-                                Icon(Icons.Default.Check, null, Modifier.padding(end = 4.dp))
-                                Text(stringResource(R.string.finish))
-                            }
+                            TopBarCancelAction(
+                                compact = compaction.compactCancel,
+                                onClick = { showCancelDialog = true },
+                                contentDescription = stringResource(R.string.cancel_workout)
+                            )
+                            TopBarConfirmAction(
+                                compact = compaction.compactConfirm,
+                                icon = Icons.Default.Check,
+                                label = stringResource(R.string.finish),
+                                onClick = { viewModel.finishWorkout() }
+                            )
                         }
                     }
                 }

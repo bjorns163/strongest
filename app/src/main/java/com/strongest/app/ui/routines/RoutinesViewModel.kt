@@ -70,7 +70,7 @@ class RoutinesViewModel @Inject constructor(
     fun shareRoutine(routine: Routine, context: Context) {
         viewModelScope.launch {
             val full = repository.getRoutineWithExercisesAndSets(routine.id) ?: return@launch
-            val json = exportRoutineToJson(full)
+            val json = exportRoutineToJson(full, context.getString(R.string.unknown_exercise))
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/json"
                 putExtra(Intent.EXTRA_TEXT, json)
@@ -91,9 +91,9 @@ class RoutinesViewModel @Inject constructor(
         }
     }
 
-    private suspend fun exportRoutineToJson(full: RoutineWithExercisesAndSets): String {
+    private suspend fun exportRoutineToJson(full: RoutineWithExercisesAndSets, unknownExerciseName: String): String {
         val exercisesById = repository.getAllExercisesList().associateBy { it.id }
-        return full.toSharedRoutine(exercisesById).toJson()
+        return full.toSharedRoutine(exercisesById, unknownExerciseName).toJson()
     }
 
     private suspend fun importRoutineFromJson(jsonString: String): RoutineImportData? {

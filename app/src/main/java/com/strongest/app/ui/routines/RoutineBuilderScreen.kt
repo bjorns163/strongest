@@ -351,7 +351,7 @@ fun RoutineExerciseBlock(
                             .clickable { onViewExercise() }
                     ) {
                         Text(
-                            text = exercise.exerciseName,
+                            text = exercise.exerciseName.ifEmpty { stringResource(R.string.unknown_exercise) },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )

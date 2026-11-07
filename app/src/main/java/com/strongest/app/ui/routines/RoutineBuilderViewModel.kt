@@ -132,7 +132,8 @@ class RoutineBuilderViewModel @Inject constructor(
                     }
                     RoutineExerciseUi(
                         exerciseId = re.exerciseId,
-                        exerciseName = exercise?.name ?: "Unknown",
+                        // Empty when the exercise no longer exists; the screen shows a localized "Unknown".
+                        exerciseName = exercise?.name ?: "",
                         routineExerciseId = re.id,
                         muscleGroup = exercise?.muscleGroup?.name ?: "",
                         equipment = exercise?.equipment ?: Equipment.NONE,

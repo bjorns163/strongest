@@ -1,5 +1,9 @@
 package com.strongest.app.utils
 
+import java.math.RoundingMode
+import java.text.NumberFormat
+import java.util.Locale
+
 /**
  * Parses a number the user typed into a text field, accepting either decimal separator.
  *
@@ -18,3 +22,15 @@ fun parseDecimalInput(text: String): Float? =
  */
 fun filterDecimalInput(text: String): String =
     text.filter { it.isDigit() || it == '.' || it == ',' }
+
+/**
+ * Formats a number for display or for prefilling a decimal field: at most [maxDecimals]
+ * decimals, trailing zeros dropped (2.5 not 2.50, 1.25 stays 1.25), locale decimal separator.
+ */
+fun formatDecimal(value: Float, maxDecimals: Int = 2): String =
+    NumberFormat.getNumberInstance(Locale.getDefault()).apply {
+        minimumFractionDigits = 0
+        maximumFractionDigits = maxDecimals
+        roundingMode = RoundingMode.HALF_UP
+        isGroupingUsed = false
+    }.format(value.toDouble())

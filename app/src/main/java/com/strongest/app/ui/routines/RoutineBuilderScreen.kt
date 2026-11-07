@@ -75,8 +75,8 @@ import com.strongest.app.R
 import com.strongest.app.data.model.RoutineGroup
 import com.strongest.app.data.model.SetType
 import com.strongest.app.ui.workout.exerciseSubtitle
+import com.strongest.app.utils.formatDecimal
 import com.strongest.app.utils.parseDecimalInput
-import java.util.Locale
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.components.DurationTextField
 import com.strongest.app.ui.components.reopenKeyboardOnTap
@@ -653,8 +653,7 @@ fun RoutineSetTextField(
     LaunchedEffect(value) {
         if (!isFocused) {
             val current = if (value == 0f) "" else {
-                if (isInteger || value % 1f == 0f) value.toInt().toString()
-                else String.format(Locale.getDefault(), "%.1f", value)
+                if (isInteger) value.toInt().toString() else formatDecimal(value)
             }
             textState = TextFieldValue(text = current)
         }

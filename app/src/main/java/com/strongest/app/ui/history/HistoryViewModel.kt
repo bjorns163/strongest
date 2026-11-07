@@ -217,7 +217,8 @@ class HistoryViewModel @Inject constructor(
                             Cell.Str(muscle),
                             Cell.Str(equipment),
                             Cell.Num(set.setNumber.toDouble()),
-                            Cell.Num(displayWeight.toDouble()),
+                            // Float→Double would export 60.3 as 60.29999923706055.
+                            Cell.Num(Math.round(displayWeight * 100.0) / 100.0),
                             Cell.Num(set.reps.toDouble()),
                             if (set.rpe != null) Cell.Num(set.rpe.toDouble()) else Cell.Str(""),
                             Cell.Str(context.getString(set.setType.labelRes)),

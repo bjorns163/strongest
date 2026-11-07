@@ -46,7 +46,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.res.stringResource
 import com.strongest.app.R
 import com.strongest.app.data.repository.WeightUnit
-import java.util.Locale
+import com.strongest.app.utils.formatDecimal
 import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.utils.SettingsEntryPoint
 import com.strongest.app.utils.WorkoutRepositoryEntryPoint
@@ -57,7 +57,6 @@ import com.strongest.app.utils.weightUnitLabel
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 private val KG_BARS = listOf(20f, 15f, 10f, 7f, 0f)
 private val LBS_BARS = listOf(45f, 35f, 25f, 15f, 0f)
@@ -97,13 +96,7 @@ fun calculatePlates(target: Float, bar: Float, availablePlates: Map<Float, Int>,
     return PlateResult(counts, achievedTotal, if (singleSide) remaining else remaining * 2f)
 }
 
-private fun formatWeight(value: Float): String {
-    val rounded = (value * 100f).roundToInt() / 100f
-    return if (rounded % 1f == 0f) rounded.toInt().toString() else {
-        if ((rounded * 10f) % 1f == 0f) String.format(Locale.getDefault(), "%.1f", rounded)
-        else String.format(Locale.getDefault(), "%.2f", rounded)
-    }
-}
+private fun formatWeight(value: Float): String = formatDecimal(value)
 
 /** Competition plate colours, so the loaded bar reads at a glance like a real one. */
 private fun plateColor(plate: Float, unit: WeightUnit): Color = if (unit == WeightUnit.KG) {

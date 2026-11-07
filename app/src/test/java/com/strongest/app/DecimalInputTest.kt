@@ -2,6 +2,7 @@ package com.strongest.app
 
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.data.repository.WeightUnit
+import com.strongest.app.utils.formatDecimal
 import com.strongest.app.utils.parseDecimalInput
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -73,5 +74,32 @@ class DecimalInputTest {
         val formatted = formatWeightForDisplay(82.5f, WeightUnit.KG)
         assertEquals("82.5", formatted)
         assertEquals(82.5f, parseDecimalInput(formatted)!!, 0.001f)
+    }
+
+    @Test
+    fun `weights show up to two decimals, only as many as needed`() {
+        // Regression: everything was rounded to one decimal, so a 1.25 kg plate showed as 1.3.
+        Locale.setDefault(Locale.US)
+        assertEquals("1.25", formatWeightForDisplay(1.25f, WeightUnit.KG))
+        assertEquals("2.5", formatWeightForDisplay(2.5f, WeightUnit.KG))
+        assertEquals("100", formatWeightForDisplay(100f, WeightUnit.KG))
+        assertEquals("61.25", formatWeightForDisplay(61.25f, WeightUnit.KG))
+        assertEquals("60.3", formatWeightForDisplay(60.3f, WeightUnit.KG))
+        assertEquals("1250", formatWeightForDisplay(1250f, WeightUnit.KG))
+    }
+
+    @Test
+    fun `two-decimal weights round-trip in a comma-decimal locale`() {
+        Locale.setDefault(Locale.forLanguageTag("nl-NL"))
+        val formatted = formatWeightForDisplay(1.25f, WeightUnit.KG)
+        assertEquals("1,25", formatted)
+        assertEquals(1.25f, parseDecimalInput(formatted)!!, 0.0001f)
+    }
+
+    @Test
+    fun `formatDecimal honours a smaller decimal cap for estimates`() {
+        Locale.setDefault(Locale.US)
+        assertEquals("117.3", formatDecimal(117.25f, maxDecimals = 1))
+        assertEquals("117", formatDecimal(117.0f, maxDecimals = 1))
     }
 }

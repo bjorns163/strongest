@@ -95,6 +95,7 @@ import com.strongest.app.ui.components.DurationTextField
 import com.strongest.app.ui.components.reopenKeyboardOnTap
 import com.strongest.app.ui.exercise.ExercisePickerResultHolder
 import com.strongest.app.ui.theme.LocalSuccessColor
+import com.strongest.app.utils.formatDecimal
 import com.strongest.app.utils.displayToKg
 import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.formatWeightForDisplay
@@ -1221,8 +1222,7 @@ fun SetTextField(
     LaunchedEffect(value) {
         if (!isFocused) {
             val current = if (value == 0f) "" else {
-                if (isInteger || value % 1f == 0f) value.toInt().toString()
-                else String.format(Locale.getDefault(), "%.1f", value)
+                if (isInteger) value.toInt().toString() else formatDecimal(value)
             }
             textState = TextFieldValue(text = current)
         }
@@ -1259,8 +1259,7 @@ fun SetTextField(
                     // to it: what is on screen always matches what will be logged.
                     textState = TextFieldValue(
                         text = if (value == 0f) "" else {
-                            if (isInteger || value % 1f == 0f) value.toInt().toString()
-                            else String.format(Locale.getDefault(), "%.1f", value)
+                            if (isInteger) value.toInt().toString() else formatDecimal(value)
                         }
                     )
                 }

@@ -78,11 +78,11 @@ import com.strongest.app.data.repository.Sex
 import com.strongest.app.data.repository.defaultRecoveryHours
 import com.strongest.app.data.repository.exerciseSeedData
 import com.strongest.app.data.repository.WeightUnit
-import java.util.Locale
 import com.strongest.app.ui.components.DurationInputField
 import com.strongest.app.ui.components.label
 import com.strongest.app.ui.workout.STANDARD_KG_PLATES
 import com.strongest.app.ui.workout.STANDARD_LBS_PLATES
+import com.strongest.app.utils.formatDecimal
 import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.weightUnitLabel
 
@@ -925,8 +925,4 @@ private fun PlateInventory(
  * Kept out of the composable body: reading the default locale inside one is not observable by
  * Compose, so lint rejects it there.
  */
-private fun formatPlateLabel(plate: Float): String = when {
-    (plate % 1f) == 0f -> plate.toInt().toString()
-    ((plate * 10f) % 1f) == 0f -> String.format(Locale.getDefault(), "%.1f", plate)
-    else -> String.format(Locale.getDefault(), "%.2f", plate)
-}
+private fun formatPlateLabel(plate: Float): String = formatDecimal(plate)

@@ -65,6 +65,7 @@ import com.strongest.app.data.repository.OneRmFormula
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.ui.navigation.AddWarmUpSetsRequest
 import com.strongest.app.ui.navigation.WarmUpSetSpec
+import com.strongest.app.utils.formatDecimal
 import com.strongest.app.utils.WarmUpCalculator
 import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.utils.OneRepMaxCalculator
@@ -86,7 +87,6 @@ import com.strongest.app.ui.components.label
 import com.strongest.app.utils.filterDecimalInput
 import com.strongest.app.utils.rememberLocalizedDateFormat
 import java.util.Date
-import java.util.Locale
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -839,10 +839,8 @@ fun HistoryTab(
     }
 }
 
-private fun formatDisplayValue(value: Float): String {
-    val rounded = (value * 10f).roundToInt() / 10f
-    return if (rounded % 1f == 0f) rounded.toInt().toString() else String.format(Locale.getDefault(), "%.1f", rounded)
-}
+/** Calculated estimates (1RM, rep maxes) to one decimal; entered weights use [formatDecimal]. */
+private fun formatDisplayValue(value: Float): String = formatDecimal(value, maxDecimals = 1)
 
 @Composable
 fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
@@ -857,7 +855,7 @@ fun OneRmTab(initialWeightKg: Float, initialReps: Int) {
 
     var weightText by remember(weightUnit, initialWeightKg) {
         mutableStateOf(
-            if (initialWeightKg > 0f) formatDisplayValue(kgToDisplay(initialWeightKg, weightUnit)) else ""
+            if (initialWeightKg > 0f) formatDecimal(kgToDisplay(initialWeightKg, weightUnit)) else ""
         )
     }
     var repsText by remember(initialReps) {
@@ -1022,7 +1020,7 @@ fun WarmupTab(
 
     var workingText by remember(weightUnit, initialWeightKg) {
         mutableStateOf(
-            if (initialWeightKg > 0f) formatDisplayValue(kgToDisplay(initialWeightKg, weightUnit)) else ""
+            if (initialWeightKg > 0f) formatDecimal(kgToDisplay(initialWeightKg, weightUnit)) else ""
         )
     }
     var repsText by remember(initialReps) {
@@ -1165,7 +1163,7 @@ fun WarmupTab(
                                     else MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "${formatDisplayValue(w)} $unitLabel × $r",
+                            text = "${formatDecimal(w)} $unitLabel × $r",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isWorking) FontWeight.Bold else FontWeight.Normal
                         )

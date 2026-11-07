@@ -34,6 +34,7 @@ import com.strongest.app.data.repository.CaliperMode
 import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.data.repository.Sex
 import com.strongest.app.utils.filterDecimalInput
+import com.strongest.app.utils.formatDecimal
 import java.util.Calendar
 
 /**
@@ -70,13 +71,18 @@ fun CaliperBodyFatDialog(
     onDismiss: () -> Unit
 ) {
     val mode: CaliperMode = profile.mode
-    val needProfileStep = profile.sex == Sex.UNSET || profile.birthYear <= 0
+    // Decided once: saving the profile on step 0 updates [profile], and re-deriving this would
+    // drop the profile step from the count and skip the first skinfold site.
+    val needProfileStep = remember { profile.sex == Sex.UNSET || profile.birthYear <= 0 }
 
     var sex by remember { mutableStateOf(profile.sex) }
     var birthYearText by remember {
         mutableStateOf(if (profile.birthYear > 0) profile.birthYear.toString() else "")
     }
     val values = remember { mutableStateMapOf<SkinfoldSite, String>() }
+    // Normalised so "12,5" and "15.5" typed in one session read the same in the result and notes.
+    fun displayValue(site: SkinfoldSite): String =
+        values[site]?.let(::parseDecimalInput)?.let { formatDecimal(it) } ?: "-"
     var step by remember { mutableIntStateOf(0) }
 
     val sites = remember(mode, sex) {
@@ -169,14 +175,14 @@ fun CaliperBodyFatDialog(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = stringResource(R.string.caliper_sum, modeLabel, "%.0f".format(sites.sumOf { (values[it]?.let(::parseDecimalInput)?.toDouble() ?: 0.0) })),
+                                text = stringResource(R.string.caliper_sum, modeLabel, formatDecimal(sites.sumOf { (values[it]?.let(::parseDecimalInput)?.toDouble() ?: 0.0) }.toFloat())),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                             sites.forEach { site ->
                                 Text(
-                                    text = "${siteNames.getValue(site)}: ${values[site] ?: "-"} mm",
+                                    text = "${siteNames.getValue(site)}: ${displayValue(site)} mm",
                                     style = MaterialTheme.typography.bodySmall,
                                     modifier = Modifier.padding(top = 2.dp)
                                 )
@@ -234,7 +240,7 @@ fun CaliperBodyFatDialog(
                 onClick = {
                     if (onResultStep) {
                         val percent = computedPercent ?: return@TextButton
-                        val notes = sites.joinToString(", ") { "${siteNames.getValue(it)} ${values[it]}mm" }
+                        val notes = sites.joinToString(", ") { "${siteNames.getValue(it)} ${displayValue(it)}mm" }
                         onSave(percent, "$modeLabel: $notes")
                     } else {
                         if (onProfileStep) onSaveProfile(sex, birthYear)

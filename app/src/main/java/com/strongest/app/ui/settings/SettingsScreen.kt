@@ -74,6 +74,7 @@ import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.data.repository.CaliperMode
 import com.strongest.app.data.repository.OneRmFormula
 import com.strongest.app.data.repository.RECOVERABLE_MUSCLE_GROUPS
+import com.strongest.app.data.repository.SILENT_SOUND
 import com.strongest.app.data.repository.Sex
 import com.strongest.app.data.repository.defaultRecoveryHours
 import com.strongest.app.data.repository.exerciseSeedData
@@ -173,7 +174,14 @@ fun SettingsScreen(
             val uri = result.data?.let { data ->
                 IntentCompat.getParcelableExtra(data, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
             }
-            viewModel.setNotificationSoundUri(uri?.toString())
+            // The picker reports Silent as null and Default as the system default URI.
+            viewModel.setNotificationSoundUri(
+                when {
+                    uri == null -> SILENT_SOUND
+                    RingtoneManager.isDefault(uri) -> null
+                    else -> uri.toString()
+                }
+            )
         }
     }
 
@@ -255,14 +263,29 @@ fun SettingsScreen(
                             val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
                                 putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
                                 putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, soundPickerTitle)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, uiState.notificationSoundUri?.toUri())
+                                putExtra(
+                                    RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
+                                    when (val current = uiState.notificationSoundUri) {
+                                        null -> android.provider.Settings.System.DEFAULT_NOTIFICATION_URI
+                                        SILENT_SOUND -> null
+                                        else -> current.toUri()
+                                    }
+                                )
                                 putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
                                 putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
                             }
                             soundPickerLauncher.launch(intent)
                         },
                         trailing = {
-                            SettingsValue(stringResource(if (uiState.notificationSoundUri != null) R.string.sound_custom else R.string.sound_default))
+                            SettingsValue(
+                                stringResource(
+                                    when (uiState.notificationSoundUri) {
+                                        null -> R.string.sound_default
+                                        SILENT_SOUND -> R.string.sound_silent
+                                        else -> R.string.sound_custom
+                                    }
+                                )
+                            )
                         }
                     )
                 }

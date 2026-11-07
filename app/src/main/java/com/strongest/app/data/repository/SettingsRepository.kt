@@ -21,6 +21,12 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Stored as the alert sound when the user picks "Silent". Null already means "default sound", and
+ * the ringtone picker reports Silent as null too, so it needs a value of its own.
+ */
+const val SILENT_SOUND = "silent"
+
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 data class AppSettings(

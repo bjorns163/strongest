@@ -350,6 +350,7 @@
     <string name="select_timer_sound">Select Timer Sound</string>
     <string name="sound_custom">Custom</string>
     <string name="sound_default">Default</string>
+    <string name="sound_silent">Silent</string>
     <string name="settings_keep_screen_on">Keep screen on</string>
     <string name="settings_keep_screen_on_desc">Stops the screen sleeping during an active workout.</string>
     <string name="settings_rpe">Rate sets with RPE</string>

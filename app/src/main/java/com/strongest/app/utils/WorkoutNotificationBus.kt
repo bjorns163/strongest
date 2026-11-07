@@ -40,8 +40,7 @@ sealed interface WorkoutNotificationState {
         val nextSetNumber: Int,
         val nextWeightKg: Float,
         val nextReps: Int,
-        val remainingSeconds: Int,
-        val totalSeconds: Int,
+        // The countdown itself comes from RestTimer, which keeps running without the screen.
         val adjustmentSeconds: Int,
         override val weightUnit: WeightUnit = WeightUnit.KG
     ) : WorkoutNotificationState
@@ -57,11 +56,26 @@ object WorkoutNotificationBus {
     private val _state = MutableStateFlow<WorkoutNotificationState?>(null)
     val state: StateFlow<WorkoutNotificationState?> = _state.asStateFlow()
 
+    private val _attached = MutableStateFlow(false)
+
+    /**
+     * True while the workout screen is alive to handle "Complete set" and "Finish". After the user
+     * leaves it (back, or swiping the app away) the notification stays up with the rest timer,
+     * but those actions have nothing to act on until the workout is reopened.
+     */
+    val attached: StateFlow<Boolean> = _attached.asStateFlow()
+
     fun publish(state: WorkoutNotificationState) {
         _state.value = state
+        _attached.value = true
+    }
+
+    fun detach() {
+        _attached.value = false
     }
 
     fun clear() {
         _state.value = null
+        _attached.value = false
     }
 }

@@ -5,13 +5,16 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import com.strongest.app.MainActivity
 import com.strongest.app.R
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +22,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 private const val CHANNEL_ID = "workout_active_channel_v2"
@@ -33,9 +37,29 @@ class WorkoutForegroundService : Service() {
         getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     }
 
+    // The rest-timer buttons are handled here rather than by the workout screen, so they keep
+    // working after that screen is gone. Set and finish actions still need the screen.
+    private val timerActionsReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val adjustment = (WorkoutNotificationBus.state.value as? WorkoutNotificationState.Resting)
+                ?.adjustmentSeconds ?: 0
+            when (intent.action) {
+                ACTION_TIMER_ADD -> RestTimer.adjust(context, adjustment)
+                ACTION_TIMER_SUBTRACT -> RestTimer.adjust(context, -adjustment)
+                ACTION_SKIP_REST -> RestTimer.cancel()
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         ensureChannel()
+        val filter = IntentFilter().apply {
+            addAction(ACTION_TIMER_ADD)
+            addAction(ACTION_TIMER_SUBTRACT)
+            addAction(ACTION_SKIP_REST)
+        }
+        ContextCompat.registerReceiver(this, timerActionsReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     private fun ensureChannel() {
@@ -54,7 +78,11 @@ class WorkoutForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val initial = buildNotification(WorkoutNotificationBus.state.value)
+        val initial = buildNotification(
+            WorkoutNotificationBus.state.value,
+            WorkoutNotificationBus.attached.value,
+            RestTimer.state.value
+        )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             ServiceCompat.startForeground(
                 this,
@@ -68,11 +96,16 @@ class WorkoutForegroundService : Service() {
 
         if (collectorJob == null) {
             collectorJob = scope.launch {
-                WorkoutNotificationBus.state.collectLatest { state ->
+                combine(
+                    WorkoutNotificationBus.state,
+                    WorkoutNotificationBus.attached,
+                    RestTimer.state,
+                    ::Triple
+                ).collectLatest { (state, attached, rest) ->
                     if (state == null) {
                         stopSelf()
                     } else {
-                        notificationManager.notify(NOTIFICATION_ID, buildNotification(state))
+                        notificationManager.notify(NOTIFICATION_ID, buildNotification(state, attached, rest))
                     }
                 }
             }
@@ -82,6 +115,7 @@ class WorkoutForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        try { unregisterReceiver(timerActionsReceiver) } catch (_: Exception) {}
         scope.cancel()
         collectorJob = null
         notificationManager.cancel(NOTIFICATION_ID)
@@ -90,7 +124,15 @@ class WorkoutForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun buildNotification(state: WorkoutNotificationState?): Notification {
+    /**
+     * [attached] is false once the workout screen is gone: the set and finish actions are left out
+     * (nothing would handle them) and tapping the notification reopens the app instead.
+     */
+    private fun buildNotification(
+        state: WorkoutNotificationState?,
+        attached: Boolean,
+        rest: RestTimerState?
+    ): Notification {
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -153,30 +195,37 @@ class WorkoutForegroundService : Service() {
                             )
                         )
                     )
-                    .addAction(
+                if (attached) {
+                    builder.addAction(
                         0,
                         getString(R.string.notification_complete_set),
                         broadcastPending(REQ_COMPLETE, ACTION_COMPLETE_SET)
                     )
+                }
             }
             is WorkoutNotificationState.Resting -> {
-                val mm = state.remainingSeconds / 60
-                val ss = state.remainingSeconds % 60
-                val timeText = String.format("%02d:%02d", mm, ss)
                 val nextWeightText = formatWeightForDisplay(state.nextWeightKg, state.weightUnit)
                 val unitLabel = weightUnitLabel(state.weightUnit)
+                val nextText = getString(
+                    R.string.notification_next,
+                    state.nextExerciseName,
+                    state.nextSetNumber,
+                    "$nextWeightText $unitLabel",
+                    state.nextReps
+                )
+                if (rest == null) {
+                    // The rest ran out while the workout screen was closed, so nothing has
+                    // published the next set yet: show what's next until the workout is reopened.
+                    builder.setContentTitle(state.workoutName).setContentText(nextText)
+                    return builder.build()
+                }
+                val mm = rest.remainingSeconds / 60
+                val ss = rest.remainingSeconds % 60
+                val timeText = String.format("%02d:%02d", mm, ss)
                 val progress =
-                    if (state.totalSeconds > 0) state.remainingSeconds * 100 / state.totalSeconds else 0
+                    if (rest.totalSeconds > 0) rest.remainingSeconds * 100 / rest.totalSeconds else 0
                 builder.setContentTitle(getString(R.string.notification_rest, timeText))
-                    .setContentText(
-                        getString(
-                            R.string.notification_next,
-                            state.nextExerciseName,
-                            state.nextSetNumber,
-                            "$nextWeightText $unitLabel",
-                            state.nextReps
-                        )
-                    )
+                    .setContentText(nextText)
                     .setProgress(100, progress, false)
                     .addAction(
                         0,
@@ -198,11 +247,13 @@ class WorkoutForegroundService : Service() {
             is WorkoutNotificationState.AllDone -> {
                 builder.setContentTitle(state.workoutName)
                     .setContentText(getString(R.string.notification_all_done))
-                    .addAction(
+                if (attached) {
+                    builder.addAction(
                         0,
                         getString(R.string.notification_complete_workout),
                         broadcastPending(REQ_FINISH, ACTION_FINISH_WORKOUT)
                     )
+                }
             }
         }
 

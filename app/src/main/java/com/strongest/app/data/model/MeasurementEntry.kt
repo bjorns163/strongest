@@ -1,131 +1,133 @@
 package com.strongest.app.data.model
 
+import androidx.annotation.StringRes
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.strongest.app.R
 
 enum class MeasurementUnit { KG, PERCENT, KCAL, CM }
 
-enum class MetricCategory(val displayName: String) {
-    BODY("Body"),
-    UPPER_BODY("Upper Body"),
-    CORE("Core"),
-    LOWER_BODY("Lower Body")
+enum class MetricCategory(@StringRes val displayNameRes: Int) {
+    BODY(R.string.metric_category_body),
+    UPPER_BODY(R.string.metric_category_upper_body),
+    CORE(R.string.metric_category_core),
+    LOWER_BODY(R.string.metric_category_lower_body)
 }
 
 enum class BodyMetric(
-    val displayName: String,
+    @StringRes val displayNameRes: Int,
     val unit: MeasurementUnit,
     val category: MetricCategory,
-    val instructions: String
+    @StringRes val instructionsRes: Int
 ) {
     WEIGHT(
-        "Weight",
+        R.string.metric_weight,
         MeasurementUnit.KG,
         MetricCategory.BODY,
-        "Weigh yourself first thing in the morning, after using the bathroom and before eating or drinking. Wear minimal clothing for consistency."
+        R.string.metric_weight_instructions
     ),
     BODY_FAT(
-        "Body Fat",
+        R.string.metric_body_fat,
         MeasurementUnit.PERCENT,
         MetricCategory.BODY,
-        "Use the same method every time: smart scale, calipers, or DEXA. Measure under consistent conditions (e.g. fasted, morning)."
+        R.string.metric_body_fat_instructions
     ),
     CALORIC_INTAKE(
-        "Caloric Intake",
+        R.string.metric_caloric_intake,
         MeasurementUnit.KCAL,
         MetricCategory.BODY,
-        "Log the total calories you consumed over the day. Track at the same time each day for consistent comparisons."
+        R.string.metric_caloric_intake_instructions
     ),
     NECK(
-        "Neck",
+        R.string.metric_neck,
         MeasurementUnit.CM,
         MetricCategory.UPPER_BODY,
-        "Stand relaxed with your head straight. Measure around the middle of the neck, just below the Adam's apple. Tape should be snug, not tight."
+        R.string.metric_neck_instructions
     ),
     SHOULDERS(
-        "Shoulders",
+        R.string.metric_shoulders,
         MeasurementUnit.CM,
         MetricCategory.UPPER_BODY,
-        "Stand relaxed with arms at your sides. Wrap the tape around the widest part of your shoulders / deltoids, keeping the tape level."
+        R.string.metric_shoulders_instructions
     ),
     CHEST(
-        "Chest",
+        R.string.metric_chest,
         MeasurementUnit.CM,
         MetricCategory.UPPER_BODY,
-        "Stand relaxed and breathe normally. Wrap the tape around the chest at nipple level, keeping it horizontal across the back."
+        R.string.metric_chest_instructions
     ),
     LEFT_BICEP(
-        "Left Bicep",
+        R.string.metric_left_bicep,
         MeasurementUnit.CM,
         MetricCategory.UPPER_BODY,
-        "Flex your left arm at 90°. Measure around the largest part of the biceps, keeping the tape perpendicular to the arm."
+        R.string.metric_left_bicep_instructions
     ),
     RIGHT_BICEP(
-        "Right Bicep",
+        R.string.metric_right_bicep,
         MeasurementUnit.CM,
         MetricCategory.UPPER_BODY,
-        "Flex your right arm at 90°. Measure around the largest part of the biceps, keeping the tape perpendicular to the arm."
+        R.string.metric_right_bicep_instructions
     ),
     LEFT_FOREARM(
-        "Left Forearm",
+        R.string.metric_left_forearm,
         MeasurementUnit.CM,
         MetricCategory.UPPER_BODY,
-        "Let your left arm hang at your side, palm facing forward. Measure around the widest point of the forearm below the elbow."
+        R.string.metric_left_forearm_instructions
     ),
     RIGHT_FOREARM(
-        "Right Forearm",
+        R.string.metric_right_forearm,
         MeasurementUnit.CM,
         MetricCategory.UPPER_BODY,
-        "Let your right arm hang at your side, palm facing forward. Measure around the widest point of the forearm below the elbow."
+        R.string.metric_right_forearm_instructions
     ),
     UPPER_ABS(
-        "Upper Abs",
+        R.string.metric_upper_abs,
         MeasurementUnit.CM,
         MetricCategory.CORE,
-        "Stand relaxed and exhale normally. Wrap the tape just below the chest, around the upper abdomen. Keep the tape level."
+        R.string.metric_upper_abs_instructions
     ),
     WAIST(
-        "Waist",
+        R.string.metric_waist,
         MeasurementUnit.CM,
         MetricCategory.CORE,
-        "Stand relaxed and exhale normally. Measure around the narrowest part of the waist, usually around the navel. Do not suck in."
+        R.string.metric_waist_instructions
     ),
     LOWER_ABS(
-        "Lower Abs",
+        R.string.metric_lower_abs,
         MeasurementUnit.CM,
         MetricCategory.CORE,
-        "Stand relaxed and exhale normally. Measure around the lower abdomen, roughly two finger-widths below the navel."
+        R.string.metric_lower_abs_instructions
     ),
     HIPS(
-        "Hips",
+        R.string.metric_hips,
         MeasurementUnit.CM,
         MetricCategory.CORE,
-        "Stand with feet together. Measure around the widest part of the hips / glutes. Keep the tape level all the way around."
+        R.string.metric_hips_instructions
     ),
     LEFT_THIGH(
-        "Left Thigh",
+        R.string.metric_left_thigh,
         MeasurementUnit.CM,
         MetricCategory.LOWER_BODY,
-        "Stand with weight evenly distributed. Measure around the largest part of the left thigh, just below the glute."
+        R.string.metric_left_thigh_instructions
     ),
     RIGHT_THIGH(
-        "Right Thigh",
+        R.string.metric_right_thigh,
         MeasurementUnit.CM,
         MetricCategory.LOWER_BODY,
-        "Stand with weight evenly distributed. Measure around the largest part of the right thigh, just below the glute."
+        R.string.metric_right_thigh_instructions
     ),
     LEFT_CALF(
-        "Left Calf",
+        R.string.metric_left_calf,
         MeasurementUnit.CM,
         MetricCategory.LOWER_BODY,
-        "Stand relaxed. Measure around the widest part of the left calf, keeping the tape perpendicular to the leg."
+        R.string.metric_left_calf_instructions
     ),
     RIGHT_CALF(
-        "Right Calf",
+        R.string.metric_right_calf,
         MeasurementUnit.CM,
         MetricCategory.LOWER_BODY,
-        "Stand relaxed. Measure around the widest part of the right calf, keeping the tape perpendicular to the leg."
+        R.string.metric_right_calf_instructions
     )
 }
 

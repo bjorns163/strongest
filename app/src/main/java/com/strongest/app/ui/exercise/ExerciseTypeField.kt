@@ -14,7 +14,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.strongest.app.R
 import com.strongest.app.data.model.ExerciseType
+import com.strongest.app.ui.components.label
 
 /** Biomechanical category picker, shared by the create and edit exercise dialogs. */
 @Composable
@@ -23,7 +26,7 @@ fun ExerciseTypeField(
     onTypeChange: (ExerciseType) -> Unit
 ) {
     EnumDropdownField(
-        label = "Type",
+        label = stringResource(R.string.exercise_type_field),
         selected = type,
         options = ExerciseType.entries,
         optionLabel = { it.label() },
@@ -37,7 +40,7 @@ private fun <T> EnumDropdownField(
     label: String,
     selected: T,
     options: List<T>,
-    optionLabel: (T) -> String,
+    optionLabel: @Composable (T) -> String,
     onSelect: (T) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }

@@ -23,11 +23,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.strongest.app.R
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.MuscleGroup
+import com.strongest.app.ui.components.label
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +51,7 @@ fun AddCustomExerciseDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create Custom Exercise") },
+        title = { Text(stringResource(R.string.create_custom_exercise)) },
         text = {
             Column(
                 modifier = Modifier
@@ -62,9 +65,9 @@ fun AddCustomExerciseDialog(
                         name = it
                         nameError = false
                     },
-                    label = { Text("Exercise Name *") },
+                    label = { Text(stringResource(R.string.exercise_name_required)) },
                     isError = nameError,
-                    supportingText = if (nameError) {{ Text("Name is required") }} else null,
+                    supportingText = if (nameError) {{ Text(stringResource(R.string.name_is_required)) }} else null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -75,10 +78,10 @@ fun AddCustomExerciseDialog(
                     onExpandedChange = { muscleExpanded = it }
                 ) {
                     OutlinedTextField(
-                        value = selectedMuscleGroup.name.lowercase().replaceFirstChar { it.uppercase() },
+                        value = selectedMuscleGroup.label(),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Muscle Group") },
+                        label = { Text(stringResource(R.string.muscle_group)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = muscleExpanded) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -91,7 +94,7 @@ fun AddCustomExerciseDialog(
                     ) {
                         MuscleGroup.entries.forEach { group ->
                             DropdownMenuItem(
-                                text = { Text(group.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                                text = { Text(group.label()) },
                                 onClick = {
                                     selectedMuscleGroup = group
                                     muscleExpanded = false
@@ -107,10 +110,10 @@ fun AddCustomExerciseDialog(
                     onExpandedChange = { equipmentExpanded = it }
                 ) {
                     OutlinedTextField(
-                        value = selectedEquipment.name.lowercase().replaceFirstChar { it.uppercase() },
+                        value = selectedEquipment.label(),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Equipment") },
+                        label = { Text(stringResource(R.string.equipment)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = equipmentExpanded) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -123,7 +126,7 @@ fun AddCustomExerciseDialog(
                     ) {
                         Equipment.entries.forEach { eq ->
                             DropdownMenuItem(
-                                text = { Text(eq.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                                text = { Text(eq.label()) },
                                 onClick = {
                                     selectedEquipment = eq
                                     equipmentExpanded = false
@@ -143,7 +146,7 @@ fun AddCustomExerciseDialog(
                 OutlinedTextField(
                     value = instructions,
                     onValueChange = { instructions = it },
-                    label = { Text("Instructions (optional)") },
+                    label = { Text(stringResource(R.string.instructions_optional)) },
                     minLines = 3,
                     maxLines = 6,
                     modifier = Modifier.fillMaxWidth()
@@ -171,12 +174,12 @@ fun AddCustomExerciseDialog(
                 },
                 enabled = canSave
             ) {
-                Text("Create")
+                Text(stringResource(R.string.create))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

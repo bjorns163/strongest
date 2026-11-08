@@ -43,18 +43,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.res.stringResource
+import com.strongest.app.R
 import com.strongest.app.data.repository.WeightUnit
-import java.util.Locale
+import com.strongest.app.utils.formatDecimal
 import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.utils.SettingsEntryPoint
 import com.strongest.app.utils.WorkoutRepositoryEntryPoint
 import com.strongest.app.utils.displayToKg
+import com.strongest.app.utils.filterDecimalInput
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.weightUnitLabel
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 private val KG_BARS = listOf(20f, 15f, 10f, 7f, 0f)
 private val LBS_BARS = listOf(45f, 35f, 25f, 15f, 0f)
@@ -94,13 +96,7 @@ fun calculatePlates(target: Float, bar: Float, availablePlates: Map<Float, Int>,
     return PlateResult(counts, achievedTotal, if (singleSide) remaining else remaining * 2f)
 }
 
-private fun formatWeight(value: Float): String {
-    val rounded = (value * 100f).roundToInt() / 100f
-    return if (rounded % 1f == 0f) rounded.toInt().toString() else {
-        if ((rounded * 10f) % 1f == 0f) String.format(Locale.getDefault(), "%.1f", rounded)
-        else String.format(Locale.getDefault(), "%.2f", rounded)
-    }
-}
+private fun formatWeight(value: Float): String = formatDecimal(value)
 
 /** Competition plate colours, so the loaded bar reads at a glance like a real one. */
 private fun plateColor(plate: Float, unit: WeightUnit): Color = if (unit == WeightUnit.KG) {
@@ -195,7 +191,7 @@ private fun LoadedBarVisual(load: BarLoad, unit: WeightUnit, maxPlate: Float) {
             BarSegment(width = 6.dp, height = 22.dp)
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = "Empty bar",
+                text = stringResource(R.string.empty_bar),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -310,16 +306,16 @@ fun PlateCalculatorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Plate Calculator") },
+        title = { Text(stringResource(R.string.plate_calculator)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = targetText,
                     onValueChange = { input ->
-                        val filtered = input.text.filter { it.isDigit() || it == '.' }
+                        val filtered = filterDecimalInput(input.text)
                         targetText = if (filtered == input.text) input else TextFieldValue(filtered)
                     },
-                    label = { Text("Target weight ($unitLabel, optional)") },
+                    label = { Text(stringResource(R.string.target_weight_optional, unitLabel)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier
@@ -328,7 +324,7 @@ fun PlateCalculatorDialog(
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(text = "Bar", style = MaterialTheme.typography.labelLarge)
+                Text(text = stringResource(R.string.bar), style = MaterialTheme.typography.labelLarge)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -350,7 +346,7 @@ fun PlateCalculatorDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (bar == 0f) "No bar" else "${formatWeight(bar)} $unitLabel",
+                                text = if (bar == 0f) stringResource(R.string.no_bar) else "${formatWeight(bar)} $unitLabel",
                                 color = if (selected) MaterialTheme.colorScheme.onPrimary
                                         else MaterialTheme.colorScheme.onSurface,
                                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
@@ -377,12 +373,12 @@ fun PlateCalculatorDialog(
                             rememberSetup(load.copy(singleSide = it).constrainedTo(availablePlates))
                         }
                     )
-                    Text("Single side (e.g. machines with one pin)")
+                    Text(stringResource(R.string.single_side))
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = if (load.singleSide) "Add plates" else "Add plates (per side)",
+                    text = stringResource(if (load.singleSide) R.string.add_plates else R.string.add_plates_per_side),
                     style = MaterialTheme.typography.labelLarge
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -449,11 +445,11 @@ fun PlateCalculatorDialog(
                             load = barLoadForTarget(target, load.bar, availablePlates, load.singleSide)
                         },
                         enabled = target > 0f
-                    ) { Text("Fill to target") }
+                    ) { Text(stringResource(R.string.fill_to_target)) }
                     TextButton(
                         onClick = { load = load.cleared() },
                         enabled = !load.isEmpty
-                    ) { Text("Clear bar") }
+                    ) { Text(stringResource(R.string.clear_bar)) }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -464,14 +460,17 @@ fun PlateCalculatorDialog(
 
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Total on bar: ${formatWeight(total)} $unitLabel",
+                    text = stringResource(R.string.total_on_bar, "${formatWeight(total)} $unitLabel"),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 if (!load.singleSide && !load.isEmpty) {
                     Text(
-                        text = "${formatWeight(load.plateWeight)} $unitLabel per side + " +
-                            "${formatWeight(load.bar)} $unitLabel bar",
+                        text = stringResource(
+                            R.string.per_side_plus_bar,
+                            "${formatWeight(load.plateWeight)} $unitLabel",
+                            "${formatWeight(load.bar)} $unitLabel"
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -479,11 +478,20 @@ fun PlateCalculatorDialog(
                 if (target > 0f) {
                     Text(
                         text = when {
-                            abs(difference) < 0.01f -> "Matches your target of ${formatWeight(target)} $unitLabel"
+                            abs(difference) < 0.01f ->
+                                stringResource(R.string.matches_target, "${formatWeight(target)} $unitLabel")
                             difference > 0f ->
-                                "${formatWeight(difference)} $unitLabel over the ${formatWeight(target)} $unitLabel target"
+                                stringResource(
+                                    R.string.over_target,
+                                    "${formatWeight(difference)} $unitLabel",
+                                    "${formatWeight(target)} $unitLabel"
+                                )
                             else ->
-                                "${formatWeight(-difference)} $unitLabel to go to ${formatWeight(target)} $unitLabel"
+                                stringResource(
+                                    R.string.to_go_to_target,
+                                    "${formatWeight(-difference)} $unitLabel",
+                                    "${formatWeight(target)} $unitLabel"
+                                )
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (abs(difference) < 0.01f) MaterialTheme.colorScheme.primary
@@ -492,14 +500,14 @@ fun PlateCalculatorDialog(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Plate availability comes from Settings → Plate Calculator.",
+                    text = stringResource(R.string.plate_availability_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         }
     )
 }

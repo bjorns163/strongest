@@ -37,11 +37,5 @@ enum class Equipment {
 
 /** Biomechanical category — how many joints the movement crosses. */
 enum class ExerciseType {
-    COMPOUND, ISOLATION, ISOMETRIC;
-
-    fun label(): String = when (this) {
-        COMPOUND -> "Compound"
-        ISOLATION -> "Isolation"
-        ISOMETRIC -> "Isometric"
-    }
+    COMPOUND, ISOLATION, ISOMETRIC
 }

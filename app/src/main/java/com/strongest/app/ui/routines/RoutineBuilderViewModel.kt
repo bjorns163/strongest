@@ -19,10 +19,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 data class RoutineExerciseUi(
@@ -37,13 +37,17 @@ data class RoutineExerciseUi(
     val previousSets: List<com.strongest.app.ui.workout.PreviousSetInfo> = emptyList()
 )
 
+private val routineSetUiKeys = AtomicLong()
+
 data class RoutineSetUi(
     val setNumber: Int,
     val weight: Float = 0f,
     val reps: Int = 10,
     val restSeconds: Int = 90,
     val setType: SetType = SetType.NORMAL,
-    val previousSetInfo: com.strongest.app.ui.workout.PreviousSetInfo? = null
+    val previousSetInfo: com.strongest.app.ui.workout.PreviousSetInfo? = null,
+    /** Stable row identity for the UI, so a deleted set's row goes with it. */
+    val uiKey: Long = routineSetUiKeys.incrementAndGet()
 )
 
 data class RoutineBuilderState(
@@ -78,7 +82,9 @@ class RoutineBuilderViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            _exercises.value = repository.getAllExercises().first()
+            // Follow the database rather than a one-off snapshot: an exercise created from the
+            // picker while this editor is open has to be addable (and usable as a replacement).
+            repository.getAllExercises().collect { _exercises.value = it }
         }
         viewModelScope.launch {
             settingsRepository.settingsFlow.collect { settings ->
@@ -126,7 +132,8 @@ class RoutineBuilderViewModel @Inject constructor(
                     }
                     RoutineExerciseUi(
                         exerciseId = re.exerciseId,
-                        exerciseName = exercise?.name ?: "Unknown",
+                        // Empty when the exercise no longer exists; the screen shows a localized "Unknown".
+                        exerciseName = exercise?.name ?: "",
                         routineExerciseId = re.id,
                         muscleGroup = exercise?.muscleGroup?.name ?: "",
                         equipment = exercise?.equipment ?: Equipment.NONE,
@@ -150,10 +157,8 @@ class RoutineBuilderViewModel @Inject constructor(
     }
 
     fun addExercise(exerciseId: Long) {
-        val allExercises = _exercises.value
-        val found = allExercises.find { it.id == exerciseId } ?: return
-
         viewModelScope.launch {
+            val found = findExercise(exerciseId) ?: return@launch
             val previousSets = repository.getPreviousSessionSets(exerciseId)
             val defaultSetCount = if (previousSets.isNotEmpty()) previousSets.size else 3
             val defaultWeight = previousSets.firstOrNull()?.weightKg ?: 0f
@@ -187,6 +192,14 @@ class RoutineBuilderViewModel @Inject constructor(
             _state.update { it.copy(exercises = it.exercises + newExercise) }
         }
     }
+
+    /**
+     * The exercise from the live list, or straight from the database when it was created a moment
+     * ago and the list hasn't caught up yet. Silently returning null here used to drop exercises
+     * created in the picker.
+     */
+    private suspend fun findExercise(exerciseId: Long): Exercise? =
+        _exercises.value.find { it.id == exerciseId } ?: repository.getExerciseById(exerciseId)
 
     fun addExercises(exerciseIds: List<Long>) {
         exerciseIds.forEach { addExercise(it) }
@@ -343,8 +356,7 @@ class RoutineBuilderViewModel @Inject constructor(
             if (exerciseIndex == -1) return@launch
 
             val oldExercise = _state.value.exercises[exerciseIndex]
-            val allExercises = _exercises.value
-            val newExercise = allExercises.find { it.id == newExerciseId } ?: return@launch
+            val newExercise = findExercise(newExerciseId) ?: return@launch
 
             val previousSets = repository.getPreviousSessionSets(newExerciseId)
 

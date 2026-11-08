@@ -1,84 +1,647 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Strongest</string>
-    <string name="app_description">Free workout tracker with 800+ exercises</string>
+    <string name="app_name" translatable="false">Strongest</string>
 
-    <!-- Navigation -->
+    <!-- Measurements: categories -->
+    <string name="metric_category_body">Body</string>
+    <string name="metric_category_upper_body">Upper Body</string>
+    <string name="metric_category_core">Core</string>
+    <string name="metric_category_lower_body">Lower Body</string>
+
+    <!-- Measurements: metrics -->
+    <string name="metric_weight">Weight</string>
+    <string name="metric_weight_instructions">Weigh yourself first thing in the morning, after using the bathroom and before eating or drinking. Wear minimal clothing for consistency.</string>
+    <string name="metric_body_fat">Body Fat</string>
+    <string name="metric_body_fat_instructions">Use the same method every time: smart scale, calipers, or DEXA. Measure under consistent conditions (e.g. fasted, morning).</string>
+    <string name="metric_caloric_intake">Caloric Intake</string>
+    <string name="metric_caloric_intake_instructions">Log the total calories you consumed over the day. Track at the same time each day for consistent comparisons.</string>
+    <string name="metric_neck">Neck</string>
+    <string name="metric_neck_instructions">Stand relaxed with your head straight. Measure around the middle of the neck, just below the Adam\'s apple. Tape should be snug, not tight.</string>
+    <string name="metric_shoulders">Shoulders</string>
+    <string name="metric_shoulders_instructions">Stand relaxed with arms at your sides. Wrap the tape around the widest part of your shoulders / deltoids, keeping the tape level.</string>
+    <string name="metric_chest">Chest</string>
+    <string name="metric_chest_instructions">Stand relaxed and breathe normally. Wrap the tape around the chest at nipple level, keeping it horizontal across the back.</string>
+    <string name="metric_left_bicep">Left Bicep</string>
+    <string name="metric_left_bicep_instructions">Flex your left arm at 90°. Measure around the largest part of the biceps, keeping the tape perpendicular to the arm.</string>
+    <string name="metric_right_bicep">Right Bicep</string>
+    <string name="metric_right_bicep_instructions">Flex your right arm at 90°. Measure around the largest part of the biceps, keeping the tape perpendicular to the arm.</string>
+    <string name="metric_left_forearm">Left Forearm</string>
+    <string name="metric_left_forearm_instructions">Let your left arm hang at your side, palm facing forward. Measure around the widest point of the forearm below the elbow.</string>
+    <string name="metric_right_forearm">Right Forearm</string>
+    <string name="metric_right_forearm_instructions">Let your right arm hang at your side, palm facing forward. Measure around the widest point of the forearm below the elbow.</string>
+    <string name="metric_upper_abs">Upper Abs</string>
+    <string name="metric_upper_abs_instructions">Stand relaxed and exhale normally. Wrap the tape just below the chest, around the upper abdomen. Keep the tape level.</string>
+    <string name="metric_waist">Waist</string>
+    <string name="metric_waist_instructions">Stand relaxed and exhale normally. Measure around the narrowest part of the waist, usually around the navel. Do not suck in.</string>
+    <string name="metric_lower_abs">Lower Abs</string>
+    <string name="metric_lower_abs_instructions">Stand relaxed and exhale normally. Measure around the lower abdomen, roughly two finger-widths below the navel.</string>
+    <string name="metric_hips">Hips</string>
+    <string name="metric_hips_instructions">Stand with feet together. Measure around the widest part of the hips / glutes. Keep the tape level all the way around.</string>
+    <string name="metric_left_thigh">Left Thigh</string>
+    <string name="metric_left_thigh_instructions">Stand with weight evenly distributed. Measure around the largest part of the left thigh, just below the glute.</string>
+    <string name="metric_right_thigh">Right Thigh</string>
+    <string name="metric_right_thigh_instructions">Stand with weight evenly distributed. Measure around the largest part of the right thigh, just below the glute.</string>
+    <string name="metric_left_calf">Left Calf</string>
+    <string name="metric_left_calf_instructions">Stand relaxed. Measure around the widest part of the left calf, keeping the tape perpendicular to the leg.</string>
+    <string name="metric_right_calf">Right Calf</string>
+    <string name="metric_right_calf_instructions">Stand relaxed. Measure around the widest part of the right calf, keeping the tape perpendicular to the leg.</string>
+
+    <!-- Caliper skinfold sites -->
+    <string name="skinfold_chest">Chest</string>
+    <string name="skinfold_chest_instruction">Diagonal fold, halfway between the front armpit crease and the nipple (men) or one-third of the way (women).</string>
+    <string name="skinfold_abdomen">Abdomen</string>
+    <string name="skinfold_abdomen_instruction">Vertical fold about 2 cm to the right of the navel.</string>
+    <string name="skinfold_thigh">Thigh</string>
+    <string name="skinfold_thigh_instruction">Vertical fold on the front of the thigh, midway between the hip crease and the top of the kneecap.</string>
+    <string name="skinfold_triceps">Triceps</string>
+    <string name="skinfold_triceps_instruction">Vertical fold on the back of the upper arm, midway between the shoulder and elbow, arm relaxed.</string>
+    <string name="skinfold_suprailiac">Suprailiac</string>
+    <string name="skinfold_suprailiac_instruction">Diagonal fold just above the hip bone, following the natural angle of the iliac crest.</string>
+    <string name="skinfold_midaxillary">Midaxillary</string>
+    <string name="skinfold_midaxillary_instruction">Vertical fold on the midline of the side of the torso, level with the bottom of the sternum.</string>
+    <string name="skinfold_subscapular">Subscapular</string>
+    <string name="skinfold_subscapular_instruction">Diagonal fold just below the bottom tip of the shoulder blade.</string>
+    <string name="skinfold_biceps">Biceps</string>
+    <string name="skinfold_biceps_instruction">Vertical fold on the front of the upper arm, midway between the shoulder and elbow, arm relaxed.</string>
+
+    <!-- Muscle groups -->
+    <string name="muscle_chest">Chest</string>
+    <string name="muscle_back">Back</string>
+    <string name="muscle_shoulders">Shoulders</string>
+    <string name="muscle_biceps">Biceps</string>
+    <string name="muscle_triceps">Triceps</string>
+    <string name="muscle_abs">Abs</string>
+    <string name="muscle_quads">Quads</string>
+    <string name="muscle_hamstrings">Hamstrings</string>
+    <string name="muscle_glutes">Glutes</string>
+    <string name="muscle_calves">Calves</string>
+    <string name="muscle_forearms">Forearms</string>
+    <string name="muscle_lower_back">Lower back</string>
+    <string name="muscle_traps">Traps</string>
+    <string name="muscle_full_body">Full body</string>
+    <string name="muscle_cardio">Cardio</string>
+    <string name="muscle_stretching">Stretching</string>
+    <string name="muscle_other">Other</string>
+
+    <!-- Equipment -->
+    <string name="equipment_barbell">Barbell</string>
+    <string name="equipment_dumbbell">Dumbbell</string>
+    <string name="equipment_machine">Machine</string>
+    <string name="equipment_cable">Cable</string>
+    <string name="equipment_bodyweight">Bodyweight</string>
+    <string name="equipment_kettlebell">Kettlebell</string>
+    <string name="equipment_resistance_band">Resistance band</string>
+    <string name="equipment_medicine_ball">Medicine ball</string>
+    <string name="equipment_suspension">Suspension</string>
+    <string name="equipment_smith_machine">Smith machine</string>
+    <string name="equipment_ez_bar">EZ bar</string>
+    <string name="equipment_trap_bar">Trap bar</string>
+    <string name="equipment_plate">Plate</string>
+    <string name="equipment_none">None</string>
+    <string name="equipment_other">Other</string>
+
+    <!-- Exercise types -->
+    <string name="exercise_type_compound">Compound</string>
+    <string name="exercise_type_isolation">Isolation</string>
+    <string name="exercise_type_isometric">Isometric</string>
+
+    <!-- Set types -->
+    <string name="set_type_normal">Normal</string>
+    <string name="set_type_warm_up">Warm-up</string>
+    <string name="set_type_failure">Failure</string>
+    <string name="set_type_drop_set">Drop set</string>
+
+    <!-- Date ranges (chip labels, keep short) -->
+    <string name="range_7d">7d</string>
+    <string name="range_30d">30d</string>
+    <string name="range_90d">90d</string>
+    <string name="range_6m">6m</string>
+    <string name="range_1y">1y</string>
+    <string name="range_all">All</string>
+    <string name="range_custom">Custom</string>
+
+    <!-- Progress metrics -->
+    <string name="progress_metric_sets">Sets</string>
+    <string name="progress_metric_weight">Weight</string>
+    <string name="progress_metric_workouts">Workouts</string>
+    <string name="progress_metric_prs">PRs</string>
+
+    <!-- Caliper protocols -->
+    <string name="caliper_mode_3_site">3-site</string>
+    <string name="caliper_mode_4_site">4-site</string>
+    <string name="caliper_mode_7_site">7-site</string>
+
+    <!-- Bottom navigation -->
     <string name="nav_workout">Workout</string>
     <string name="nav_routines">Routines</string>
     <string name="nav_history">History</string>
     <string name="nav_progress">Progress</string>
     <string name="nav_settings">Settings</string>
-
-    <!-- Workout -->
-    <string name="start_workout">Start Workout</string>
-    <string name="finish_workout">Finish Workout</string>
-    <string name="add_exercise">Add Exercise</string>
-    <string name="add_set">Add Set</string>
-    <string name="log_set">Log Set</string>
-    <string name="previous">Previous</string>
-    <string name="weight">Weight</string>
-    <string name="reps">Reps</string>
-    <string name="rpe">RPE</string>
-    <string name="set_type">Set Type</string>
-    <string name="normal_set">Normal</string>
-    <string name="warmup_set">Warm Up</string>
-    <string name="failure_set">Failure</string>
-    <string name="drop_set">Drop Set</string>
-    <string name="rest_timer">Rest Timer</string>
-
-    <!-- Routines -->
-    <string name="create_routine">Create Routine</string>
-    <string name="routine_name">Routine Name</string>
-    <string name="routine_description">Description (optional)</string>
-    <string name="delete_routine">Delete Routine</string>
-    <string name="edit_routine">Edit Routine</string>
-
-    <!-- Exercises -->
-    <string name="exercise_library">Exercise Library</string>
-    <string name="search_exercises">Search exercises...</string>
-    <string name="all_muscles">All</string>
-    <string name="chest">Chest</string>
-    <string name="back">Back</string>
-    <string name="shoulders">Shoulders</string>
-    <string name="biceps">Biceps</string>
-    <string name="triceps">Triceps</string>
-    <string name="legs">Legs</string>
-    <string name="calves">Calves</string>
-    <string name="abs">Abs</string>
-    <string name="lower_back">Lower Back</string>
-    <string name="cardio">Cardio</string>
-    <string name="stretching">Stretching</string>
-
-    <!-- Progress -->
-    <string name="personal_records">Personal Records</string>
-    <string name="one_rep_max">1 Rep Max</string>
-    <string name="volume">Volume</string>
-    <string name="muscle_heatmap">Muscle Heatmap</string>
-    <string name="body_measurements">Body Measurements</string>
-
-    <!-- Settings -->
-    <string name="weight_unit">Weight Unit</string>
-    <string name="kilograms">Kilograms (kg)</string>
-    <string name="pounds">Pounds (lbs)</string>
-    <string name="theme">Theme</string>
-    <string name="dark_mode">Dark Mode</string>
-    <string name="light_mode">Light Mode</string>
-    <string name="system_default">System Default</string>
-    <string name="export_csv">Export CSV</string>
-    <string name="import_csv">Import CSV</string>
-    <string name="about">About</string>
-    <string name="privacy_policy">Privacy Policy</string>
-    <string name="donate">Support Development</string>
+    <string name="exercise_type_field">Type</string>
 
     <!-- Common -->
-    <string name="save">Save</string>
+    <string name="weight">Weight</string>
+    <string name="reps">Reps</string>
+    <string name="duration_mm_ss">Duration (mm:ss)</string>
+
+    <!-- Muscle heatmap -->
+    <string name="body_front">Front</string>
+    <string name="body_back">Back</string>
+    <string name="heatmap_untrained">Untrained</string>
+    <string name="heatmap_most_volume">Most volume</string>
+    <string name="back">Back</string>
+
+    <!-- Measurements -->
+    <string name="body_measurements">Body Measurements</string>
+    <plurals name="entry_count">
+        <item quantity="one">%d entry</item>
+        <item quantity="other">%d entries</item>
+    </plurals>
+    <string name="no_entries_yet">No entries yet</string>
+
+    <!-- Exercises -->
+    <string name="create_custom_exercise">Create Custom Exercise</string>
+    <string name="exercise_name_required">Exercise Name *</string>
+    <string name="name_is_required">Name is required</string>
+    <string name="muscle_group">Muscle Group</string>
+    <string name="equipment">Equipment</string>
+    <string name="instructions_optional">Instructions (optional)</string>
+    <string name="create">Create</string>
     <string name="cancel">Cancel</string>
+
+    <!-- Workout home -->
+    <string name="app_tagline">Your workout tracker</string>
+    <string name="start_workout">Start Workout</string>
+    <string name="start_empty_workout">Start Empty Workout</string>
+    <string name="resume_workout">Resume Workout</string>
+    <string name="your_routines">Your Routines</string>
+    <string name="ungrouped">Ungrouped</string>
+    <string name="exercises">Exercises</string>
+    <string name="filter_all">All</string>
+    <string name="search_exercises">Search exercises…</string>
+    <string name="replace_exercise">Replace Exercise</string>
+    <string name="add_exercise">Add Exercise</string>
+    <string name="replace">Replace</string>
+    <string name="add_count">Add (%1$d)</string>
+    <string name="no_exercises_found">No exercises found</string>
+
+    <!-- Measurement detail -->
+    <string name="how_to_measure_title">How to measure: %1$s</string>
+    <string name="how_to_measure">How to measure</string>
+    <string name="got_it">Got it</string>
+    <string name="delete_entry_title">Delete Entry</string>
+    <string name="delete_entry">Delete entry</string>
+    <string name="delete_measurement_message">Delete this measurement? This action cannot be undone.</string>
     <string name="delete">Delete</string>
+    <string name="calipers">Calipers</string>
+    <string name="add_measurement">Add measurement</string>
+    <string name="history">History</string>
+    <string name="no_measurements_yet">No measurements logged yet. Tap + to add your first entry.</string>
+    <string name="chart_empty_add_measurements">Add measurements to see your progress</string>
+    <string name="chart_empty_range">No measurements in this range</string>
+    <string name="chart_empty_need_two">Add at least one more entry to see a trend</string>
+    <string name="ok">OK</string>
+    <string name="add_metric_title">Add %1$s</string>
+    <string name="value_with_unit">Value (%1$s)</string>
+    <string name="date_optional">Date (optional)</string>
+    <string name="today">Today</string>
+    <string name="pick">Pick</string>
+    <string name="change">Change</string>
+    <string name="reset">Reset</string>
+    <string name="notes_optional">Notes (optional)</string>
+    <string name="save">Save</string>
+
+    <!-- Caliper body fat dialog -->
+    <string name="caliper_your_profile">Your profile</string>
+    <string name="caliper_result_title">Body fat result</string>
+    <string name="caliper_site_progress">Skinfold %1$d of %2$d</string>
+    <string name="caliper_profile_explanation">The caliper formula needs your gender and age. This is saved once.</string>
+    <string name="sex_male">Male</string>
+    <string name="sex_female">Female</string>
+    <string name="birth_year">Birth year</string>
+    <string name="caliper_sum">%1$s • sum %2$s mm</string>
+    <string name="caliper_compute_failed">Couldn\'t compute — please check the values.</string>
+    <string name="caliper_site_location">%1$s skinfold location</string>
+    <string name="skinfold_mm">Skinfold (mm)</string>
+    <string name="next">Next</string>
+
+    <!-- History -->
+    <string name="share_count">Share (%1$d)</string>
+    <string name="share_workouts">Share workouts</string>
+    <string name="no_workouts_yet">No Workouts Yet</string>
+    <string name="no_workouts_yet_hint">Complete your first workout to see it here</string>
+    <string name="exit_selection">Exit selection</string>
+    <plurals name="selected_count">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <string name="clear_all">Clear All</string>
+    <string name="select_all">Select All</string>
+    <string name="delete_workout_title">Delete Workout</string>
+    <string name="delete_workout_message">Are you sure you want to delete this workout? This action cannot be undone.</string>
+    <string name="delete_workout">Delete workout</string>
+    <string name="empty_workout">Empty Workout</string>
+    <string name="started_at">Started at %1$s</string>
+    <string name="sets">Sets</string>
+    <string name="best_set">Best set</string>
+    <string name="cardio_level_duration">Level %1$s - %2$s</string>
+    <string name="minutes_short">%1$dm</string>
+    <plurals name="pr_count">
+        <item quantity="one">%d PR</item>
+        <item quantity="other">%d PRs</item>
+    </plurals>
+
+    <!-- Routines -->
+    <string name="routine_imported">Routine imported successfully</string>
+    <string name="routine_import_failed">Failed to import routine</string>
+    <string name="create_routine">Create Routine</string>
+    <string name="manage_groups">Manage groups</string>
+    <string name="import_routine">Import Routine</string>
+    <string name="no_routines_yet">No Routines Yet</string>
+    <string name="no_routines_yet_hint">Create your first routine to get started</string>
+    <string name="delete_group_title">Delete Group</string>
+    <string name="delete_group_message">Delete “%1$s”? Routines in this group will become ungrouped.</string>
+    <string name="routine_groups">Routine Groups</string>
+    <string name="no_groups_yet">No groups yet. Create one below.</string>
+    <string name="rename">Rename</string>
+    <string name="new_group_name">New group name</string>
+    <string name="add">Add</string>
+    <string name="close">Close</string>
+    <string name="delete_routine_title">Delete Routine</string>
+    <string name="delete_routine_message">Delete “%1$s”? This action cannot be undone.</string>
+    <string name="share_routine">Share routine</string>
+    <string name="delete_routine">Delete routine</string>
+
+    <!-- Routine builder -->
+    <string name="edit_routine">Edit Routine</string>
+    <string name="new_routine">New Routine</string>
+    <string name="routine_name">Routine name</string>
+    <string name="description_optional">Description (optional)</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="options">Options</string>
+    <string name="add_note">Add Note</string>
+    <string name="edit_note">Edit Note</string>
+    <string name="remove_exercise">Remove Exercise</string>
+    <string name="exercise_note">Exercise Note</string>
+    <string name="note">Note</string>
+    <string name="remove_note">Remove Note</string>
+
+    <!-- Set table column headers (keep short) -->
+    <string name="col_set">Set</string>
+    <string name="col_last">Last</string>
+    <string name="col_level">Level</string>
+    <string name="col_duration">Duration</string>
+    <string name="col_reps">Reps</string>
+    <string name="col_rest">Rest</string>
+    <string name="add_set">Add Set</string>
+    <string name="warm_up_set">Warm-up set</string>
+    <string name="mark_as_warm_up">Mark as warm-up set</string>
+    <string name="group">Group</string>
+    <string name="select_group">Select group</string>
+
+    <!-- Plate calculator (%s arguments are a weight with its unit, e.g. "20 kg") -->
+    <string name="empty_bar">Empty bar</string>
+    <string name="plate_calculator">Plate Calculator</string>
+    <string name="target_weight_optional">Target weight (%1$s, optional)</string>
+    <string name="bar">Bar</string>
+    <string name="no_bar">No bar</string>
+    <string name="single_side">Single side (e.g. machines with one pin)</string>
+    <string name="add_plates">Add plates</string>
+    <string name="add_plates_per_side">Add plates (per side)</string>
+    <string name="fill_to_target">Fill to target</string>
+    <string name="clear_bar">Clear bar</string>
+    <string name="total_on_bar">Total on bar: %1$s</string>
+    <string name="per_side_plus_bar">%1$s per side + %2$s bar</string>
+    <string name="matches_target">Matches your target of %1$s</string>
+    <string name="over_target">%1$s over the %2$s target</string>
+    <string name="to_go_to_target">%1$s to go to %2$s</string>
+    <string name="plate_availability_hint">Plate availability comes from Settings → Plate Calculator.</string>
+
+    <!-- Settings -->
+    <string name="data_exported">Data exported successfully</string>
+    <string name="data_imported">Imported %1$s, %2$s</string>
+    <plurals name="workout_count">
+        <item quantity="one">%d workout</item>
+        <item quantity="other">%d workouts</item>
+    </plurals>
+    <plurals name="exercise_count">
+        <item quantity="one">%d exercise</item>
+        <item quantity="other">%d exercises</item>
+    </plurals>
+    <string name="settings_general">General</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System</string>
+    <string name="settings_weight_unit">Weight unit</string>
+    <string name="settings_weight_unit_desc">Used for every weight you enter and see.</string>
+    <string name="kilograms">Kilograms (kg)</string>
+    <string name="pounds">Pounds (lbs)</string>
+    <string name="settings_rest_timer">Rest timer</string>
+    <string name="settings_default_rest">Default rest</string>
+    <string name="settings_last_set_rest">Last set rest</string>
+    <string name="settings_last_set_rest_desc">Applied to the final set of an exercise.</string>
+    <string name="settings_adjustment_step">Adjustment step</string>
+    <string name="settings_adjustment_step_desc">How much the +/- buttons move a running timer.</string>
+    <string name="seconds_short">%1$ds</string>
+    <string name="hours_short">%1$dh</string>
+    <string name="settings_alert_sound">Alert sound</string>
+    <string name="select_timer_sound">Select Timer Sound</string>
+    <string name="sound_custom">Custom</string>
+    <string name="sound_default">Default</string>
+    <string name="sound_silent">Silent</string>
+    <string name="settings_keep_screen_on">Keep screen on</string>
+    <string name="settings_keep_screen_on_desc">Stops the screen sleeping during an active workout.</string>
+    <string name="settings_rpe">Rate sets with RPE</string>
+    <string name="settings_rpe_desc">Rate each set 1–10 for perceived exertion. Cardio sets are excluded.</string>
+    <string name="settings_notification">Notification bar</string>
+    <string name="settings_notification_desc">Shows workout progress, the rest timer and quick controls while you train.</string>
+    <string name="settings_calculators">Calculators</string>
+    <string name="settings_1rm_formula">1RM formula</string>
+    <string name="settings_1rm_formula_desc">Used by the 1RM calculator on the exercise detail screen.</string>
+    <string name="formula_epley">Epley</string>
+    <string name="formula_brzycki">Brzycki</string>
+    <string name="formula_both">Both (average)</string>
+    <string name="settings_available_plates">Available plates</string>
+    <string name="settings_available_plates_desc">How many of each plate your gym has. The calculator only loads plates you own.</string>
+    <string name="settings_recovery">Recovery</string>
+    <string name="settings_recovery_windows">Recovery windows</string>
+    <string name="settings_recovery_windows_desc">How long each muscle needs before it counts as fresh on the Progress tab.</string>
+    <string name="settings_profile">Profile</string>
+    <string name="settings_gender">Gender</string>
+    <string name="not_set">Not set</string>
+    <string name="settings_caliper_method">Caliper method</string>
+    <string name="settings_caliper_method_desc">Skinfold protocol used by the guided body-fat measurement.</string>
+    <string name="settings_data">Data</string>
+    <string name="export">Export</string>
+    <string name="import_label">Import</string>
+    <string name="settings_about">About</string>
+    <plurals name="settings_about_desc">
+        <item quantity="one">Free workout tracker with %1$d exercise.</item>
+        <item quantity="other">Free workout tracker with %1$d exercises.</item>
+    </plurals>
+    <string name="settings_support">Support development</string>
+    <string name="settings_support_desc">Opens the project on GitHub.</string>
+    <string name="default_rest_timer_title">Default Rest Timer</string>
+    <string name="rest_mm_ss">Rest (mm:ss)</string>
+    <string name="muscle_recovery_title">%1$s recovery</string>
+    <string name="hours">Hours</string>
+    <string name="birth_year_title">Birth Year</string>
+    <string name="year_hint">Year (e.g. 1990)</string>
+    <string name="timer_adjustment_title">Timer Adjustment Step</string>
+    <string name="seconds">Seconds</string>
+    <string name="last_set_rest_title">Last Set Rest Timer</string>
+    <string name="import_data_title">Import Data</string>
+    <string name="import_data_message">This will REPLACE all existing data in the app with the imported data. This cannot be undone. Make sure you have exported your current data first if you want to keep it.\n\nContinue?</string>
+    <string name="continue_label">Continue</string>
+    <string name="selected">Selected</string>
+    <string name="collapse">Collapse</string>
+    <string name="expand">Expand</string>
+    <string name="plates_unlimited_hint">999 means unlimited. For a barbell the calculator loads a pair at a time.</string>
+    <string name="error_open_output_file">Could not open output file</string>
+    <string name="error_open_input_file">Could not open input file</string>
+    <string name="error_invalid_export_file">Invalid or corrupted export file</string>
+    <string name="export_failed">Export failed: %1$s</string>
+    <string name="import_failed">Import failed: %1$s</string>
+    <string name="unknown_error">Unknown error</string>
+
+    <!-- Exercise detail -->
+    <string name="exercise_details">Exercise Details</string>
+    <string name="edit_exercise">Edit exercise</string>
+    <string name="delete_exercise">Delete exercise</string>
+    <string name="delete_exercise_title">Delete Exercise</string>
+    <string name="delete_exercise_message">Are you sure you want to delete this custom exercise? This cannot be undone.</string>
+    <string name="tab_details">Details</string>
+    <string name="tab_1rm">1RM</string>
+    <string name="tab_warm_up">Warm-up</string>
+    <string name="add_warm_up_sets_to_workout">Add warm-up sets to workout</string>
+    <string name="add_warm_up_sets_to_routine">Add warm-up sets to routine</string>
+    <string name="add_warm_up_sets">Add warm-up sets</string>
+    <string name="also_works">Also works: %1$s</string>
+    <string name="description">Description</string>
+    <string name="how_to_perform">How to Perform</string>
+    <string name="my_note">My Note</string>
+    <string name="tap_to_add_note">Tap to add a note…</string>
+    <string name="edit_exercise_title">Edit Exercise</string>
+    <string name="exercise_name">Exercise Name</string>
+    <string name="total_sets">Total Sets</string>
+    <string name="max_level">Max Level</string>
+    <string name="max_weight">Max Weight</string>
+    <string name="no_history_yet">No history yet</string>
+    <string name="no_history_yet_hint">Complete a workout to see history here</string>
+    <plurals name="set_count">
+        <item quantity="one">%d set</item>
+        <item quantity="other">%d sets</item>
+    </plurals>
+    <plurals name="times_reps">
+        <item quantity="one">× %d rep</item>
+        <item quantity="other">× %d reps</item>
+    </plurals>
+    <string name="rpe_value">RPE %1$s</string>
+    <string name="estimated_one_rep_max">Estimated One-Rep Max</string>
+    <string name="formula_change_in_settings">Formula: %1$s — change in Settings.</string>
+    <string name="formula_both_short">Epley + Brzycki (avg)</string>
+    <string name="weight_with_unit">Weight (%1$s)</string>
+    <string name="one_rm_enter_hint">Enter weight and reps to see your estimated 1RM.</string>
+    <string name="estimated_1rm">Estimated 1RM</string>
+    <string name="epley_brzycki_values">Epley: %1$s  •  Brzycki: %2$s</string>
+    <string name="weight_you_can_do_for">Weight you can do for…</string>
+    <string name="rep_max_table_hint">Estimated max weight for each rep count, based on your 1RM.</string>
+    <plurals name="rep_count">
+        <item quantity="one">%d rep</item>
+        <item quantity="other">%d reps</item>
+    </plurals>
+    <string name="warm_up_sets">Warm-up sets</string>
+    <string name="warm_up_explanation">Do all warm-up sets in order before your working set — each builds on the previous one. Rest 30–60 seconds between warm-ups, then take your normal rest before the working set. Reps drop as the weight climbs because heavier warm-ups are just for priming, not for fatigue.</string>
+    <string name="working_with_unit">Working (%1$s)</string>
+    <string name="number_of_warm_up_sets">Number of warm-up sets</string>
+    <string name="warm_up_too_light">This weight is too light to warm up to — just do your working set.</string>
+    <string name="warm_up_only_one">This weight only supports 1 warm-up set.</string>
+    <plurals name="warm_up_set_count">
+        <item quantity="one">%d warm-up set</item>
+        <item quantity="other">%d warm-up sets</item>
+    </plurals>
+    <string name="warm_up_lighter_hint">Lighter working weights leave less room to ramp up.</string>
+    <string name="warm_up_enter_hint">Enter your working weight and reps to see warm-up suggestions.</string>
+    <string name="working_set">Working set</string>
+    <string name="warm_up_n">Warm-up %1$d</string>
+
+    <!-- Progress -->
+    <string name="view_body_measurements">View Body Measurements →</string>
+    <string name="nothing_in_range">nothing in range</string>
+    <string name="focus_a_muscle">Focus a muscle</string>
+    <string name="focused_muscle_value">%1$s  ·  %2$s — tap again to clear</string>
+    <string name="muscle_balance">Muscle Balance</string>
+    <string name="muscle_heatmap">Muscle Heatmap</string>
+    <string name="personal_records">Personal Records</string>
+    <string name="no_prs_yet">Complete workouts to see your personal records</string>
+    <string name="no_prs_match">No records match the selected filters</string>
+    <string name="volume_per_day">Volume per Day</string>
+    <string name="sets_per_day">Sets per Day</string>
+    <string name="workouts_per_day">Workouts per Day</string>
+    <string name="prs_per_day">PRs per Day</string>
+    <string name="volume_by_muscle_group">Volume by Muscle Group</string>
+    <string name="sets_by_muscle_group">Sets by Muscle Group</string>
+    <string name="workouts_by_muscle_group">Workouts by Muscle Group</string>
+    <string name="prs_by_muscle_group">PRs by Muscle Group</string>
+    <string name="muscle_info_shared">Muscle Balance and the Muscle Heatmap use the same numbers. Warm-up sets and cardio are not counted.</string>
+    <string name="muscle_info_sets">Every exercise has one main muscle and can work other muscles too. A set counts as 1 set for the main muscle and %1$s set for each other muscle it works.\n\nFor example, 1 set of Barbell Flat Bench Press counts as 1 set for Chest, and %1$s set each for Triceps and Shoulders. That\'s why you can see halves like 7.5 sets.</string>
+    <string name="muscle_info_volume">Volume is weight × reps. The main muscle of an exercise gets all of it, and each other muscle it works gets %1$d%%.\n\nFor example, 100 %2$s × 10 on Barbell Flat Bench Press adds 1000 %2$s to Chest, and %3$d %2$s each to Triceps and Shoulders.</string>
+    <string name="muscle_info_workouts">The number of workouts in which a muscle was trained, as the main muscle or as one the exercise also works. A workout counts once per muscle, however many exercises hit it.</string>
+    <string name="muscle_info_prs">PRs are counted for the main muscle of the exercise only. A workout\'s total volume PR belongs to no single muscle, so it only shows under PRs per Day.\n\nMuscle Balance and the Muscle Heatmap use the same numbers. Cardio is not counted.</string>
+    <string name="how_this_is_counted">How this is counted</string>
+    <string name="recovering_muscles">Recovering muscles</string>
+    <string name="all_recovered">All trained muscles are recovered — ready to train.</string>
+    <string name="hours_left">%1$dh left</string>
+    <string name="no_cardio_in_range">No cardio in this range</string>
+    <string name="total_time">Total time</string>
+    <string name="sessions">Sessions</string>
+    <plurals name="session_count">
+        <item quantity="one">%d session</item>
+        <item quantity="other">%d sessions</item>
+    </plurals>
+    <string name="max_level_value">max level %1$s</string>
+    <string name="last_done">last %1$s</string>
+    <string name="custom_range">Custom range</string>
+    <string name="custom_range_no_data">Finish a workout to pick a range from your data.</string>
+    <string name="from">From</string>
+    <string name="to">To</string>
+    <string name="all_workouts_today">All your workouts are from today.</string>
+    <plurals name="day_count">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="apply">Apply</string>
+    <string name="volume_with_unit">Volume (%1$s)</string>
+    <plurals name="set_count_value">
+        <item quantity="one">%s set</item>
+        <item quantity="other">%s sets</item>
+    </plurals>
+    <plurals name="workout_count_value">
+        <item quantity="one">%s workout</item>
+        <item quantity="other">%s workouts</item>
+    </plurals>
+    <plurals name="pr_count_value">
+        <item quantity="one">%s PR</item>
+        <item quantity="other">%s PRs</item>
+    </plurals>
+    <string name="no_data_in_range">No data in this range</string>
+
+    <!-- Active workout -->
+    <string name="notification_permission_title">Notification Permission</string>
+    <string name="notification_permission_message">Strongest uses the notification bar to show your active workout progress, rest timer, and quick controls. Grant notification permission to see these updates even when the app is in the background.</string>
+    <string name="allow">Allow</string>
+    <string name="not_now">Not Now</string>
+    <string name="cancel_workout">Cancel Workout</string>
+    <string name="cancel_workout_message">Are you sure you want to cancel this workout? All progress will be lost.</string>
+    <string name="continue_workout">Continue Workout</string>
+    <string name="finish_workout">Finish Workout</string>
+    <plurals name="uncompleted_sets_message">
+        <item quantity="one">You have %d uncompleted set. What would you like to do?</item>
+        <item quantity="other">You have %d uncompleted sets. What would you like to do?</item>
+    </plurals>
+    <string name="mark_all_completed">Mark All Completed</string>
+    <string name="discard_unfinished">Discard Unfinished</string>
+    <string name="active_workout_found">Active Workout Found</string>
+    <string name="active_workout_found_message">You already have an active workout. Do you want to resume it or cancel it and start a new one?</string>
+    <string name="resume">Resume</string>
+    <string name="cancel_and_start_new">Cancel &amp; Start New</string>
+    <string name="save_routine_changes">Save Routine Changes?</string>
+    <string name="save_as_routine">Save as Routine?</string>
+    <string name="update_sets_only">Update Sets/Reps/Weight Only</string>
+    <string name="update_full_routine">Update Full Routine</string>
+    <string name="save_as_new_routine">Save as New Routine</string>
+    <string name="just_finish">Just Finish</string>
+    <string name="discard_changes_title">Discard changes?</string>
+    <string name="discard_changes_message">Your changes to this workout won\'t be saved.</string>
+    <string name="discard">Discard</string>
+    <string name="keep_editing">Keep editing</string>
+    <string name="edit_workout">Edit Workout</string>
+    <string name="workout_details">Workout Details</string>
+    <string name="active_workout">Active Workout</string>
     <string name="edit">Edit</string>
-    <string name="confirm">Confirm</string>
-    <string name="undo">Undo</string>
-    <string name="duration">Duration</string>
-    <string name="notes">Notes</string>
-    <string name="date">Date</string>
+    <string name="finish">Finish</string>
+    <string name="workout_name">Workout name</string>
+    <string name="col_rpe">RPE</string>
+    <string name="rest_countdown">Rest: %1$s</string>
+    <string name="skip">Skip</string>
+    <string name="delete_completed_set_title">Delete Completed Set</string>
+    <string name="delete_completed_set_message">This set is already completed. Are you sure you want to delete it?</string>
+    <string name="completed">Completed</string>
+    <string name="log_set">Log set</string>
+    <string name="workout_complete">Workout Complete!</string>
+    <string name="workout_complete_message">Great job! Keep up the progress.</string>
+    <string name="back_to_workouts">Back to Workouts</string>
+    <string name="pick_start_time">Pick start time</string>
+    <string name="started_label">Started:</string>
+    <plurals name="personal_record_count">
+        <item quantity="one">%d Personal Record</item>
+        <item quantity="other">%d Personal Records</item>
+    </plurals>
+
+    <!-- Personal record lines. %1$s is the exercise name; weights include their unit. -->
+    <string name="pr_heaviest_set">%1$s — heaviest set %2$s × %3$d</string>
+    <string name="pr_estimated_1rm">%1$s — estimated 1RM %2$s</string>
+    <string name="pr_reps_at_weight">%1$s — most reps at %2$s: %3$d</string>
+    <string name="pr_max_reps">%1$s — most reps: %2$d</string>
+    <string name="pr_set_volume">%1$s — best set %2$s × %3$d (%4$s)</string>
+    <string name="pr_exercise_volume">%1$s — most volume %2$s</string>
+    <string name="pr_longest_session">%1$s — longest session %2$s</string>
+    <string name="pr_highest_level">%1$s — highest level %2$s (%3$s)</string>
+    <string name="pr_workout_volume">Workout volume PR %1$s</string>
+
+    <!-- RPE scale -->
+    <string name="rpe_10">Max effort — no reps left in the tank</string>
+    <string name="rpe_9">Very hard — 1 rep left in reserve</string>
+    <string name="rpe_8">Hard — 2 reps left in reserve</string>
+    <string name="rpe_7">Moderately hard — 3 reps left in reserve</string>
+    <string name="rpe_6">Moderate — 4 reps left in reserve</string>
+    <string name="rpe_5">Somewhat easy — 5+ reps in reserve</string>
+    <string name="rpe_4">Light effort</string>
+    <string name="rpe_3">Easy</string>
+    <string name="rpe_2">Very light</string>
+    <string name="rpe_1">Little to no effort</string>
+    <string name="rate_this_set">Rate this set (RPE)</string>
+    <string name="how_hard_did_it_feel">How hard did this set feel?</string>
+    <string name="clear">Clear</string>
+
+    <!-- Auto-generated workout names (saved with the workout) -->
+    <string name="workout_default_name">Workout</string>
+    <string name="workout_name_morning">Morning Workout</string>
+    <string name="workout_name_afternoon">Afternoon Workout</string>
+    <string name="workout_name_evening">Evening Workout</string>
+    <string name="routine_workout_name_morning">Morning %1$s</string>
+    <string name="routine_workout_name_afternoon">Afternoon %1$s</string>
+    <string name="routine_workout_name_evening">Evening %1$s</string>
+    <string name="unknown_exercise">Unknown</string>
+    <string name="share_routine_subject">Strongest Routine: %1$s</string>
+
+    <!-- Workout history spreadsheet export -->
+    <string name="xlsx_date">Date</string>
+    <string name="xlsx_workout_name">Workout Name</string>
+    <string name="xlsx_routine">Routine</string>
+    <string name="xlsx_duration_min">Duration (min)</string>
+    <string name="xlsx_exercise">Exercise</string>
+    <string name="xlsx_set_number">Set #</string>
+    <string name="xlsx_set_type">Set Type</string>
+    <string name="xlsx_completed_at">Completed At</string>
+    <string name="xlsx_sheet_name">Workout History</string>
+    <string name="share_history_subject">Strongest Workout History</string>
+    <string name="share_history">Share Workout History</string>
+
+    <!-- Workout notification (weights include their unit) -->
+    <string name="notification_channel_desc">Persistent notification during an active workout</string>
+    <string name="notification_starting">Starting…</string>
+    <string name="notification_tap_to_add">Tap to add exercises</string>
+    <string name="notification_set_ready">%1$s • Set %2$d/%3$d • %4$s × %5$d</string>
+    <plurals name="notification_set_ready_long">
+        <item quantity="one">%1$s\nSet %2$d of %3$d • %4$s × %5$d rep</item>
+        <item quantity="other">%1$s\nSet %2$d of %3$d • %4$s × %5$d reps</item>
+    </plurals>
+    <string name="notification_complete_set">Complete set</string>
+    <string name="notification_rest">Rest • %1$s</string>
+    <string name="notification_next">Next: %1$s • Set %2$d • %3$s × %4$d</string>
+    <string name="notification_all_done">All sets done — tap finish to save</string>
+    <string name="notification_complete_workout">Complete workout</string>
 </resources>

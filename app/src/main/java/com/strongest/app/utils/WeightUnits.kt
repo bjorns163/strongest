@@ -12,8 +12,6 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import kotlin.math.roundToInt
-import java.util.Locale
 
 private const val KG_PER_LB = 0.45359237f
 
@@ -28,12 +26,9 @@ fun weightUnitLabel(unit: WeightUnit): String = when (unit) {
     WeightUnit.LBS -> "lbs"
 }
 
-fun formatWeightForDisplay(kg: Float, unit: WeightUnit): String {
-    val v = kgToDisplay(kg, unit)
-    val rounded = (v * 10f).roundToInt() / 10f
-    return if (rounded % 1f == 0f) rounded.toInt().toString()
-    else String.format(Locale.getDefault(), "%.1f", rounded)
-}
+/** Up to two decimals so small plates show as entered (1.25, not 1.3). */
+fun formatWeightForDisplay(kg: Float, unit: WeightUnit): String =
+    formatDecimal(kgToDisplay(kg, unit))
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)

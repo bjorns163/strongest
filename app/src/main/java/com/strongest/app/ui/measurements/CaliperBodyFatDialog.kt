@@ -27,10 +27,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.res.stringResource
 import coil3.compose.SubcomposeAsyncImage
+import com.strongest.app.R
 import com.strongest.app.data.repository.CaliperMode
 import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.data.repository.Sex
+import com.strongest.app.utils.filterDecimalInput
+import com.strongest.app.utils.formatDecimal
 import java.util.Calendar
 
 /**
@@ -67,13 +71,18 @@ fun CaliperBodyFatDialog(
     onDismiss: () -> Unit
 ) {
     val mode: CaliperMode = profile.mode
-    val needProfileStep = profile.sex == Sex.UNSET || profile.birthYear <= 0
+    // Decided once: saving the profile on step 0 updates [profile], and re-deriving this would
+    // drop the profile step from the count and skip the first skinfold site.
+    val needProfileStep = remember { profile.sex == Sex.UNSET || profile.birthYear <= 0 }
 
     var sex by remember { mutableStateOf(profile.sex) }
     var birthYearText by remember {
         mutableStateOf(if (profile.birthYear > 0) profile.birthYear.toString() else "")
     }
     val values = remember { mutableStateMapOf<SkinfoldSite, String>() }
+    // Normalised so "12,5" and "15.5" typed in one session read the same in the result and notes.
+    fun displayValue(site: SkinfoldSite): String =
+        values[site]?.let(::parseDecimalInput)?.let { formatDecimal(it) } ?: "-"
     var step by remember { mutableIntStateOf(0) }
 
     val sites = remember(mode, sex) {
@@ -108,15 +117,17 @@ fun CaliperBodyFatDialog(
         onResultStep -> computedPercent != null
         else -> currentSiteValid
     }
+    val modeLabel = stringResource(mode.labelRes)
+    val siteNames = sites.associateWith { stringResource(it.displayNameRes) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
                 when {
-                    onProfileStep -> "Your profile"
-                    onResultStep -> "Body fat result"
-                    else -> "Skinfold ${siteIndex + 1} of ${sites.size}"
+                    onProfileStep -> stringResource(R.string.caliper_your_profile)
+                    onResultStep -> stringResource(R.string.caliper_result_title)
+                    else -> stringResource(R.string.caliper_site_progress, siteIndex + 1, sites.size)
                 }
             )
         },
@@ -125,7 +136,7 @@ fun CaliperBodyFatDialog(
                 when {
                     onProfileStep -> {
                         Text(
-                            "The caliper formula needs your gender and age. This is saved once.",
+                            stringResource(R.string.caliper_profile_explanation),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -136,18 +147,18 @@ fun CaliperBodyFatDialog(
                             FilterChip(
                                 selected = sex == Sex.MALE,
                                 onClick = { sex = Sex.MALE },
-                                label = { Text("Male") }
+                                label = { Text(stringResource(R.string.sex_male)) }
                             )
                             FilterChip(
                                 selected = sex == Sex.FEMALE,
                                 onClick = { sex = Sex.FEMALE },
-                                label = { Text("Female") }
+                                label = { Text(stringResource(R.string.sex_female)) }
                             )
                         }
                         OutlinedTextField(
                             value = birthYearText,
                             onValueChange = { birthYearText = it.filter { c -> c.isDigit() }.take(4) },
-                            label = { Text("Birth year") },
+                            label = { Text(stringResource(R.string.birth_year)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier
@@ -164,33 +175,33 @@ fun CaliperBodyFatDialog(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "${mode.label} • sum ${"%.0f".format(sites.sumOf { (values[it]?.let(::parseDecimalInput)?.toDouble() ?: 0.0) })} mm",
+                                text = stringResource(R.string.caliper_sum, modeLabel, formatDecimal(sites.sumOf { (values[it]?.let(::parseDecimalInput)?.toDouble() ?: 0.0) }.toFloat())),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                             sites.forEach { site ->
                                 Text(
-                                    text = "${site.displayName}: ${values[site] ?: "-"} mm",
+                                    text = "${siteNames.getValue(site)}: ${displayValue(site)} mm",
                                     style = MaterialTheme.typography.bodySmall,
                                     modifier = Modifier.padding(top = 2.dp)
                                 )
                             }
                         } else {
-                            Text("Couldn't compute — please check the values.")
+                            Text(stringResource(R.string.caliper_compute_failed))
                         }
                     }
 
                     currentSite != null -> {
                         Text(
-                            text = currentSite.displayName,
+                            text = siteNames.getValue(currentSite),
                             style = MaterialTheme.typography.titleMedium
                         )
                         val imageUri = rememberCaliperImageUri(currentSite)
                         if (imageUri != null) {
                             SubcomposeAsyncImage(
                                 model = imageUri,
-                                contentDescription = "${currentSite.displayName} skinfold location",
+                                contentDescription = stringResource(R.string.caliper_site_location, siteNames.getValue(currentSite)),
                                 contentScale = ContentScale.Fit,
                                 loading = {},
                                 error = {},
@@ -202,7 +213,7 @@ fun CaliperBodyFatDialog(
                             )
                         }
                         Text(
-                            text = currentSite.instruction,
+                            text = stringResource(currentSite.instructionRes),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp)
@@ -210,9 +221,9 @@ fun CaliperBodyFatDialog(
                         OutlinedTextField(
                             value = values[currentSite] ?: "",
                             onValueChange = { input ->
-                                values[currentSite] = input.filter { c -> c.isDigit() || c == '.' }
+                                values[currentSite] = filterDecimalInput(input)
                             },
-                            label = { Text("Skinfold (mm)") },
+                            label = { Text(stringResource(R.string.skinfold_mm)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier
@@ -229,15 +240,15 @@ fun CaliperBodyFatDialog(
                 onClick = {
                     if (onResultStep) {
                         val percent = computedPercent ?: return@TextButton
-                        val notes = sites.joinToString(", ") { "${it.displayName} ${values[it]}mm" }
-                        onSave(percent, "${mode.label}: $notes")
+                        val notes = sites.joinToString(", ") { "${siteNames.getValue(it)} ${displayValue(it)}mm" }
+                        onSave(percent, "$modeLabel: $notes")
                     } else {
                         if (onProfileStep) onSaveProfile(sex, birthYear)
                         step++
                     }
                 }
             ) {
-                Text(if (onResultStep) "Save" else "Next")
+                Text(stringResource(if (onResultStep) R.string.save else R.string.next))
             }
         },
         dismissButton = {
@@ -246,7 +257,7 @@ fun CaliperBodyFatDialog(
                     if (step == 0) onDismiss() else step--
                 }
             ) {
-                Text(if (step == 0) "Cancel" else "Back")
+                Text(stringResource(if (step == 0) R.string.cancel else R.string.back))
             }
         }
     )

@@ -14,10 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import com.strongest.app.utils.parseDecimalInput
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.strongest.app.R
 
 @Composable
 fun LoadingIndicator(modifier: Modifier = Modifier) {
@@ -82,7 +84,7 @@ fun ExercisePickerItem(
 fun WeightTextField(
     value: Float,
     onValueChange: (Float) -> Unit,
-    label: String = "Weight",
+    label: String = stringResource(R.string.weight),
     modifier: Modifier = Modifier,
     unit: String = "kg"
 ) {
@@ -118,7 +120,7 @@ fun RepsTextField(
                 input.toIntOrNull()?.let { onValueChange(it) }
             }
         },
-        label = { Text("Reps") },
+        label = { Text(stringResource(R.string.reps)) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
         modifier = modifier

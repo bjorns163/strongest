@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -24,6 +25,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.strongest.app.R
 import com.strongest.app.ui.exercise.ExercisePickerScreen
 import com.strongest.app.ui.history.HistoryScreen
 import com.strongest.app.ui.progress.ProgressScreen
@@ -247,11 +249,11 @@ fun AppNavigation(
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
-        Screen.Workout to "Workout",
-        Screen.Routines to "Routines",
-        Screen.History to "History",
-        Screen.Progress to "Progress",
-        Screen.Settings to "Settings"
+        Screen.Workout to stringResource(R.string.nav_workout),
+        Screen.Routines to stringResource(R.string.nav_routines),
+        Screen.History to stringResource(R.string.nav_history),
+        Screen.Progress to stringResource(R.string.nav_progress),
+        Screen.Settings to stringResource(R.string.nav_settings)
     )
 
     NavigationBar {

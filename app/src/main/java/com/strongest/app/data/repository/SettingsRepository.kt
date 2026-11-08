@@ -1,6 +1,7 @@
 package com.strongest.app.data.repository
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -9,6 +10,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.strongest.app.R
 import com.strongest.app.ThemeMode
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.ui.workout.STANDARD_KG_PLATES
@@ -18,6 +20,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Stored as the alert sound when the user picks "Silent". Null already means "default sound", and
+ * the ringtone picker reports Silent as null too, so it needs a value of its own.
+ */
+const val SILENT_SOUND = "silent"
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -52,10 +60,10 @@ enum class Sex {
     MALE, FEMALE, UNSET
 }
 
-enum class CaliperMode(val siteCount: Int, val label: String) {
-    THREE_SITE(3, "3-site"),
-    FOUR_SITE(4, "4-site"),
-    SEVEN_SITE(7, "7-site")
+enum class CaliperMode(val siteCount: Int, @StringRes val labelRes: Int) {
+    THREE_SITE(3, R.string.caliper_mode_3_site),
+    FOUR_SITE(4, R.string.caliper_mode_4_site),
+    SEVEN_SITE(7, R.string.caliper_mode_7_site)
 }
 
 /** Muscle groups that have a recovery window (trainable, non-cardio/stretching). */

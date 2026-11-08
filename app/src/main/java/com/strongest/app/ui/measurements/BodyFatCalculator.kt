@@ -1,45 +1,47 @@
 package com.strongest.app.ui.measurements
 
+import androidx.annotation.StringRes
+import com.strongest.app.R
 import com.strongest.app.data.repository.CaliperMode
 import com.strongest.app.data.repository.Sex
 import kotlin.math.log10
 
 /**
- * Skinfold sites used across the supported caliper protocols. [instruction] guides the user on
+ * Skinfold sites used across the supported caliper protocols. [instructionRes] guides the user on
  * where and how to pinch each site (all measured on the right side of the body, in millimetres).
  */
-enum class SkinfoldSite(val displayName: String, val instruction: String) {
+enum class SkinfoldSite(@StringRes val displayNameRes: Int, @StringRes val instructionRes: Int) {
     CHEST(
-        "Chest",
-        "Diagonal fold, halfway between the front armpit crease and the nipple (men) or one-third of the way (women)."
+        R.string.skinfold_chest,
+        R.string.skinfold_chest_instruction
     ),
     ABDOMEN(
-        "Abdomen",
-        "Vertical fold about 2 cm to the right of the navel."
+        R.string.skinfold_abdomen,
+        R.string.skinfold_abdomen_instruction
     ),
     THIGH(
-        "Thigh",
-        "Vertical fold on the front of the thigh, midway between the hip crease and the top of the kneecap."
+        R.string.skinfold_thigh,
+        R.string.skinfold_thigh_instruction
     ),
     TRICEPS(
-        "Triceps",
-        "Vertical fold on the back of the upper arm, midway between the shoulder and elbow, arm relaxed."
+        R.string.skinfold_triceps,
+        R.string.skinfold_triceps_instruction
     ),
     SUPRAILIAC(
-        "Suprailiac",
-        "Diagonal fold just above the hip bone, following the natural angle of the iliac crest."
+        R.string.skinfold_suprailiac,
+        R.string.skinfold_suprailiac_instruction
     ),
     MIDAXILLARY(
-        "Midaxillary",
-        "Vertical fold on the midline of the side of the torso, level with the bottom of the sternum."
+        R.string.skinfold_midaxillary,
+        R.string.skinfold_midaxillary_instruction
     ),
     SUBSCAPULAR(
-        "Subscapular",
-        "Diagonal fold just below the bottom tip of the shoulder blade."
+        R.string.skinfold_subscapular,
+        R.string.skinfold_subscapular_instruction
     ),
     BICEPS(
-        "Biceps",
-        "Vertical fold on the front of the upper arm, midway between the shoulder and elbow, arm relaxed."
+        R.string.skinfold_biceps,
+        R.string.skinfold_biceps_instruction
     )
 }
 

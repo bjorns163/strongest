@@ -4,15 +4,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.media.RingtoneManager
-import android.net.Uri
-import android.os.SystemClock
-import android.os.VibrationEffect
-import android.os.VibratorManager
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.strongest.app.R
 import com.strongest.app.data.model.Equipment
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.ExerciseType
@@ -31,9 +27,7 @@ import com.strongest.app.data.repository.WorkoutSnapshot
 import com.strongest.app.ui.navigation.WarmUpSetSpec
 import com.strongest.app.utils.ACTION_COMPLETE_SET
 import com.strongest.app.utils.ACTION_FINISH_WORKOUT
-import com.strongest.app.utils.ACTION_SKIP_REST
-import com.strongest.app.utils.ACTION_TIMER_ADD
-import com.strongest.app.utils.ACTION_TIMER_SUBTRACT
+import com.strongest.app.utils.RestTimer
 import com.strongest.app.utils.WorkoutForegroundService
 import com.strongest.app.utils.WorkoutNotificationBus
 import com.strongest.app.utils.WorkoutNotificationState
@@ -43,22 +37,22 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 data class WorkoutUiState(
@@ -135,6 +129,9 @@ class WorkoutViewModel @Inject constructor(
     fun cancelWorkout() {
         viewModelScope.launch {
             repository.getOngoingWorkout()?.let { ongoing ->
+                // Its screen may be long gone while the notification and rest timer live on.
+                RestTimer.cancelFor(ongoing.id)
+                WorkoutNotificationBus.clear()
                 repository.deleteWorkout(ongoing)
             }
             _uiState.update { it.copy(ongoingWorkoutId = null) }
@@ -154,6 +151,8 @@ data class ActiveWorkoutState(
     val workoutName: String? = null,
     val workoutExercises: List<WorkoutExerciseUi> = emptyList(),
     val isFinished: Boolean = false,
+    /** The workout was deleted from elsewhere (e.g. a data import) while this screen was alive. */
+    val workoutDeleted: Boolean = false,
     val isViewMode: Boolean = false,
     val isEditingHistory: Boolean = false,
     val startTime: Long = 0L,
@@ -192,6 +191,8 @@ data class WorkoutExerciseUi(
     val noteText: String = ""
 )
 
+private val setUiKeys = AtomicLong()
+
 data class SetUi(
     val setId: Long? = null,
     val setNumber: Int,
@@ -202,7 +203,9 @@ data class SetUi(
     val isCompleted: Boolean = false,
     val completedAt: Long = 0L,
     val restSeconds: Int = 90,
-    val previousSetInfo: PreviousSetInfo? = null
+    val previousSetInfo: PreviousSetInfo? = null,
+    /** Stable row identity for the UI (setId stays null until the set is saved). */
+    val uiKey: Long = setUiKeys.incrementAndGet()
 )
 
 data class PreviousSetInfo(
@@ -229,44 +232,29 @@ class ActiveWorkoutViewModel @Inject constructor(
             if (workoutId == null) emptyList() else computeWorkoutPrs(rows, workoutId)
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    private var timerJob: Job? = null
     private var workoutActionsReceiver: BroadcastReceiver? = null
     private var isWorkoutActionsReceiverRegistered = false
     private var isServiceStarted = false
     // True once the user has committed to finishing; stops the state collector from re-publishing
     // the ongoing-workout notification while a post-workout (e.g. routine-save) dialog is shown.
     private var isFinishing = false
-    /**
-     * When the current rest ends, on the [SystemClock.elapsedRealtime] timebase.
-     *
-     * Deliberately not wall-clock: an NTP correction or a manual clock change would
-     * otherwise jump the countdown mid-rest, ending it early or stretching it. Unlike
-     * uptimeMillis, elapsedRealtime keeps counting through deep sleep, so the rest still
-     * runs out while the screen is off.
-     */
-    private var timerEndTime: Long = 0
+    private var isCancelling = false
     private val persistOrderMutex = Mutex()
 
     private fun ensureWorkoutActionsReceiverRegistered() {
         if (isWorkoutActionsReceiverRegistered) return
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
-                val adjustment = _state.value.timerAdjustmentSeconds
+                // The rest-timer buttons are handled by WorkoutForegroundService.
                 when (intent?.action) {
-                    ACTION_TIMER_ADD -> adjustTimer(adjustment)
-                    ACTION_TIMER_SUBTRACT -> adjustTimer(-adjustment)
                     ACTION_COMPLETE_SET -> completeCurrentSetFromNotification()
-                    ACTION_SKIP_REST -> skipRestTimer()
                     ACTION_FINISH_WORKOUT -> doFinishWorkout()
                 }
             }
         }
         workoutActionsReceiver = receiver
         val filter = IntentFilter().apply {
-            addAction(ACTION_TIMER_ADD)
-            addAction(ACTION_TIMER_SUBTRACT)
             addAction(ACTION_COMPLETE_SET)
-            addAction(ACTION_SKIP_REST)
             addAction(ACTION_FINISH_WORKOUT)
         }
         ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
@@ -336,7 +324,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     private fun publishNotificationState() {
         val s = _state.value
         if (s.workoutId == null || s.isViewMode || s.isFinished || isFinishing) return
-        val name = s.workoutName?.takeIf { it.isNotBlank() } ?: "Workout"
+        val name = s.workoutName?.takeIf { it.isNotBlank() } ?: context.getString(R.string.workout_default_name)
 
         if (s.isTimerRunning && s.timerRemainingSeconds > 0) {
             val next = findNextUncompletedSet()
@@ -349,8 +337,6 @@ class ActiveWorkoutViewModel @Inject constructor(
                     nextSetNumber = set.setNumber,
                     nextWeightKg = set.weight,
                     nextReps = set.reps,
-                    remainingSeconds = s.timerRemainingSeconds,
-                    totalSeconds = s.timerTotalSeconds,
                     adjustmentSeconds = s.timerAdjustmentSeconds,
                     weightUnit = s.weightUnit
                 )
@@ -383,16 +369,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     }
 
     fun adjustTimer(seconds: Int) {
-        viewModelScope.launch {
-            timerEndTime += (seconds * 1000L)
-            val remaining = ((timerEndTime - SystemClock.elapsedRealtime()) / 1000).toInt().coerceAtLeast(0)
-            _state.update {
-                it.copy(
-                    timerRemainingSeconds = remaining,
-                    timerTotalSeconds = maxOf(it.timerTotalSeconds, remaining)
-                )
-            }
-        }
+        RestTimer.adjust(context, seconds)
     }
 
     init {
@@ -413,7 +390,43 @@ class ActiveWorkoutViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            // The rest timer outlives this screen; mirror it so a reopened workout shows a rest
+            // that kept running in the meantime. Only this workout's rest, never another one's.
+            combine(RestTimer.state, _state.map { it.workoutId }.distinctUntilChanged()) { rest, workoutId ->
+                rest?.takeIf { workoutId != null && it.workoutId == workoutId }
+            }.collect { rest ->
+                _state.update {
+                    it.copy(
+                        activeTimerSetId = rest?.setId,
+                        timerRemainingSeconds = rest?.remainingSeconds ?: 0,
+                        timerTotalSeconds = rest?.totalSeconds ?: it.timerTotalSeconds,
+                        isTimerRunning = rest != null
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
             _state.collect { publishNotificationState() }
+        }
+        viewModelScope.launch {
+            // This screen can sit in a tab's saved back stack while its workout is deleted
+            // elsewhere (Settings → Import replaces every workout). Any later write then failed
+            // the workout's foreign key and crashed the app, so close the screen instead.
+            _state.map { it.workoutId }.distinctUntilChanged().collectLatest { id ->
+                if (id == null) return@collectLatest
+                val deleted = repository.observeWorkout(id).map { it == null }.firstOrNull { it } == true
+                if (deleted && !isCancelling) onWorkoutDeletedElsewhere(id)
+            }
+        }
+    }
+
+    private fun onWorkoutDeletedElsewhere(workoutId: Long) {
+        RestTimer.cancelFor(workoutId)
+        stopServiceAndClearNotification()
+        unregisterWorkoutActionsReceiver()
+        loadedWorkoutId = null
+        _state.update {
+            it.copy(workoutId = null, workoutExercises = emptyList(), workoutDeleted = true)
         }
     }
 
@@ -423,10 +436,11 @@ class ActiveWorkoutViewModel @Inject constructor(
             historyEditSnapshot = null
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { repository.restoreWorkout(snapshot) }
         }
-        timerJob?.cancel()
         unregisterWorkoutActionsReceiver()
-        // Workout stays ongoing/resumable in DB; only kill its notification.
-        stopServiceAndClearNotification()
+        // Leaving the screen doesn't end the workout (it stays ongoing and resumable): the rest
+        // timer keeps running and the notification stays up, minus the set/finish actions that
+        // need this screen, until the workout is reopened.
+        if (isServiceStarted) WorkoutNotificationBus.detach()
         super.onCleared()
     }
 
@@ -473,11 +487,13 @@ class ActiveWorkoutViewModel @Inject constructor(
 
             val calendar = java.util.Calendar.getInstance()
             val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
-            val defaultName = when (hour) {
-                in 5..11 -> "Morning Workout"
-                in 12..16 -> "Afternoon Workout"
-                else -> "Evening Workout"
-            }
+            val defaultName = context.getString(
+                when (hour) {
+                    in 5..11 -> R.string.workout_name_morning
+                    in 12..16 -> R.string.workout_name_afternoon
+                    else -> R.string.workout_name_evening
+                }
+            )
             val startTime = System.currentTimeMillis()
             val workoutId = repository.startWorkout(null, null, defaultName)
             _state.update { it.copy(workoutId = workoutId, workoutName = defaultName, startTime = startTime) }
@@ -499,6 +515,7 @@ class ActiveWorkoutViewModel @Inject constructor(
         viewModelScope.launch {
             val existing = repository.getOngoingWorkout()
             if (existing != null) {
+                RestTimer.cancelFor(existing.id)
                 repository.deleteWorkout(existing)
             }
             _state.update { it.copy(showExistingWorkoutDialog = false) }
@@ -527,13 +544,16 @@ class ActiveWorkoutViewModel @Inject constructor(
             val routine = full?.routine
             val routineExercises = full?.exercises ?: emptyList()
             val routineSets = full?.sets ?: emptyMap()
-            val routineName = routine?.name ?: "Workout"
+            val routineName = routine?.name ?: context.getString(R.string.workout_default_name)
             val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-            val workoutName = when (hour) {
-                in 5..11 -> "Morning $routineName"
-                in 12..16 -> "Afternoon $routineName"
-                else -> "Evening $routineName"
-            }
+            val workoutName = context.getString(
+                when (hour) {
+                    in 5..11 -> R.string.routine_workout_name_morning
+                    in 12..16 -> R.string.routine_workout_name_afternoon
+                    else -> R.string.routine_workout_name_evening
+                },
+                routineName
+            )
             val startTime = System.currentTimeMillis()
             val workoutId = repository.startWorkout(routineId, routineName, workoutName)
 
@@ -578,7 +598,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                     WorkoutExerciseUi(
                         exerciseId = re.exerciseId,
                         workoutExerciseId = workoutExerciseId,
-                        exerciseName = exercise?.name ?: "Unknown",
+                        exerciseName = exercise?.name ?: context.getString(R.string.unknown_exercise),
                         muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                         equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                         type = exercise?.type ?: ExerciseType.ISOLATION,
@@ -628,7 +648,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                 WorkoutExerciseUi(
                     exerciseId = exerciseWithSets.workoutExercise.exerciseId,
                     workoutExerciseId = exerciseWithSets.workoutExercise.id,
-                    exerciseName = exercise?.name ?: "Unknown",
+                    exerciseName = exercise?.name ?: context.getString(R.string.unknown_exercise),
                     muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                     equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                     type = exercise?.type ?: ExerciseType.ISOLATION,
@@ -694,7 +714,7 @@ class ActiveWorkoutViewModel @Inject constructor(
             val newExercise = WorkoutExerciseUi(
                 exerciseId = exerciseId,
                 workoutExerciseId = workoutExerciseId,
-                exerciseName = exercise?.name ?: "Unknown",
+                exerciseName = exercise?.name ?: context.getString(R.string.unknown_exercise),
                 muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                 equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                 type = exercise?.type ?: ExerciseType.ISOLATION,
@@ -753,7 +773,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                     WorkoutExerciseUi(
                         exerciseId = exerciseId,
                         workoutExerciseId = workoutExerciseId,
-                        exerciseName = exercise?.name ?: "Unknown",
+                        exerciseName = exercise?.name ?: context.getString(R.string.unknown_exercise),
                         muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
                         equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                         type = exercise?.type ?: ExerciseType.ISOLATION,
@@ -1105,65 +1125,16 @@ class ActiveWorkoutViewModel @Inject constructor(
     }
 
     fun startRestTimer(setId: Long?, durationSeconds: Int) {
-        timerJob?.cancel()
-        ensureWorkoutActionsReceiverRegistered()
-        timerEndTime = SystemClock.elapsedRealtime() + (durationSeconds * 1000L)
-        _state.update {
-            it.copy(
-                activeTimerSetId = setId,
-                timerRemainingSeconds = durationSeconds,
-                timerTotalSeconds = durationSeconds,
-                isTimerRunning = true
-            )
-        }
-
-        timerJob = viewModelScope.launch {
-            while (isActive) {
-                delay(1000)
-                val remaining = ((timerEndTime - SystemClock.elapsedRealtime()) / 1000).toInt()
-                if (remaining <= 0) {
-                    _state.update { it.copy(isTimerRunning = false, timerRemainingSeconds = 0, activeTimerSetId = null) }
-                    playTimerAlert()
-                    break
-                }
-                _state.update { it.copy(timerRemainingSeconds = remaining) }
-            }
-        }
+        val workoutId = _state.value.workoutId ?: return
+        RestTimer.start(context, workoutId, setId, durationSeconds, _state.value.notificationSoundUri)
     }
 
     fun cancelRestTimer() {
-        timerJob?.cancel()
-        timerJob = null
-        _state.update { it.copy(isTimerRunning = false, timerRemainingSeconds = 0, activeTimerSetId = null) }
+        RestTimer.cancelFor(_state.value.workoutId)
     }
 
     fun skipRestTimer() {
         cancelRestTimer()
-    }
-
-    private fun playTimerAlert() {
-        try {
-            val alertUri = _state.value.notificationSoundUri?.let { Uri.parse(it) }
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val ringtone = RingtoneManager.getRingtone(context, alertUri)
-            ringtone?.play()
-        } catch (_: Exception) {
-        }
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE)
-                    as VibratorManager
-                vibratorManager.defaultVibrator.vibrate(
-                    VibrationEffect.createWaveform(longArrayOf(0, 200, 100, 200, 100, 200), -1)
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE)
-                    as android.os.Vibrator
-                vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 200, 100, 200, 100, 200), -1))
-            }
-        } catch (_: Exception) {
-        }
     }
 
     fun finishWorkout() {
@@ -1639,6 +1610,8 @@ class ActiveWorkoutViewModel @Inject constructor(
     }
 
     fun cancelWorkout(onCancelled: () -> Unit) {
+        // Deleting below would otherwise also trip the deleted-elsewhere watcher.
+        isCancelling = true
         cancelRestTimer()
         stopServiceAndClearNotification()
         unregisterWorkoutActionsReceiver()

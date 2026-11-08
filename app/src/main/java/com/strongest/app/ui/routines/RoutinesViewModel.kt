@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.strongest.app.R
 import com.strongest.app.data.db.RoutineWithExercisesAndSets
 import com.strongest.app.data.model.Exercise
 import com.strongest.app.data.model.Routine
@@ -69,13 +70,13 @@ class RoutinesViewModel @Inject constructor(
     fun shareRoutine(routine: Routine, context: Context) {
         viewModelScope.launch {
             val full = repository.getRoutineWithExercisesAndSets(routine.id) ?: return@launch
-            val json = exportRoutineToJson(full)
+            val json = exportRoutineToJson(full, context.getString(R.string.unknown_exercise))
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/json"
                 putExtra(Intent.EXTRA_TEXT, json)
-                putExtra(Intent.EXTRA_SUBJECT, "Strongest Routine: ${routine.name}")
+                putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_routine_subject, routine.name))
             }
-            val chooser = Intent.createChooser(shareIntent, "Share Routine")
+            val chooser = Intent.createChooser(shareIntent, context.getString(R.string.share_routine))
             context.startActivity(chooser)
         }
     }
@@ -90,9 +91,9 @@ class RoutinesViewModel @Inject constructor(
         }
     }
 
-    private suspend fun exportRoutineToJson(full: RoutineWithExercisesAndSets): String {
+    private suspend fun exportRoutineToJson(full: RoutineWithExercisesAndSets, unknownExerciseName: String): String {
         val exercisesById = repository.getAllExercisesList().associateBy { it.id }
-        return full.toSharedRoutine(exercisesById).toJson()
+        return full.toSharedRoutine(exercisesById, unknownExerciseName).toJson()
     }
 
     private suspend fun importRoutineFromJson(jsonString: String): RoutineImportData? {

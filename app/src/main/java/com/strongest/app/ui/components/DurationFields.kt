@@ -21,11 +21,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.strongest.app.R
 import com.strongest.app.utils.durationDigitsToSeconds
 import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.formatDurationDigits
@@ -151,7 +153,7 @@ fun DurationInputField(
     totalSeconds: Int,
     onValueChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    label: String = "Duration (mm:ss)"
+    label: String = stringResource(R.string.duration_mm_ss)
 ) {
     val focusRequester = remember { FocusRequester() }
     var isFocused by remember { mutableStateOf(false) }

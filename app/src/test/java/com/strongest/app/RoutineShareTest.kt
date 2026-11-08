@@ -50,7 +50,7 @@ class RoutineShareTest {
     )
 
     private fun sharedJson(): String =
-        full.toSharedRoutine(mapOf(42L to benchPress)).toJson()
+        full.toSharedRoutine(mapOf(42L to benchPress), unknownExerciseName = "Unknown").toJson()
 
     @Test
     fun `exported routine json contains the set type of every set`() {

@@ -1,5 +1,6 @@
 package com.strongest.app.ui.measurements
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,35 +44,36 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
+import com.strongest.app.R
 import com.strongest.app.data.model.BodyMetric
 import com.strongest.app.data.model.MeasurementEntry
 import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.data.repository.WeightUnit
-import com.strongest.app.utils.DAY_MS
+import com.strongest.app.utils.addDays
 import com.strongest.app.utils.dailyEntries
 import com.strongest.app.utils.daySlotCount
 import com.strongest.app.utils.localDayStart
-import java.text.SimpleDateFormat
+import com.strongest.app.utils.rememberLocalizedDateFormat
 import java.util.Date
 
-enum class MeasurementRange(val label: String, val days: Int?) {
-    DAYS_7("7d", 7),
-    DAYS_30("30d", 30),
-    DAYS_90("90d", 90),
-    MONTHS_6("6m", 183),
-    YEAR_1("1y", 365),
-    ALL_TIME("All", null)
+enum class MeasurementRange(@StringRes val labelRes: Int, val days: Int?) {
+    DAYS_7(R.string.range_7d, 7),
+    DAYS_30(R.string.range_30d, 30),
+    DAYS_90(R.string.range_90d, 90),
+    MONTHS_6(R.string.range_6m, 183),
+    YEAR_1(R.string.range_1y, 365),
+    ALL_TIME(R.string.range_all, null)
 }
 
 @Composable
@@ -118,10 +120,10 @@ fun MeasurementDetailScreen(
     if (showInfoDialog) {
         AlertDialog(
             onDismissRequest = { showInfoDialog = false },
-            title = { Text("How to measure: ${metric.displayName}") },
-            text = { Text(metric.instructions) },
+            title = { Text(stringResource(R.string.how_to_measure_title, stringResource(metric.displayNameRes))) },
+            text = { Text(stringResource(metric.instructionsRes)) },
             confirmButton = {
-                TextButton(onClick = { showInfoDialog = false }) { Text("Got it") }
+                TextButton(onClick = { showInfoDialog = false }) { Text(stringResource(R.string.got_it)) }
             }
         )
     }
@@ -130,18 +132,18 @@ fun MeasurementDetailScreen(
         val toDelete = pendingDelete!!
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete Entry") },
-            text = { Text("Delete this measurement? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.delete_entry_title)) },
+            text = { Text(stringResource(R.string.delete_measurement_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteEntry(toDelete)
                     pendingDelete = null
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -155,11 +157,11 @@ fun MeasurementDetailScreen(
                         modifier = Modifier.padding(bottom = 12.dp)
                     ) {
                         Icon(Icons.Default.Straighten, null, Modifier.padding(end = 8.dp))
-                        Text("Calipers")
+                        Text(stringResource(R.string.calipers))
                     }
                 }
                 FloatingActionButton(onClick = { showAddDialog = true }) {
-                    Icon(Icons.Default.Add, "Add measurement")
+                    Icon(Icons.Default.Add, stringResource(R.string.add_measurement))
                 }
             }
         }
@@ -179,16 +181,16 @@ fun MeasurementDetailScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Default.ArrowBack, "Back")
+                            Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
                         }
                         Text(
-                            text = metric.displayName,
+                            text = stringResource(metric.displayNameRes),
                             style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier.padding(start = 4.dp)
                         )
                     }
                     IconButton(onClick = { showInfoDialog = true }) {
-                        Icon(Icons.Default.Info, "How to measure")
+                        Icon(Icons.Default.Info, stringResource(R.string.how_to_measure))
                     }
                 }
             }
@@ -205,7 +207,7 @@ fun MeasurementDetailScreen(
                         FilterChip(
                             selected = range == r,
                             onClick = { range = r },
-                            label = { Text(r.label) }
+                            label = { Text(stringResource(r.labelRes)) }
                         )
                     }
                 }
@@ -224,7 +226,7 @@ fun MeasurementDetailScreen(
 
             item {
                 Text(
-                    text = "History",
+                    text = stringResource(R.string.history),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
@@ -233,7 +235,7 @@ fun MeasurementDetailScreen(
             if (entries.isEmpty()) {
                 item {
                     Text(
-                        text = "No measurements logged yet. Tap + to add your first entry.",
+                        text = stringResource(R.string.no_measurements_yet),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
@@ -269,20 +271,21 @@ private fun ProgressChartCard(
         )
     ) {
         if (entries.isEmpty()) {
-            MeasurementChartEmpty("Add measurements to see your progress")
+            MeasurementChartEmpty(stringResource(R.string.chart_empty_add_measurements))
             return@Card
         }
         val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
         val primary = MaterialTheme.colorScheme.primary.toArgb()
-        val dateFormat = SimpleDateFormat("MMM d", LocalConfiguration.current.locales[0])
+        val dateFormat = rememberLocalizedDateFormat("MMMd")
+        val metricName = stringResource(metric.displayNameRes)
 
         // The x-axis spans every calendar day in the range; days without a measurement simply
         // have no point, and the line connects across them.
         val lastDay = localDayStart(System.currentTimeMillis())
         val firstEntryDay = localDayStart(entries.minOf { it.timestamp })
-        val startDay = range.days?.let { localDayStart(lastDay - (it - 1) * DAY_MS) } ?: firstEntryDay
+        val startDay = range.days?.let { addDays(lastDay, -(it - 1)) } ?: firstEntryDay
         if (startDay > lastDay) {
-            MeasurementChartEmpty("No measurements in this range")
+            MeasurementChartEmpty(stringResource(R.string.chart_empty_range))
             return@Card
         }
         val byDay = entries.groupBy { localDayStart(it.timestamp) }
@@ -291,8 +294,10 @@ private fun ProgressChartCard(
         }
         if (points.size < 2) {
             MeasurementChartEmpty(
-                if (points.isEmpty()) "No measurements in this range"
-                else "Add at least one more entry to see a trend"
+                stringResource(
+                    if (points.isEmpty()) R.string.chart_empty_range
+                    else R.string.chart_empty_need_two
+                )
             )
             return@Card
         }
@@ -321,7 +326,7 @@ private fun ProgressChartCard(
                     }
                 },
                 update = { chart ->
-                    val ds = LineDataSet(points, "${metric.displayName} ($unitLabel)").apply {
+                    val ds = LineDataSet(points, "$metricName ($unitLabel)").apply {
                         color = primary
                         valueTextColor = onSurface
                         circleColors = listOf(primary)
@@ -334,7 +339,7 @@ private fun ProgressChartCard(
                         override fun getFormattedValue(value: Float): String {
                             val idx = value.toInt()
                         if (idx < 0 || idx >= slotCount) return ""
-                        return dateFormat.format(Date(localDayStart(startDay + idx * DAY_MS)))
+                        return dateFormat.format(Date(addDays(startDay, idx)))
                         }
                     }
                     chart.xAxis.axisMinimum = 0f
@@ -370,7 +375,7 @@ private fun HistoryRow(
     weightUnit: WeightUnit,
     onDelete: () -> Unit
 ) {
-    val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
+    val dateFormat = rememberLocalizedDateFormat("MMMdyyyy")
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -407,7 +412,7 @@ private fun HistoryRow(
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,
-                    "Delete entry",
+                    stringResource(R.string.delete_entry),
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -430,7 +435,7 @@ private fun AddMeasurementDialog(
     val unit = metricUnitLabel(metric, weightUnit)
     val parsed = parseDecimalInput(valueText)
     val canSave = parsed != null && parsed > 0f
-    val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
+    val dateFormat = rememberLocalizedDateFormat("MMMdyyyy")
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
@@ -442,10 +447,10 @@ private fun AddMeasurementDialog(
                 TextButton(onClick = {
                     customDate = datePickerState.selectedDateMillis
                     showDatePicker = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.cancel)) }
             }
         ) {
             DatePicker(state = datePickerState)
@@ -454,18 +459,18 @@ private fun AddMeasurementDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add ${metric.displayName}") },
+        title = { Text(stringResource(R.string.add_metric_title, stringResource(metric.displayNameRes))) },
         text = {
             Column {
                 Text(
-                    text = metric.instructions,
+                    text = stringResource(metric.instructionsRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
                     value = valueText,
                     onValueChange = { valueText = it },
-                    label = { Text("Value ($unit)") },
+                    label = { Text(stringResource(R.string.value_with_unit, unit)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier
@@ -481,27 +486,27 @@ private fun AddMeasurementDialog(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Date (optional)",
+                            text = stringResource(R.string.date_optional),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = if (customDate != null) dateFormat.format(Date(customDate!!))
-                            else "Today",
+                            else stringResource(R.string.today),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                     TextButton(onClick = { showDatePicker = true }) {
-                        Text(if (customDate == null) "Pick" else "Change")
+                        Text(stringResource(if (customDate == null) R.string.pick else R.string.change))
                     }
                     if (customDate != null) {
-                        TextButton(onClick = { customDate = null }) { Text("Reset") }
+                        TextButton(onClick = { customDate = null }) { Text(stringResource(R.string.reset)) }
                     }
                 }
                 OutlinedTextField(
                     value = notesText,
                     onValueChange = { notesText = it },
-                    label = { Text("Notes (optional)") },
+                    label = { Text(stringResource(R.string.notes_optional)) },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -518,11 +523,11 @@ private fun AddMeasurementDialog(
                 },
                 enabled = canSave
             ) {
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

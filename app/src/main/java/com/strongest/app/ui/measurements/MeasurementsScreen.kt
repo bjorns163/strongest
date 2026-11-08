@@ -23,14 +23,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.R
 import com.strongest.app.data.db.LatestMeasurement
 import com.strongest.app.data.model.BodyMetric
 import com.strongest.app.data.model.MetricCategory
 import com.strongest.app.data.repository.WeightUnit
-import java.text.SimpleDateFormat
+import com.strongest.app.utils.rememberLocalizedDateFormat
 import java.util.Date
 
 @Composable
@@ -56,10 +58,10 @@ fun MeasurementsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Default.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Default.ArrowBack, stringResource(R.string.back))
                     }
                     Text(
-                        text = "Body Measurements",
+                        text = stringResource(R.string.body_measurements),
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(start = 4.dp)
                     )
@@ -71,7 +73,7 @@ fun MeasurementsScreen(
                 val metrics = grouped[category] ?: continue
                 item(key = "cat-${category.name}") {
                     Text(
-                        text = category.displayName,
+                        text = stringResource(category.displayNameRes),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -98,7 +100,7 @@ private fun MetricRow(
     weightUnit: WeightUnit,
     onClick: () -> Unit
 ) {
-    val dateFormat = SimpleDateFormat("MMM d, yyyy", LocalConfiguration.current.locales[0])
+    val dateFormat = rememberLocalizedDateFormat("MMMdyyyy")
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -117,14 +119,15 @@ private fun MetricRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = metric.displayName,
+                    text = stringResource(metric.displayNameRes),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
                     text = if (latest != null) {
-                        "${formatMetricValue(metric, latest.value, weightUnit)} · ${dateFormat.format(Date(latest.timestamp))} · ${latest.entryCount} entries"
+                        "${formatMetricValue(metric, latest.value, weightUnit)} · ${dateFormat.format(Date(latest.timestamp))} · " +
+                            pluralStringResource(R.plurals.entry_count, latest.entryCount, latest.entryCount)
                     } else {
-                        "No entries yet"
+                        stringResource(R.string.no_entries_yet)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

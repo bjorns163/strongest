@@ -24,6 +24,7 @@ import com.strongest.app.ui.navigation.WarmUpSetSpec
 import com.strongest.app.ui.workout.ActiveWorkoutViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
@@ -33,6 +34,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -67,6 +69,7 @@ class ActiveWorkoutViewModelTest {
         `when`(settingsRepository.settingsFlow).thenReturn(
             flowOf(AppSettings(workoutNotificationEnabled = false))
         )
+        `when`(repository.observeWorkout(anyLong())).thenReturn(flowOf(Workout()))
     }
 
     @After
@@ -545,5 +548,31 @@ class ActiveWorkoutViewModelTest {
                 completedAt = 0L
             )
         )
+    }
+
+    /**
+     * Regression (crash reports): a workout screen kept in a tab's saved back stack outlived its
+     * workout (Settings → Import replaces every workout), and adding an exercise then failed the
+     * workout_exercises foreign key and crashed the app.
+     */
+    @Test
+    fun `a workout deleted elsewhere closes the screen instead of writing to it`() = runTest(dispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val row = MutableStateFlow<Workout?>(Workout(id = 5L))
+        `when`(repository.observeWorkout(5L)).thenReturn(row)
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+        seedWorkout(vm, pairs = listOf(1L to 10L))
+        advanceUntilIdle()
+        assertEquals(5L, vm.state.value.workoutId)
+
+        row.value = null
+        advanceUntilIdle()
+
+        assertTrue(vm.state.value.workoutDeleted)
+        assertNull(vm.state.value.workoutId)
+        vm.addExercises(listOf(2L))
+        advanceUntilIdle()
+        verify(repository, never()).addExerciseToWorkout(anyLong(), eq(2L), org.mockito.ArgumentMatchers.anyInt())
     }
 }

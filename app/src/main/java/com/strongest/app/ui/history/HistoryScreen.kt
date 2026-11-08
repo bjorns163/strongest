@@ -41,14 +41,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.strongest.app.R
 import com.strongest.app.data.model.Workout
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
+import com.strongest.app.utils.rememberLocalizedDateFormat
 import com.strongest.app.utils.rememberWeightUnit
 import com.strongest.app.utils.weightUnitLabel
 import java.text.SimpleDateFormat
@@ -85,14 +89,14 @@ fun HistoryScreen(
                         }
                     ) {
                         Icon(Icons.Default.Share, null, Modifier.padding(end = 8.dp))
-                        Text("Share (${selectedIds.size})")
+                        Text(stringResource(R.string.share_count, selectedIds.size))
                     }
                 } else {
                     FloatingActionButton(
                         onClick = { viewModel.enterSelectionMode() },
                         containerColor = MaterialTheme.colorScheme.primary
                     ) {
-                        Icon(Icons.Default.Share, "Share workouts")
+                        Icon(Icons.Default.Share, stringResource(R.string.share_workouts))
                     }
                 }
             }
@@ -107,12 +111,12 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "No Workouts Yet",
+                    text = stringResource(R.string.no_workouts_yet),
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(32.dp)
                 )
                 Text(
-                    text = "Complete your first workout to see it here",
+                    text = stringResource(R.string.no_workouts_yet_hint),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -133,10 +137,10 @@ fun HistoryScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = { viewModel.exitSelectionMode() }) {
-                                Icon(Icons.Default.Close, "Exit selection")
+                                Icon(Icons.Default.Close, stringResource(R.string.exit_selection))
                             }
                             Text(
-                                text = "${selectedIds.size} selected",
+                                text = pluralStringResource(R.plurals.selected_count, selectedIds.size, selectedIds.size),
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }
@@ -146,7 +150,7 @@ fun HistoryScreen(
                                 if (allSelected) viewModel.clearSelection() else viewModel.selectAll()
                             }
                         ) {
-                            Text(if (allSelected) "Clear All" else "Select All")
+                            Text(stringResource(if (allSelected) R.string.clear_all else R.string.select_all))
                         }
                     }
                 }
@@ -185,15 +189,15 @@ fun WorkoutHistoryCard(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val dateFormat = SimpleDateFormat("MMM dd, yyyy", LocalConfiguration.current.locales[0])
+    val dateFormat = rememberLocalizedDateFormat("MMMdyyyy")
     val timeFormat = SimpleDateFormat("HH:mm", LocalConfiguration.current.locales[0])
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Workout") },
-            text = { Text("Are you sure you want to delete this workout? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.delete_workout_title)) },
+            text = { Text(stringResource(R.string.delete_workout_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -201,12 +205,12 @@ fun WorkoutHistoryCard(
                         showDeleteDialog = false
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -239,12 +243,12 @@ fun WorkoutHistoryCard(
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = workout.workoutName ?: workout.routineName ?: "Empty Workout",
+                        text = workout.workoutName ?: workout.routineName ?: stringResource(R.string.empty_workout),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Started at ${timeFormat.format(Date(workout.startTime))}",
+                        text = stringResource(R.string.started_at, timeFormat.format(Date(workout.startTime))),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -273,7 +277,7 @@ fun WorkoutHistoryCard(
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(
                             Icons.Default.Delete,
-                            contentDescription = "Delete workout",
+                            contentDescription = stringResource(R.string.delete_workout),
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
@@ -305,13 +309,13 @@ private fun ExerciseSummaryTable(
 ) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Sets",
+            text = stringResource(R.string.sets),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f)
         )
         Text(
-            text = "Best set",
+            text = stringResource(R.string.best_set),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.End,
@@ -336,7 +340,7 @@ private fun ExerciseSummaryTable(
             Text(
                 text = if (ex.setCount > 0 && (ex.bestWeightKg > 0f || ex.bestReps > 0)) {
                     if (ex.muscleGroup == "CARDIO") {
-                        "Level ${formatWeightForDisplay(ex.bestWeightKg, weightUnit)} - ${formatDuration(ex.bestReps)}"
+                        stringResource(R.string.cardio_level_duration, formatWeightForDisplay(ex.bestWeightKg, weightUnit), formatDuration(ex.bestReps))
                     } else {
                         "${formatWeightForDisplay(ex.bestWeightKg, weightUnit)} ${weightUnitLabel(weightUnit)} × ${ex.bestReps}"
                     }
@@ -360,7 +364,7 @@ private fun WorkoutStatsRow(
     val durationMin = if (workout.endTime != null) (workout.endTime - workout.startTime) / 60000 else 0L
     val hours = durationMin / 60
     val minutes = durationMin % 60
-    val durationText = if (hours > 0) String.format("%d:%02d", hours, minutes) else "${minutes}m"
+    val durationText = if (hours > 0) String.format("%d:%02d", hours, minutes) else stringResource(R.string.minutes_short, minutes)
 
     val totalVolume = summary?.totalVolumeKg ?: 0f
     val prCount = summary?.prs?.size ?: 0
@@ -383,7 +387,7 @@ private fun WorkoutStatsRow(
         )
         StatChip(
             icon = Icons.Default.EmojiEvents,
-            text = if (prCount > 0) "$prCount PR${if (prCount > 1) "s" else ""}" else "0 PRs",
+            text = pluralStringResource(R.plurals.pr_count, prCount, prCount),
             highlight = prCount > 0,
             modifier = Modifier.weight(1f)
         )

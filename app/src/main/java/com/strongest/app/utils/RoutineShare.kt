@@ -46,15 +46,17 @@ data class SharedRoutine(
     val version: Int = ROUTINE_SHARE_VERSION
 )
 
+/** [unknownExerciseName] names an exercise that no longer exists (localized by the caller). */
 fun RoutineWithExercisesAndSets.toSharedRoutine(
-    exercisesById: Map<Long, Exercise>
+    exercisesById: Map<Long, Exercise>,
+    unknownExerciseName: String
 ): SharedRoutine = SharedRoutine(
     name = routine.name,
     description = routine.description,
     exercises = exercises.map { re ->
         val exercise = exercisesById[re.exerciseId]
         SharedRoutineExercise(
-            name = exercise?.name ?: "Unknown",
+            name = exercise?.name ?: unknownExerciseName,
             muscleGroup = exercise?.muscleGroup ?: MuscleGroup.OTHER,
             equipment = exercise?.equipment ?: Equipment.NONE,
             defaultSets = re.defaultSets,

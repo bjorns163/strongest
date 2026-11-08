@@ -34,6 +34,17 @@ A completely free Android workout tracker with **500+ exercises** and no paywall
 - **Delete exercises** and sets
 - **Finish or discard** workout
 
+### Progression Suggestions
+- **Next weight and reps suggested automatically** from your last session of each exercise — shown above the sets, and filled in for you (optional)
+- **Double progression** by default: work up through a rep range (e.g. 8–12), then add weight and start at the bottom again; **Linear** or **Off** per exercise
+- **Uses your RPE**: easy sets (below the target RPE) add reps faster, max-effort sets are repeated before adding weight
+- **Each exercise has its own track** — dumbbell and machine chest press never affect each other — and when the same exercise is in two routines (heavy day / light day) each routine follows its own history
+- **Weight steps follow the equipment** (2.5 kg barbell, 2 kg dumbbells, 5 kg machines/cables, reps only for bodyweight), or set your own per exercise
+- **Rep range and target RPE per routine exercise**, from the exercise's menu in the routine editor
+- **Plateau detection**: same weight several sessions without progress → suggests a deload
+- **Long-break rule**: no increase after a long time away from an exercise
+- **All rules adjustable** in Settings → Progression, with a feedback link to GitHub
+
 ### Routines
 - **Unlimited routines** with custom names and descriptions
 - **Routine groups** — organize routines into named groups

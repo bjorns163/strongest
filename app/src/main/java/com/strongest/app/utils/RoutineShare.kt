@@ -36,7 +36,11 @@ data class SharedRoutineExercise(
     val defaultReps: Int = 10,
     val defaultWeight: Float = 0f,
     val restSeconds: Int = 90,
-    val sets: List<SharedRoutineSet> = emptyList()
+    val sets: List<SharedRoutineSet> = emptyList(),
+    /** Progression rep range and target RPE; null = the importer's own defaults. */
+    val repMin: Int? = null,
+    val repMax: Int? = null,
+    val targetRpe: Int? = null
 )
 
 data class SharedRoutine(
@@ -63,6 +67,9 @@ fun RoutineWithExercisesAndSets.toSharedRoutine(
             defaultReps = re.defaultReps,
             defaultWeight = re.defaultWeight,
             restSeconds = re.restSeconds,
+            repMin = re.repMin,
+            repMax = re.repMax,
+            targetRpe = re.targetRpe,
             sets = (sets[re.id] ?: emptyList()).map { set ->
                 SharedRoutineSet(
                     setNumber = set.setNumber,
@@ -98,6 +105,9 @@ fun SharedRoutine.toJson(): String = JSONObject().apply {
             put("defaultWeight", ex.defaultWeight.toDouble())
             put("defaultReps", ex.defaultReps)
             put("restSeconds", ex.restSeconds)
+            ex.repMin?.let { put("repMin", it) }
+            ex.repMax?.let { put("repMax", it) }
+            ex.targetRpe?.let { put("targetRpe", it) }
         }
     }))
 }.toString(2)
@@ -124,6 +134,9 @@ fun String.parseSharedRoutine(): SharedRoutine? = try {
                     defaultReps = exObj.optInt("defaultReps", 10),
                     defaultWeight = exObj.optDouble("defaultWeight", 0.0).toFloat(),
                     restSeconds = restSeconds,
+                    repMin = exObj.optIntOrNull("repMin"),
+                    repMax = exObj.optIntOrNull("repMax"),
+                    targetRpe = exObj.optIntOrNull("targetRpe"),
                     sets = (0 until (setsArr?.length() ?: 0)).map { j ->
                         val setObj = setsArr!!.getJSONObject(j)
                         SharedRoutineSet(

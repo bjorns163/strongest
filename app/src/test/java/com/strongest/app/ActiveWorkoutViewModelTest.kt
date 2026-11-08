@@ -22,6 +22,10 @@ import com.strongest.app.data.repository.WorkoutWithDetails
 import com.strongest.app.data.repository.WorkoutExerciseWithSets
 import com.strongest.app.ui.navigation.WarmUpSetSpec
 import com.strongest.app.ui.workout.ActiveWorkoutViewModel
+import com.strongest.app.utils.ProgressionConfig
+import com.strongest.app.utils.ProgressionSession
+import com.strongest.app.utils.ProgressionSet
+import com.strongest.app.utils.SuggestionKind
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -161,6 +165,7 @@ class ActiveWorkoutViewModelTest {
         )
         `when`(repository.getExerciseById(1L)).thenReturn(exercise(1L, "Exercise 1"))
         `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getProgressionSessions(1L)).thenReturn(emptyList())
         `when`(repository.getNote(1L)).thenReturn(null)
 
         vm.loadWorkout(workoutId)
@@ -251,6 +256,7 @@ class ActiveWorkoutViewModelTest {
         )
         `when`(repository.getExerciseById(1L)).thenReturn(exercise(1L, "Exercise 1"))
         `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getProgressionSessions(1L)).thenReturn(emptyList())
         `when`(repository.getNote(1L)).thenReturn(null)
 
         vm.loadWorkout(workoutId)
@@ -305,6 +311,7 @@ class ActiveWorkoutViewModelTest {
             `when`(repository.getExerciseById(exerciseId))
                 .thenReturn(exercise(exerciseId, "Exercise $exerciseId"))
             `when`(repository.getPreviousSessionSets(exerciseId)).thenReturn(emptyList())
+            `when`(repository.getProgressionSessions(exerciseId)).thenReturn(emptyList())
             `when`(repository.getNote(exerciseId))
                 .thenReturn(ExerciseNote(exerciseId = exerciseId, noteText = "Note for $exerciseId", updatedAt = 1000L))
         }
@@ -326,6 +333,7 @@ class ActiveWorkoutViewModelTest {
 
         `when`(repository.getExerciseById(2L)).thenReturn(exercise(2L, "Bench Press"))
         `when`(repository.getPreviousSessionSets(2L)).thenReturn(emptyList())
+        `when`(repository.getProgressionSessions(2L)).thenReturn(emptyList())
         `when`(repository.getNote(2L))
             .thenReturn(ExerciseNote(exerciseId = 2L, noteText = "Keep elbows tucked", updatedAt = 2000L))
 
@@ -351,6 +359,7 @@ class ActiveWorkoutViewModelTest {
 
         `when`(repository.getExerciseById(2L)).thenReturn(exercise(2L, "Bench Press"))
         `when`(repository.getPreviousSessionSets(2L)).thenReturn(emptyList())
+        `when`(repository.getProgressionSessions(2L)).thenReturn(emptyList())
         `when`(repository.getNote(2L)).thenReturn(null)
 
         vm.replaceExercise(10L, 2L)
@@ -463,6 +472,7 @@ class ActiveWorkoutViewModelTest {
         )
         `when`(repository.getExerciseById(1L)).thenReturn(exercise(1L, "Exercise 1"))
         `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getProgressionSessions(1L)).thenReturn(emptyList())
         `when`(repository.addExerciseToWorkout(5L, 1L, 0)).thenReturn(10L)
         `when`(repository.getNote(1L)).thenReturn(null)
         `when`(repository.logSet(10L, 1, 80f, 8, null, SetType.WARM_UP, 150, 0L)).thenReturn(100L)
@@ -472,6 +482,93 @@ class ActiveWorkoutViewModelTest {
 
         verify(repository).logSet(10L, 1, 80f, 8, null, SetType.WARM_UP, 150, 0L)
         assertEquals(SetType.WARM_UP, vm.state.value.workoutExercises.single().sets.single().setType)
+    }
+
+    /** A routine with two 60 kg × 10 sets, last done at 60 kg × 12, 12 @ RPE 8 in this routine. */
+    private suspend fun stubRoutineWithProgressionHistory() {
+        `when`(repository.startWorkout(eq(7L), eq("Routine 7"), anyString())).thenReturn(5L)
+        `when`(repository.getRoutineWithExercisesAndSets(7L)).thenReturn(
+            RoutineWithExercisesAndSets(
+                routine = Routine(id = 7L, name = "Routine 7"),
+                exercises = listOf(
+                    RoutineExercise(id = 70L, routineId = 7L, exerciseId = 1L, orderIndex = 0)
+                ),
+                sets = mapOf(
+                    70L to listOf(
+                        RoutineSet(id = 700L, routineExerciseId = 70L, setNumber = 1, weight = 60f, reps = 10),
+                        RoutineSet(id = 701L, routineExerciseId = 70L, setNumber = 2, weight = 60f, reps = 10)
+                    )
+                )
+            )
+        )
+        `when`(repository.getExerciseById(1L)).thenReturn(exercise(1L, "Exercise 1"))
+        `when`(repository.getPreviousSessionSets(1L)).thenReturn(emptyList())
+        `when`(repository.getProgressionSessions(1L)).thenReturn(
+            listOf(
+                ProgressionSession(
+                    workoutId = 3L,
+                    routineId = 7L,
+                    startTime = System.currentTimeMillis() - 2L * 24 * 60 * 60 * 1000,
+                    sets = listOf(
+                        ProgressionSet(60f, 12, 8f, SetType.NORMAL),
+                        ProgressionSet(60f, 12, 8f, SetType.NORMAL)
+                    )
+                )
+            )
+        )
+        `when`(repository.getExerciseSettings(1L)).thenReturn(null)
+        `when`(repository.addExerciseToWorkout(5L, 1L, 0)).thenReturn(10L)
+        `when`(repository.getNote(1L)).thenReturn(null)
+        `when`(repository.logSet(10L, 1, 60f, 10, null, SetType.NORMAL, 90, 0L)).thenReturn(100L)
+        `when`(repository.logSet(10L, 2, 60f, 10, null, SetType.NORMAL, 150, 0L)).thenReturn(101L)
+    }
+
+    @Test
+    fun `starting a routine fills in the progression suggestion`() = runTest(dispatcher) {
+        `when`(settingsRepository.settingsFlow).thenReturn(
+            flowOf(AppSettings(workoutNotificationEnabled = false, rpeTrackingEnabled = true))
+        )
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+        stubRoutineWithProgressionHistory()
+
+        vm.startWorkoutFromRoutine(7L)
+        advanceUntilIdle()
+
+        val exercise = vm.state.value.workoutExercises.single()
+        assertEquals(SuggestionKind.INCREASE_WEIGHT, exercise.suggestion?.kind)
+        assertEquals(listOf(62.5f, 62.5f), exercise.sets.map { it.weight })
+        assertEquals(listOf(8, 8), exercise.sets.map { it.reps })
+    }
+
+    @Test
+    fun `with auto-fill off the suggestion is shown but the sets keep the routine numbers`() = runTest(dispatcher) {
+        `when`(settingsRepository.settingsFlow).thenReturn(
+            flowOf(
+                AppSettings(
+                    workoutNotificationEnabled = false,
+                    rpeTrackingEnabled = true,
+                    progression = ProgressionConfig(autoFill = false)
+                )
+            )
+        )
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val vm = ActiveWorkoutViewModel(repository, settingsRepository, context)
+        advanceUntilIdle()
+        stubRoutineWithProgressionHistory()
+
+        vm.startWorkoutFromRoutine(7L)
+        advanceUntilIdle()
+
+        val exercise = vm.state.value.workoutExercises.single()
+        assertEquals(SuggestionKind.INCREASE_WEIGHT, exercise.suggestion?.kind)
+        assertEquals(listOf(60f, 60f), exercise.sets.map { it.weight })
+
+        // Tapping the suggestion fills it in after all.
+        vm.applySuggestion(10L)
+        advanceUntilIdle()
+        assertEquals(listOf(62.5f, 62.5f), vm.state.value.workoutExercises.single().sets.map { it.weight })
     }
 
     @Test

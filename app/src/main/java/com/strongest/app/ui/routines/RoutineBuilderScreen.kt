@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -74,8 +75,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.strongest.app.R
 import com.strongest.app.data.model.RoutineGroup
+import com.strongest.app.data.model.ExerciseType
 import com.strongest.app.data.model.SetType
 import com.strongest.app.ui.workout.exerciseSubtitle
+import com.strongest.app.ui.workout.ProgressionPreferencesDialog
+import com.strongest.app.ui.workout.RoutineProgressionTarget
 import com.strongest.app.utils.formatDecimal
 import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.data.repository.WeightUnit
@@ -248,6 +252,11 @@ fun RoutineBuilderScreen(
                             viewModel.deleteSet(exercise.routineExerciseId, setIndex)
                         },
                         onRemoveExercise = { viewModel.removeExercise(exercise.routineExerciseId) },
+                        onUpdateProgressionTarget = { target ->
+                            viewModel.updateProgressionTarget(
+                                exercise.routineExerciseId, target.repMin, target.repMax, target.targetRpe
+                            )
+                        },
                         onReplaceExercise = { routineExerciseId ->
                             exercisePickerResultHolder.startReplace(routineExerciseId)
                             onNavigateToReplacePicker?.invoke()
@@ -304,12 +313,31 @@ fun RoutineExerciseBlock(
     onMoveUp: () -> Unit = {},
     onMoveDown: () -> Unit = {},
     onViewExercise: () -> Unit = {},
-    onSaveNote: (String) -> Unit = {}
+    onSaveNote: (String) -> Unit = {},
+    onUpdateProgressionTarget: (RoutineProgressionTarget) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
+    var showProgressionDialog by remember { mutableStateOf(false) }
     var noteText by remember { mutableStateOf(exercise.noteText) }
     val isCardio = exercise.muscleGroup == "CARDIO"
+    val progressionApplies = !isCardio && exercise.muscleGroup != "STRETCHING" &&
+        exercise.type != ExerciseType.ISOMETRIC
+
+    if (showProgressionDialog) {
+        ProgressionPreferencesDialog(
+            exerciseId = exercise.exerciseId,
+            exerciseName = exercise.exerciseName.ifEmpty { stringResource(R.string.unknown_exercise) },
+            equipment = exercise.equipment,
+            weightUnit = weightUnit,
+            lastWeightKg = exercise.sets
+                .filter { it.setType != SetType.WARM_UP }
+                .maxOfOrNull { it.weight } ?: 0f,
+            routineTarget = RoutineProgressionTarget(exercise.repMin, exercise.repMax, exercise.targetRpe),
+            onSaveRoutineTarget = onUpdateProgressionTarget,
+            onDismiss = { showProgressionDialog = false }
+        )
+    }
 
     LaunchedEffect(exercise.noteText) {
         noteText = exercise.noteText
@@ -362,6 +390,18 @@ fun RoutineExerciseBlock(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        val repMin = exercise.repMin
+                        val repMax = exercise.repMax
+                        if (progressionApplies && repMin != null && repMax != null) {
+                            Text(
+                                text = stringResource(
+                                    R.string.progression_range_summary,
+                                    repMin, repMax, exercise.targetRpe ?: 8
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
                 Box {
@@ -388,6 +428,16 @@ fun RoutineExerciseBlock(
                             },
                             leadingIcon = { Icon(Icons.Default.Edit, null) }
                         )
+                        if (progressionApplies) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.progression_menu)) },
+                                onClick = {
+                                    showMenu = false
+                                    showProgressionDialog = true
+                                },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, null) }
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.remove_exercise)) },
                             onClick = {

@@ -644,4 +644,102 @@
     <string name="notification_next">Next: %1$s • Set %2$d • %3$s × %4$d</string>
     <string name="notification_all_done">All sets done — tap finish to save</string>
     <string name="notification_complete_workout">Complete workout</string>
+
+    <!-- Progression suggestions -->
+    <string name="progression_load">%1$s × %2$d</string>
+    <plurals name="progression_reps_only">
+        <item quantity="one">%d rep</item>
+        <item quantity="other">%d reps</item>
+    </plurals>
+    <string name="progression_increase">Add weight · %1$s</string>
+    <string name="progression_add_reps">More reps · %1$s</string>
+    <string name="progression_repeat">Repeat · %1$s</string>
+    <string name="progression_decrease">Go lighter · %1$s</string>
+    <string name="progression_deload">Deload · %1$s</string>
+    <string name="progression_long_break">Ease back in · %1$s</string>
+    <plurals name="progression_basis">
+        <item quantity="one">Last: %1$s, %2$d set</item>
+        <item quantity="other">Last: %1$s, %2$d sets</item>
+    </plurals>
+    <plurals name="progression_basis_rpe">
+        <item quantity="one">Last: %1$s, %2$d set @ RPE %3$s</item>
+        <item quantity="other">Last: %1$s, %2$d sets @ RPE %3$s</item>
+    </plurals>
+    <plurals name="progression_basis_stalled">
+        <item quantity="one">Same weight %d session without progress</item>
+        <item quantity="other">Same weight %d sessions in a row without progress</item>
+    </plurals>
+    <plurals name="progression_basis_break">
+        <item quantity="one">%d day since you last did this</item>
+        <item quantity="other">%d days since you last did this</item>
+    </plurals>
+    <string name="progression_tap_to_apply">Tap to fill in · hold for options</string>
+    <string name="progression_apply">Fill in suggestion</string>
+    <string name="progression_feedback_wrong">Suggestion seem wrong? Tell us</string>
+    <string name="progression_menu">Progression</string>
+    <string name="progression_dialog_title">Progression · %1$s</string>
+    <string name="progression_this_routine">In this routine</string>
+    <string name="progression_rep_range">Rep range</string>
+    <string name="progression_rep_min">From</string>
+    <string name="progression_rep_max">To</string>
+    <string name="progression_target_rpe">Target RPE</string>
+    <string name="progression_use_defaults">Use defaults (%1$s)</string>
+    <string name="progression_this_exercise">This exercise (all routines)</string>
+    <string name="progression_method">Method</string>
+    <string name="progression_method_double">Double progression</string>
+    <string name="progression_method_double_desc">Work up through the rep range, then add weight</string>
+    <string name="progression_method_linear">Linear</string>
+    <string name="progression_method_linear_desc">Same reps every time; add weight when you hit them all</string>
+    <string name="progression_method_off">Off</string>
+    <string name="progression_method_off_desc">No suggestions for this exercise</string>
+    <string name="progression_weight_step">Weight step (%1$s)</string>
+    <string name="progression_weight_step_auto">Leave empty for %1$s (based on equipment)</string>
+    <string name="progression_weight_step_reps_only">Leave empty to progress by reps only</string>
+    <string name="progression_range_summary">%1$d–%2$d reps · RPE %3$d</string>
+    <string name="progression_range_invalid">"From" must be 1–50 and not above "To"</string>
+
+    <!-- Settings → Progression -->
+    <string name="settings_progression">Progression</string>
+    <string name="settings_progression_enabled">Progression suggestions</string>
+    <string name="settings_progression_enabled_desc">Suggests your next weight and reps from your last session</string>
+    <string name="settings_progression_use_rpe">Use RPE in suggestions</string>
+    <string name="settings_progression_use_rpe_desc">Easy sets add reps faster; max-effort sets are repeated before adding weight</string>
+    <string name="settings_progression_rep_range">Default rep range</string>
+    <string name="settings_progression_rep_range_desc">For exercises whose routine doesn\'t set one</string>
+    <string name="settings_progression_target_rpe">Default target RPE</string>
+    <string name="settings_progression_long_break">Long break after</string>
+    <string name="settings_progression_long_break_desc">No increase after this long away from an exercise; go a bit lighter instead</string>
+    <string name="settings_progression_fail_drop">Drop after a failed session</string>
+    <string name="settings_progression_fail_drop_desc">Below the rep range at max effort</string>
+    <string name="settings_progression_plateau">Plateau detection after</string>
+    <string name="settings_progression_plateau_desc">Same weight this many sessions without progress → suggest a deload</string>
+    <string name="settings_progression_deload">Deload amount</string>
+    <string name="settings_progression_auto_fill">Fill in suggestions automatically</string>
+    <string name="settings_progression_auto_fill_desc">Off: only show the suggestion and keep last session\'s numbers</string>
+    <string name="settings_progression_reset">Reset to defaults</string>
+    <string name="settings_progression_feedback">Send feedback about suggestions</string>
+    <string name="settings_progression_feedback_desc">Opens a feedback form on GitHub</string>
+    <plurals name="days_count">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="sessions_count">
+        <item quantity="one">%d session</item>
+        <item quantity="other">%d sessions</item>
+    </plurals>
+    <string name="percent_value">%1$d%%</string>
+    <string name="off">Off</string>
+    <string name="rep_range_value">%1$d–%2$d</string>
+
+    <!-- What's new -->
+    <string name="whats_new_progression_title">New: Progression suggestions</string>
+    <string name="whats_new_progression_body">Strongest now suggests your next weight and reps from your last session and RPE. It follows each exercise separately, and each routine keeps its own track.\n\nYou can tune the rules in Settings → Progression.</string>
+    <string name="whats_new_turn_on">Turn on</string>
+    <string name="whats_new_support_title">Enjoying Strongest?</string>
+    <string name="whats_new_support_body">It\'s free with no ads. A rating helps other lifters find it.</string>
+    <string name="whats_new_rate">Rate on Play Store</string>
+    <string name="whats_new_feedback_body">Found a bug or have an idea?</string>
+    <string name="whats_new_feedback">Give feedback on GitHub</string>
+    <string name="done">Done</string>
+    <string name="whats_new_page">Page %1$d of %2$d</string>
 </resources>

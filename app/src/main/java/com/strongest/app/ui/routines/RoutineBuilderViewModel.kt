@@ -34,7 +34,11 @@ data class RoutineExerciseUi(
     val type: ExerciseType = ExerciseType.ISOLATION,
     val sets: List<RoutineSetUi>,
     val noteText: String = "",
-    val previousSets: List<com.strongest.app.ui.workout.PreviousSetInfo> = emptyList()
+    val previousSets: List<com.strongest.app.ui.workout.PreviousSetInfo> = emptyList(),
+    /** Progression rep range and target RPE for this routine; null = Settings defaults. */
+    val repMin: Int? = null,
+    val repMax: Int? = null,
+    val targetRpe: Int? = null
 )
 
 private val routineSetUiKeys = AtomicLong()
@@ -140,7 +144,10 @@ class RoutineBuilderViewModel @Inject constructor(
                         type = exercise?.type ?: ExerciseType.ISOLATION,
                         noteText = note?.noteText ?: "",
                         sets = sets,
-                        previousSets = previousSetInfos
+                        previousSets = previousSetInfos,
+                        repMin = re.repMin,
+                        repMax = re.repMax,
+                        targetRpe = re.targetRpe
                     )
                 }
                 _state.update {
@@ -390,6 +397,17 @@ class RoutineBuilderViewModel @Inject constructor(
         }
     }
 
+    /** Sets (or with nulls, clears back to the defaults) the progression target of one exercise. */
+    fun updateProgressionTarget(routineExerciseId: Long, repMin: Int?, repMax: Int?, targetRpe: Int?) {
+        _state.update { st ->
+            st.copy(exercises = st.exercises.map { e ->
+                if (e.routineExerciseId == routineExerciseId) {
+                    e.copy(repMin = repMin, repMax = repMax, targetRpe = targetRpe)
+                } else e
+            })
+        }
+    }
+
     fun updateName(name: String) {
         _state.update { it.copy(routineName = name) }
     }
@@ -422,7 +440,10 @@ class RoutineBuilderViewModel @Inject constructor(
                     defaultSets = re.sets.size,
                     defaultReps = firstSet?.reps ?: 10,
                     defaultWeight = firstSet?.weight ?: 0f,
-                    restSeconds = firstSet?.restSeconds ?: defaultRestSeconds
+                    restSeconds = firstSet?.restSeconds ?: defaultRestSeconds,
+                    repMin = re.repMin,
+                    repMax = re.repMax,
+                    targetRpe = re.targetRpe
                 )
             }
 

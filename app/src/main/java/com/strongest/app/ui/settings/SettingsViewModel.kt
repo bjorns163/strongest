@@ -30,6 +30,7 @@ import com.strongest.app.data.repository.Sex
 import com.strongest.app.data.repository.WeightUnit
 import com.strongest.app.data.repository.defaultRecoveryHoursMap
 import com.strongest.app.utils.ExportData
+import com.strongest.app.utils.ProgressionConfig
 import com.strongest.app.utils.RestTimer
 import com.strongest.app.utils.WorkoutNotificationBus
 import com.strongest.app.utils.parseExportData
@@ -61,7 +62,8 @@ data class SettingsUiState(
     val recoveryHoursByMuscle: Map<MuscleGroup, Int> = defaultRecoveryHoursMap(),
     val userSex: Sex = Sex.UNSET,
     val birthYear: Int = 0,
-    val caliperMode: CaliperMode = CaliperMode.THREE_SITE
+    val caliperMode: CaliperMode = CaliperMode.THREE_SITE,
+    val progression: ProgressionConfig = ProgressionConfig()
 )
 
 sealed interface ExportImportResult {
@@ -104,11 +106,23 @@ class SettingsViewModel @Inject constructor(
                             recoveryHoursByMuscle = appSettings.recoveryHoursByMuscle,
                             userSex = appSettings.userSex,
                             birthYear = appSettings.birthYear,
-                            caliperMode = appSettings.caliperMode
+                            caliperMode = appSettings.caliperMode,
+                            progression = appSettings.progression
                         )
                     }
             }
         }
+    }
+
+    fun updateProgression(change: (ProgressionConfig) -> ProgressionConfig) {
+        viewModelScope.launch {
+            settingsRepository.updateProgression(change)
+        }
+    }
+
+    /** Back to the shipped defaults, keeping whether suggestions are on at all. */
+    fun resetProgression() {
+        updateProgression { ProgressionConfig(enabled = it.enabled) }
     }
 
     fun setThemeMode(mode: ThemeMode) {

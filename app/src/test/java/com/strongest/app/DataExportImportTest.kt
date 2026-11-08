@@ -304,6 +304,39 @@ class DataExportImportTest {
     }
 
     @Test
+    fun `progression settings and targets round-trip`() {
+        val original = ExportData(
+            routineExercises = listOf(
+                RoutineExercise(id = 1, routineId = 1, exerciseId = 5, orderIndex = 0, repMin = 5, repMax = 8, targetRpe = 9),
+                RoutineExercise(id = 2, routineId = 1, exerciseId = 6, orderIndex = 1)
+            ),
+            exerciseSettings = listOf(
+                ExerciseSettings(exerciseId = 5, progressionMethod = "LINEAR", weightStepKg = 1.25f),
+                ExerciseSettings(exerciseId = 6)
+            ),
+            settings = AppSettings(
+                progression = com.strongest.app.utils.ProgressionConfig(
+                    enabled = false, useRpe = false, defaultRepMin = 6, defaultRepMax = 10,
+                    defaultTargetRpe = 9, longBreakDays = 14, failDropPercent = 10,
+                    plateauSessions = 0, deloadPercent = 15, autoFill = false
+                )
+            )
+        )
+        val parsed = original.toJson().parseExportData()!!
+        assertEquals(original.routineExercises, parsed.routineExercises)
+        assertEquals(original.exerciseSettings, parsed.exerciseSettings)
+        assertEquals(original.settings.progression, parsed.settings.progression)
+    }
+
+    @Test
+    fun `older backups without progression fields get the defaults`() {
+        val root = org.json.JSONObject(ExportData().toJson())
+        root.getJSONObject("settings").remove("progression")
+        val parsed = root.toString().parseExportData()!!
+        assertEquals(com.strongest.app.utils.ProgressionConfig(), parsed.settings.progression)
+    }
+
+    @Test
     fun `empty lists round-trip correctly`() {
         val original = ExportData(
             exercises = emptyList(),

@@ -16,5 +16,9 @@ data class ExerciseSettings(
     val exerciseId: Long,
     val warmUpSetCount: Int = 3,
     val barWeightKg: Float? = null,
-    val plateSingleSide: Boolean = false
+    val plateSingleSide: Boolean = false,
+    /** [com.strongest.app.utils.ProgressionMethod] name; null = double progression. */
+    val progressionMethod: String? = null,
+    /** One weight increase for progression suggestions; null = based on the equipment. */
+    val weightStepKg: Float? = null
 )

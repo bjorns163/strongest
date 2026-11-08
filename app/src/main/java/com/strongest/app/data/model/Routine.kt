@@ -47,7 +47,12 @@ data class RoutineExercise(
     val defaultSets: Int = 3,
     val defaultReps: Int = 10,
     val defaultWeight: Float = 0f,
-    val restSeconds: Int = 90
+    val restSeconds: Int = 90,
+    /** Progression rep range for this exercise in this routine; null = derive from Settings. */
+    val repMin: Int? = null,
+    val repMax: Int? = null,
+    /** Target RPE (7–9) progression aims for; null = Settings default. */
+    val targetRpe: Int? = null
 )
 
 @Entity(

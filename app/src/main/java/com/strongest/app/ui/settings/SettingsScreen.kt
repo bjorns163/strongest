@@ -84,6 +84,9 @@ import com.strongest.app.ui.components.label
 import com.strongest.app.ui.workout.STANDARD_KG_PLATES
 import com.strongest.app.ui.workout.STANDARD_LBS_PLATES
 import com.strongest.app.utils.formatDecimal
+import com.strongest.app.utils.ProgressionConfig
+import com.strongest.app.ui.workout.openUrl
+import com.strongest.app.ui.workout.progressionFeedbackUrl
 import com.strongest.app.utils.formatDuration
 import com.strongest.app.utils.weightUnitLabel
 
@@ -312,6 +315,15 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.setWorkoutNotificationEnabled(it) }
                     )
                 }
+            }
+
+            item {
+                ProgressionSettingsGroup(
+                    config = uiState.progression,
+                    rpeTrackingEnabled = uiState.rpeTrackingEnabled,
+                    onChange = { change -> viewModel.updateProgression(change) },
+                    onReset = { viewModel.resetProgression() }
+                )
             }
 
             item {
@@ -949,3 +961,167 @@ private fun PlateInventory(
  * Compose, so lint rejects it there.
  */
 private fun formatPlateLabel(plate: Float): String = formatDecimal(plate)
+
+/**
+ * Settings → Progression. The numeric rules are picked from short lists of sensible values
+ * rather than typed, so there is no way to enter a rule that makes no sense.
+ */
+@Composable
+private fun ProgressionSettingsGroup(
+    config: ProgressionConfig,
+    rpeTrackingEnabled: Boolean,
+    onChange: ((ProgressionConfig) -> ProgressionConfig) -> Unit,
+    onReset: () -> Unit
+) {
+    val context = LocalContext.current
+    var showRangeDialog by remember { mutableStateOf(false) }
+
+    SettingsGroup(title = stringResource(R.string.settings_progression)) {
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_progression_enabled),
+            description = stringResource(R.string.settings_progression_enabled_desc),
+            checked = config.enabled,
+            onCheckedChange = { on -> onChange { it.copy(enabled = on) } }
+        )
+        if (config.enabled) {
+            SettingsSubDivider()
+            if (rpeTrackingEnabled) {
+                SettingsSwitchRow(
+                    title = stringResource(R.string.settings_progression_use_rpe),
+                    description = stringResource(R.string.settings_progression_use_rpe_desc),
+                    checked = config.useRpe,
+                    onCheckedChange = { on -> onChange { it.copy(useRpe = on) } }
+                )
+            }
+            SettingsRow(
+                title = stringResource(R.string.settings_progression_rep_range),
+                description = stringResource(R.string.settings_progression_rep_range_desc),
+                onClick = { showRangeDialog = true },
+                trailing = {
+                    SettingsValue(stringResource(R.string.rep_range_value, config.defaultRepMin, config.defaultRepMax))
+                }
+            )
+            if (rpeTrackingEnabled && config.useRpe) {
+                SettingsChoiceRow(
+                    title = stringResource(R.string.settings_progression_target_rpe),
+                    selected = config.defaultTargetRpe,
+                    options = ProgressionConfig.TARGET_RPE_OPTIONS,
+                    optionLabel = { stringResource(R.string.rpe_value, it.toString()) },
+                    onSelect = { v -> onChange { it.copy(defaultTargetRpe = v) } }
+                )
+            }
+            SettingsChoiceRow(
+                title = stringResource(R.string.settings_progression_long_break),
+                description = stringResource(R.string.settings_progression_long_break_desc),
+                selected = config.longBreakDays,
+                options = withCurrent(listOf(7, 10, 14, 21, 28, 42, 60), config.longBreakDays),
+                optionLabel = { pluralStringResource(R.plurals.days_count, it, it) },
+                onSelect = { v -> onChange { it.copy(longBreakDays = v) } }
+            )
+            SettingsChoiceRow(
+                title = stringResource(R.string.settings_progression_fail_drop),
+                description = stringResource(R.string.settings_progression_fail_drop_desc),
+                selected = config.failDropPercent,
+                options = withCurrent(listOf(0, 2, 5, 7, 10, 15), config.failDropPercent),
+                optionLabel = { stringResource(R.string.percent_value, it) },
+                onSelect = { v -> onChange { it.copy(failDropPercent = v) } }
+            )
+            SettingsChoiceRow(
+                title = stringResource(R.string.settings_progression_plateau),
+                description = stringResource(R.string.settings_progression_plateau_desc),
+                selected = config.plateauSessions,
+                options = withCurrent(listOf(0, 2, 3, 4, 5, 6), config.plateauSessions),
+                optionLabel = {
+                    if (it == 0) stringResource(R.string.off)
+                    else pluralStringResource(R.plurals.sessions_count, it, it)
+                },
+                onSelect = { v -> onChange { it.copy(plateauSessions = v) } }
+            )
+            if (config.plateauSessions > 0) {
+                SettingsChoiceRow(
+                    title = stringResource(R.string.settings_progression_deload),
+                    selected = config.deloadPercent,
+                    options = withCurrent(listOf(5, 10, 15, 20), config.deloadPercent),
+                    optionLabel = { stringResource(R.string.percent_value, it) },
+                    onSelect = { v -> onChange { it.copy(deloadPercent = v) } }
+                )
+            }
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_progression_auto_fill),
+                description = stringResource(R.string.settings_progression_auto_fill_desc),
+                checked = config.autoFill,
+                onCheckedChange = { on -> onChange { it.copy(autoFill = on) } }
+            )
+            SettingsRow(
+                title = stringResource(R.string.settings_progression_reset),
+                onClick = onReset
+            )
+        }
+        SettingsRow(
+            title = stringResource(R.string.settings_progression_feedback),
+            description = stringResource(R.string.settings_progression_feedback_desc),
+            onClick = { openUrl(context, progressionFeedbackUrl()) }
+        )
+    }
+
+    if (showRangeDialog) {
+        var minText by remember { mutableStateOf(config.defaultRepMin.toString()) }
+        var maxText by remember { mutableStateOf(config.defaultRepMax.toString()) }
+        val min = minText.toIntOrNull()
+        val max = maxText.toIntOrNull()
+        val valid = min != null && max != null && min in ProgressionConfig.REP_RANGE_LIMITS &&
+            max in ProgressionConfig.REP_RANGE_LIMITS && min <= max
+        AlertDialog(
+            onDismissRequest = { showRangeDialog = false },
+            title = { Text(stringResource(R.string.settings_progression_rep_range)) },
+            text = {
+                Column {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = minText,
+                            onValueChange = { minText = it.filter(Char::isDigit).take(2) },
+                            label = { Text(stringResource(R.string.progression_rep_min)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = maxText,
+                            onValueChange = { maxText = it.filter(Char::isDigit).take(2) },
+                            label = { Text(stringResource(R.string.progression_rep_max)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (!valid) {
+                        Text(
+                            stringResource(R.string.progression_range_invalid),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = valid,
+                    onClick = {
+                        if (min != null && max != null) {
+                            onChange { it.copy(defaultRepMin = min, defaultRepMax = max) }
+                        }
+                        showRangeDialog = false
+                    }
+                ) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRangeDialog = false }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+}
+
+/** A value restored from a backup may not be one of the presets; keep it pickable. */
+private fun withCurrent(options: List<Int>, current: Int): List<Int> =
+    if (current in options) options else (options + current).sorted()

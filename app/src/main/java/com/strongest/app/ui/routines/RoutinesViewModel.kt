@@ -128,7 +128,10 @@ class RoutinesViewModel @Inject constructor(
                     defaultSets = sharedExercise.defaultSets,
                     defaultWeight = sharedExercise.defaultWeight,
                     defaultReps = sharedExercise.defaultReps,
-                    restSeconds = sharedExercise.restSeconds
+                    restSeconds = sharedExercise.restSeconds,
+                    repMin = sharedExercise.repMin,
+                    repMax = sharedExercise.repMax,
+                    targetRpe = sharedExercise.targetRpe
                 )
             )
 

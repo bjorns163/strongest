@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -588,6 +589,8 @@ fun ActiveWorkoutScreen(
                             viewModel.deleteSet(exercise.workoutExerciseId, setIndex)
                         },
                         onRemoveExercise = { viewModel.removeExercise(exercise.workoutExerciseId) },
+                        onApplySuggestion = { viewModel.applySuggestion(exercise.workoutExerciseId) },
+                        onProgressionChanged = { viewModel.refreshSuggestion(exercise.workoutExerciseId) },
                         onReplaceExercise = { workoutExerciseId ->
                             exercisePickerResultHolder.startReplace(workoutExerciseId)
                             onNavigateToReplacePicker?.invoke()
@@ -716,11 +719,14 @@ fun ExerciseBlock(
     onMoveDown: () -> Unit = {},
     onViewExercise: () -> Unit = {},
     onSaveNote: (String) -> Unit = {},
+    onApplySuggestion: () -> Unit = {},
+    onProgressionChanged: () -> Unit = {},
     isViewMode: Boolean = false
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
     var showPlateCalc by remember { mutableStateOf(false) }
+    var showProgressionDialog by remember { mutableStateOf(false) }
     var noteText by remember { mutableStateOf(exercise.noteText) }
     val isCardio = exercise.muscleGroup == MuscleGroup.CARDIO
     // RPE rates how hard a set of reps was; a cardio block is logged as time, so the column and
@@ -736,6 +742,24 @@ fun ExerciseBlock(
             initialTargetWeight = kgToDisplay(initial, weightUnit),
             onDismiss = { showPlateCalc = false },
             exerciseId = exercise.exerciseId
+        )
+    }
+
+    // Cardio, stretches and holds are logged as time; progression doesn't apply to them.
+    val progressionApplies = !isCardio && exercise.muscleGroup != MuscleGroup.STRETCHING &&
+        exercise.type != ExerciseType.ISOMETRIC
+    if (showProgressionDialog) {
+        ProgressionPreferencesDialog(
+            exerciseId = exercise.exerciseId,
+            exerciseName = exercise.exerciseName,
+            equipment = exercise.equipment,
+            weightUnit = weightUnit,
+            lastWeightKg = exercise.sets
+                .filter { it.setType != SetType.WARM_UP }
+                .maxOfOrNull { it.weight } ?: 0f,
+            routineTarget = null,
+            onSaved = onProgressionChanged,
+            onDismiss = { showProgressionDialog = false }
         )
     }
 
@@ -825,6 +849,16 @@ fun ExerciseBlock(
                                 },
                                 leadingIcon = { Icon(Icons.Default.FitnessCenter, null) }
                             )
+                            if (progressionApplies) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.progression_menu)) },
+                                    onClick = {
+                                        showMenu = false
+                                        showProgressionDialog = true
+                                    },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, null) }
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.remove_exercise)) },
                                 onClick = {
@@ -888,6 +922,17 @@ fun ExerciseBlock(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 2.dp)
+                )
+            }
+
+            val suggestion = exercise.suggestion
+            if (!isViewMode && suggestion != null && progressionApplies) {
+                ProgressionSuggestionChip(
+                    suggestion = suggestion,
+                    exerciseName = exercise.exerciseName,
+                    weightUnit = weightUnit,
+                    onApply = onApplySuggestion,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
 

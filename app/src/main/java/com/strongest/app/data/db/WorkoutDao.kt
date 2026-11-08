@@ -23,6 +23,18 @@ data class ExerciseHistoryEntry(
     val routineName: String?
 )
 
+/** One completed set of an exercise, with the workout it belongs to; feeds progression. */
+data class ProgressionHistoryRow(
+    val workoutId: Long,
+    val routineId: Long?,
+    val startTime: Long,
+    val setNumber: Int,
+    val weightKg: Float,
+    val reps: Int,
+    val rpe: Float?,
+    val setType: SetType
+)
+
 data class VolumeByDate(
     val date: Long,
     val totalVolumeKg: Float,
@@ -225,6 +237,30 @@ interface WorkoutDao {
         ORDER BY s.setNumber ASC
     """)
     suspend fun getLastSessionSets(exerciseId: Long): List<ExerciseHistoryEntry>
+
+    /** Completed sets of the last [sessionLimit] finished workouts that included this exercise. */
+    @Query("""
+        SELECT w.id AS workoutId, w.routineId AS routineId, w.startTime AS startTime,
+               s.setNumber AS setNumber, s.weightKg AS weightKg, s.reps AS reps,
+               s.rpe AS rpe, s.setType AS setType
+        FROM sets s
+        JOIN workout_exercises we ON s.workoutExerciseId = we.id
+        JOIN workouts w ON we.workoutId = w.id
+        WHERE we.exerciseId = :exerciseId AND w.isOngoing = 0 AND s.completedAt > 0
+          AND w.id IN (
+              SELECT w2.id FROM workouts w2
+              JOIN workout_exercises we2 ON we2.workoutId = w2.id
+              WHERE we2.exerciseId = :exerciseId AND w2.isOngoing = 0
+              GROUP BY w2.id
+              ORDER BY w2.startTime DESC
+              LIMIT :sessionLimit
+          )
+        ORDER BY w.startTime DESC, s.setNumber ASC
+    """)
+    suspend fun getProgressionHistory(exerciseId: Long, sessionLimit: Int): List<ProgressionHistoryRow>
+
+    @Query("SELECT COUNT(*) FROM workouts WHERE isOngoing = 0")
+    suspend fun countCompletedWorkouts(): Int
 
     @Query("""
         SELECT w.startTime as date,

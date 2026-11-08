@@ -31,7 +31,7 @@ import com.strongest.app.data.model.WorkoutExercise
         SetLog::class,
         MeasurementEntry::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -104,6 +104,17 @@ abstract class StrongestDatabase : RoomDatabase() {
                 )
                 db.execSQL("DROP TABLE exercises")
                 db.execSQL("ALTER TABLE exercises_new RENAME TO exercises")
+            }
+        }
+
+        /** Progression suggestions: rep range + target RPE per routine exercise, method + step per exercise. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE routine_exercises ADD COLUMN repMin INTEGER")
+                db.execSQL("ALTER TABLE routine_exercises ADD COLUMN repMax INTEGER")
+                db.execSQL("ALTER TABLE routine_exercises ADD COLUMN targetRpe INTEGER")
+                db.execSQL("ALTER TABLE exercise_settings ADD COLUMN progressionMethod TEXT")
+                db.execSQL("ALTER TABLE exercise_settings ADD COLUMN weightStepKg REAL")
             }
         }
     }

@@ -15,6 +15,7 @@ import com.strongest.app.ThemeMode
 import com.strongest.app.data.model.MuscleGroup
 import com.strongest.app.ui.workout.STANDARD_KG_PLATES
 import com.strongest.app.ui.workout.STANDARD_LBS_PLATES
+import com.strongest.app.utils.ProgressionConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -45,7 +46,8 @@ data class AppSettings(
     val recoveryHoursByMuscle: Map<MuscleGroup, Int> = defaultRecoveryHoursMap(),
     val userSex: Sex = Sex.UNSET,
     val birthYear: Int = 0,
-    val caliperMode: CaliperMode = CaliperMode.THREE_SITE
+    val caliperMode: CaliperMode = CaliperMode.THREE_SITE,
+    val progression: ProgressionConfig = ProgressionConfig()
 )
 
 enum class WeightUnit {
@@ -65,6 +67,12 @@ enum class CaliperMode(val siteCount: Int, @StringRes val labelRes: Int) {
     FOUR_SITE(4, R.string.caliper_mode_4_site),
     SEVEN_SITE(7, R.string.caliper_mode_7_site)
 }
+
+/**
+ * Bumped each time there is a new "what's new" intro to show. The intro shows when the stored
+ * value is lower than this; see [SettingsRepository.whatsNewSeenVersionFlow].
+ */
+const val WHATS_NEW_VERSION = 1
 
 /** Muscle groups that have a recovery window (trainable, non-cardio/stretching). */
 val RECOVERABLE_MUSCLE_GROUPS: List<MuscleGroup> = listOf(
@@ -106,6 +114,46 @@ class SettingsRepository @Inject constructor(
     private val USER_SEX_KEY = stringPreferencesKey("user_sex")
     private val BIRTH_YEAR_KEY = intPreferencesKey("birth_year")
     private val CALIPER_MODE_KEY = stringPreferencesKey("caliper_mode")
+    private val PROGRESSION_ENABLED_KEY = booleanPreferencesKey("progression_enabled")
+    private val PROGRESSION_USE_RPE_KEY = booleanPreferencesKey("progression_use_rpe")
+    private val PROGRESSION_REP_MIN_KEY = intPreferencesKey("progression_rep_min")
+    private val PROGRESSION_REP_MAX_KEY = intPreferencesKey("progression_rep_max")
+    private val PROGRESSION_TARGET_RPE_KEY = intPreferencesKey("progression_target_rpe")
+    private val PROGRESSION_LONG_BREAK_KEY = intPreferencesKey("progression_long_break_days")
+    private val PROGRESSION_FAIL_DROP_KEY = intPreferencesKey("progression_fail_drop_percent")
+    private val PROGRESSION_PLATEAU_KEY = intPreferencesKey("progression_plateau_sessions")
+    private val PROGRESSION_DELOAD_KEY = intPreferencesKey("progression_deload_percent")
+    private val PROGRESSION_AUTO_FILL_KEY = booleanPreferencesKey("progression_auto_fill")
+    private val WHATS_NEW_SEEN_KEY = intPreferencesKey("whats_new_seen_version")
+
+    private fun parseProgression(p: Preferences): ProgressionConfig {
+        val d = ProgressionConfig()
+        return ProgressionConfig(
+            enabled = p[PROGRESSION_ENABLED_KEY] ?: d.enabled,
+            useRpe = p[PROGRESSION_USE_RPE_KEY] ?: d.useRpe,
+            defaultRepMin = p[PROGRESSION_REP_MIN_KEY] ?: d.defaultRepMin,
+            defaultRepMax = p[PROGRESSION_REP_MAX_KEY] ?: d.defaultRepMax,
+            defaultTargetRpe = p[PROGRESSION_TARGET_RPE_KEY] ?: d.defaultTargetRpe,
+            longBreakDays = p[PROGRESSION_LONG_BREAK_KEY] ?: d.longBreakDays,
+            failDropPercent = p[PROGRESSION_FAIL_DROP_KEY] ?: d.failDropPercent,
+            plateauSessions = p[PROGRESSION_PLATEAU_KEY] ?: d.plateauSessions,
+            deloadPercent = p[PROGRESSION_DELOAD_KEY] ?: d.deloadPercent,
+            autoFill = p[PROGRESSION_AUTO_FILL_KEY] ?: d.autoFill
+        )
+    }
+
+    private fun writeProgression(p: androidx.datastore.preferences.core.MutablePreferences, c: ProgressionConfig) {
+        p[PROGRESSION_ENABLED_KEY] = c.enabled
+        p[PROGRESSION_USE_RPE_KEY] = c.useRpe
+        p[PROGRESSION_REP_MIN_KEY] = c.defaultRepMin
+        p[PROGRESSION_REP_MAX_KEY] = c.defaultRepMax
+        p[PROGRESSION_TARGET_RPE_KEY] = c.defaultTargetRpe
+        p[PROGRESSION_LONG_BREAK_KEY] = c.longBreakDays
+        p[PROGRESSION_FAIL_DROP_KEY] = c.failDropPercent
+        p[PROGRESSION_PLATEAU_KEY] = c.plateauSessions
+        p[PROGRESSION_DELOAD_KEY] = c.deloadPercent
+        p[PROGRESSION_AUTO_FILL_KEY] = c.autoFill
+    }
 
     private fun parsePlateMap(stored: Set<String>?, fallback: Map<Float, Int>): Map<Float, Int> {
         if (stored == null) return fallback
@@ -174,7 +222,8 @@ class SettingsRepository @Inject constructor(
                 recoveryHoursByMuscle = parseRecoveryHours(preferences[RECOVERY_BY_MUSCLE_KEY]),
                 userSex = safeEnum(preferences[USER_SEX_KEY], Sex.UNSET),
                 birthYear = preferences[BIRTH_YEAR_KEY] ?: 0,
-                caliperMode = safeEnum(preferences[CALIPER_MODE_KEY], CaliperMode.THREE_SITE)
+                caliperMode = safeEnum(preferences[CALIPER_MODE_KEY], CaliperMode.THREE_SITE),
+                progression = parseProgression(preferences)
             )
         }
 
@@ -266,6 +315,23 @@ class SettingsRepository @Inject constructor(
         }
     }
 
+    /** Applies [change] to the progression settings as one write. */
+    suspend fun updateProgression(change: (ProgressionConfig) -> ProgressionConfig) {
+        context.dataStore.edit { preferences ->
+            writeProgression(preferences, change(parseProgression(preferences)))
+        }
+    }
+
+    /** Highest "what's new" intro the user has closed; 0 if none. Not part of backups. */
+    val whatsNewSeenVersionFlow: Flow<Int> = context.dataStore.data
+        .map { it[WHATS_NEW_SEEN_KEY] ?: 0 }
+
+    suspend fun setWhatsNewSeenVersion(version: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[WHATS_NEW_SEEN_KEY] = version
+        }
+    }
+
     suspend fun getExerciseSeedVersion(): Int {
         return context.dataStore.data
             .map { it[EXERCISE_SEED_VERSION_KEY] ?: 0 }
@@ -306,6 +372,7 @@ class SettingsRepository @Inject constructor(
             preferences[USER_SEX_KEY] = settings.userSex.name
             preferences[BIRTH_YEAR_KEY] = settings.birthYear
             preferences[CALIPER_MODE_KEY] = settings.caliperMode.name
+            writeProgression(preferences, settings.progression)
             if (settings.notificationSoundUri != null) {
                 preferences[NOTIFICATION_SOUND_URI_KEY] = settings.notificationSoundUri
             } else {

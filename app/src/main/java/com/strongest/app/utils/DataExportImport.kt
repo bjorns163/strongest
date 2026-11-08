@@ -74,6 +74,7 @@ private const val SET_RECOVERY_HOURS_BY_MUSCLE = "recoveryHoursByMuscle"
 private const val SET_USER_SEX = "userSex"
 private const val SET_BIRTH_YEAR = "birthYear"
 private const val SET_CALIPER_MODE = "caliperMode"
+private const val SET_PROGRESSION = "progression"
 
 private fun Exercise.toJson(): JSONObject = JSONObject().apply {
     put("id", id)
@@ -159,7 +160,13 @@ private fun RoutineExercise.toJson(): JSONObject = JSONObject().apply {
     put("defaultReps", defaultReps)
     put("defaultWeight", defaultWeight.toDouble())
     put("restSeconds", restSeconds)
+    put("repMin", repMin ?: JSONObject.NULL)
+    put("repMax", repMax ?: JSONObject.NULL)
+    put("targetRpe", targetRpe ?: JSONObject.NULL)
 }
+
+internal fun JSONObject.optIntOrNull(key: String): Int? =
+    if (!has(key) || isNull(key)) null else optInt(key)
 
 private fun JSONObject.toRoutineExercise(): RoutineExercise = RoutineExercise(
     id = getLong("id"),
@@ -169,7 +176,10 @@ private fun JSONObject.toRoutineExercise(): RoutineExercise = RoutineExercise(
     defaultSets = optInt("defaultSets", 3),
     defaultReps = optInt("defaultReps", 10),
     defaultWeight = optDouble("defaultWeight", 0.0).toFloat(),
-    restSeconds = optInt("restSeconds", 90)
+    restSeconds = optInt("restSeconds", 90),
+    repMin = optIntOrNull("repMin"),
+    repMax = optIntOrNull("repMax"),
+    targetRpe = optIntOrNull("targetRpe")
 )
 
 private fun RoutineSet.toJson(): JSONObject = JSONObject().apply {
@@ -213,13 +223,19 @@ private fun ExerciseSettings.toJson(): JSONObject = JSONObject().apply {
     put("warmUpSetCount", warmUpSetCount)
     put("barWeightKg", barWeightKg?.toDouble() ?: JSONObject.NULL)
     put("plateSingleSide", plateSingleSide)
+    put("progressionMethod", progressionMethod ?: JSONObject.NULL)
+    put("weightStepKg", weightStepKg?.toDouble() ?: JSONObject.NULL)
 }
 
 private fun JSONObject.toExerciseSettings(): ExerciseSettings = ExerciseSettings(
     exerciseId = getLong("exerciseId"),
     warmUpSetCount = optInt("warmUpSetCount", 3),
     barWeightKg = if (isNull("barWeightKg")) null else optDouble("barWeightKg").toFloat(),
-    plateSingleSide = optBoolean("plateSingleSide", false)
+    plateSingleSide = optBoolean("plateSingleSide", false),
+    progressionMethod = if (!has("progressionMethod") || isNull("progressionMethod")) null
+    else optString("progressionMethod"),
+    weightStepKg = if (!has("weightStepKg") || isNull("weightStepKg")) null
+    else optDouble("weightStepKg").toFloat()
 )
 
 private fun Workout.toJson(): JSONObject = JSONObject().apply {
@@ -324,6 +340,35 @@ private fun AppSettings.toJson(): JSONObject = JSONObject().apply {
     put(SET_USER_SEX, userSex.name)
     put(SET_BIRTH_YEAR, birthYear)
     put(SET_CALIPER_MODE, caliperMode.name)
+    put(SET_PROGRESSION, JSONObject().apply {
+        put("enabled", progression.enabled)
+        put("useRpe", progression.useRpe)
+        put("defaultRepMin", progression.defaultRepMin)
+        put("defaultRepMax", progression.defaultRepMax)
+        put("defaultTargetRpe", progression.defaultTargetRpe)
+        put("longBreakDays", progression.longBreakDays)
+        put("failDropPercent", progression.failDropPercent)
+        put("plateauSessions", progression.plateauSessions)
+        put("deloadPercent", progression.deloadPercent)
+        put("autoFill", progression.autoFill)
+    })
+}
+
+private fun JSONObject?.toProgressionConfig(): ProgressionConfig {
+    val d = ProgressionConfig()
+    if (this == null) return d
+    return ProgressionConfig(
+        enabled = optBoolean("enabled", d.enabled),
+        useRpe = optBoolean("useRpe", d.useRpe),
+        defaultRepMin = optInt("defaultRepMin", d.defaultRepMin),
+        defaultRepMax = optInt("defaultRepMax", d.defaultRepMax),
+        defaultTargetRpe = optInt("defaultTargetRpe", d.defaultTargetRpe),
+        longBreakDays = optInt("longBreakDays", d.longBreakDays),
+        failDropPercent = optInt("failDropPercent", d.failDropPercent),
+        plateauSessions = optInt("plateauSessions", d.plateauSessions),
+        deloadPercent = optInt("deloadPercent", d.deloadPercent),
+        autoFill = optBoolean("autoFill", d.autoFill)
+    )
 }
 
 private fun JSONObject.toAppSettings(): AppSettings = AppSettings(
@@ -381,7 +426,8 @@ private fun JSONObject.toAppSettings(): AppSettings = AppSettings(
         CaliperMode.valueOf(optString(SET_CALIPER_MODE, "THREE_SITE"))
     } catch (_: Exception) {
         CaliperMode.THREE_SITE
-    }
+    },
+    progression = optJSONObject(SET_PROGRESSION).toProgressionConfig()
 )
 
 fun ExportData.toJson(): String = JSONObject().apply {

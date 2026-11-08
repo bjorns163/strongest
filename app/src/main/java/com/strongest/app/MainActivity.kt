@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import com.strongest.app.data.repository.SettingsRepository
 import com.strongest.app.ui.navigation.AppNavigation
 import com.strongest.app.ui.theme.StrongestTheme
+import com.strongest.app.ui.whatsnew.WhatsNewHost
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
 
             StrongestTheme(darkTheme = darkTheme) {
                 AppNavigation()
+                WhatsNewHost()
             }
         }
     }

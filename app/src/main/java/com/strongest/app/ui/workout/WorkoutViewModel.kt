@@ -33,6 +33,14 @@ import com.strongest.app.utils.WorkoutNotificationBus
 import com.strongest.app.utils.WorkoutNotificationState
 import com.strongest.app.utils.WorkoutPrInfo
 import com.strongest.app.utils.computeWorkoutPrs
+import com.strongest.app.utils.ProgressionMethod
+import com.strongest.app.utils.ProgressionSuggestion
+import com.strongest.app.utils.defaultWeightStepKg
+import com.strongest.app.utils.lastTopReps
+import com.strongest.app.utils.resolveProgressionTarget
+import com.strongest.app.utils.selectProgressionTrack
+import com.strongest.app.utils.suggestProgression
+import com.strongest.app.utils.takesProgressionSuggestion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -47,6 +55,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -188,7 +197,13 @@ data class WorkoutExerciseUi(
     val type: ExerciseType = ExerciseType.ISOLATION,
     val sets: List<SetUi>,
     val previousSets: List<PreviousSetInfo> = emptyList(),
-    val noteText: String = ""
+    val noteText: String = "",
+    /** Today's progression suggestion; null when off or there is no history to go on. */
+    val suggestion: ProgressionSuggestion? = null,
+    /** The routine's progression target for this exercise, kept so saving back to it keeps them. */
+    val repMin: Int? = null,
+    val repMax: Int? = null,
+    val targetRpe: Int? = null
 )
 
 private val setUiKeys = AtomicLong()
@@ -594,6 +609,12 @@ class ActiveWorkoutViewModel @Inject constructor(
                         previousSetInfo = previousSets.getOrNull(setIdx)
                     )
                 }
+                val plannedReps = savedSets
+                    .filter { it.setType.takesProgressionSuggestion() }
+                    .maxByOrNull { it.weight }?.reps ?: re.defaultReps
+                val suggestion = progressionSuggestionFor(
+                    exercise, routineId, re.repMin, re.repMax, re.targetRpe, plannedReps
+                )
                 uiExercises.add(
                     WorkoutExerciseUi(
                         exerciseId = re.exerciseId,
@@ -603,8 +624,12 @@ class ActiveWorkoutViewModel @Inject constructor(
                         equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                         type = exercise?.type ?: ExerciseType.ISOLATION,
                         noteText = note?.noteText ?: "",
-                        sets = uiSets,
-                        previousSets = previousSets
+                        sets = prefillSuggestion(workoutExerciseId, uiSets, suggestion),
+                        previousSets = previousSets,
+                        suggestion = suggestion,
+                        repMin = re.repMin,
+                        repMax = re.repMax,
+                        targetRpe = re.targetRpe
                     )
                 )
             }
@@ -631,8 +656,23 @@ class ActiveWorkoutViewModel @Inject constructor(
     private suspend fun loadWorkoutExercises(workoutId: Long, isOngoing: Boolean = false) {
         val details = repository.getWorkoutWithDetails(workoutId)
         if (details != null) {
+            // A resumed workout shows the suggestion again (without refilling the sets, which may
+            // already hold the user's own numbers) and keeps the routine's progression targets.
+            val routineId = if (isOngoing) details.workout.routineId else null
+            val routineTargets = routineId
+                ?.let { repository.getRoutineWithExercisesAndSets(it)?.exercises }
+                ?.distinctBy { it.exerciseId }
+                ?.associateBy { it.exerciseId }
+                ?: emptyMap()
             val exercisesUi = details.exercises.map { exerciseWithSets ->
                 val exercise = repository.getExerciseById(exerciseWithSets.workoutExercise.exerciseId)
+                val routineTarget = routineTargets[exerciseWithSets.workoutExercise.exerciseId]
+                val suggestion = if (isOngoing) {
+                    progressionSuggestionFor(
+                        exercise, routineId,
+                        routineTarget?.repMin, routineTarget?.repMax, routineTarget?.targetRpe
+                    )
+                } else null
                 val previousSets = repository.getPreviousSessionSets(
                     exerciseWithSets.workoutExercise.exerciseId
                 ).map { PreviousSetInfo(it.weightKg, it.reps, it.setType) }
@@ -668,7 +708,11 @@ class ActiveWorkoutViewModel @Inject constructor(
                             previousSetInfo = prevInfo
                         )
                     },
-                    previousSets = previousSets
+                    previousSets = previousSets,
+                    suggestion = suggestion,
+                    repMin = routineTarget?.repMin,
+                    repMax = routineTarget?.repMax,
+                    targetRpe = routineTarget?.targetRpe
                 )
             }
             _state.update { it.copy(workoutExercises = exercisesUi) }
@@ -711,6 +755,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                 )
             }
 
+            val suggestion = progressionSuggestionFor(exercise, _state.value.sourceRoutineId)
             val newExercise = WorkoutExerciseUi(
                 exerciseId = exerciseId,
                 workoutExerciseId = workoutExerciseId,
@@ -719,8 +764,9 @@ class ActiveWorkoutViewModel @Inject constructor(
                 equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                 type = exercise?.type ?: ExerciseType.ISOLATION,
                 noteText = note?.noteText ?: "",
-                sets = uiSets,
-                previousSets = previousSets
+                sets = prefillSuggestion(workoutExerciseId, uiSets, suggestion),
+                previousSets = previousSets,
+                suggestion = suggestion
             )
             _state.update {
                 it.copy(
@@ -769,6 +815,7 @@ class ActiveWorkoutViewModel @Inject constructor(
                     )
                 }
 
+                val suggestion = progressionSuggestionFor(exercise, _state.value.sourceRoutineId)
                 newExercises.add(
                     WorkoutExerciseUi(
                         exerciseId = exerciseId,
@@ -778,8 +825,9 @@ class ActiveWorkoutViewModel @Inject constructor(
                         equipment = exercise?.equipment ?: com.strongest.app.data.model.Equipment.NONE,
                         type = exercise?.type ?: ExerciseType.ISOLATION,
                         noteText = note?.noteText ?: "",
-                        sets = uiSets,
-                        previousSets = previousSets
+                        sets = prefillSuggestion(workoutExerciseId, uiSets, suggestion),
+                        previousSets = previousSets,
+                        suggestion = suggestion
                     )
                 )
             }
@@ -1377,7 +1425,10 @@ class ActiveWorkoutViewModel @Inject constructor(
                     defaultSets = ex.sets.size.coerceAtLeast(1),
                     defaultReps = firstSet?.reps ?: 10,
                     defaultWeight = firstSet?.weight ?: 0f,
-                    restSeconds = firstSet?.restSeconds ?: 90
+                    restSeconds = firstSet?.restSeconds ?: 90,
+                    repMin = ex.repMin,
+                    repMax = ex.repMax,
+                    targetRpe = ex.targetRpe
                 )
             )
             setsMap[localId] = ex.sets.mapIndexed { sIdx, s ->
@@ -1462,6 +1513,11 @@ class ActiveWorkoutViewModel @Inject constructor(
                 )
             }
 
+            // The routine's rep range was for the exercise being replaced; keep it as the target.
+            val suggestion = progressionSuggestionFor(
+                newExercise, _state.value.sourceRoutineId,
+                oldExercise.repMin, oldExercise.repMax, oldExercise.targetRpe
+            )
             val updatedExercises = _state.value.workoutExercises.toMutableList()
             updatedExercises[exerciseIndex] = oldExercise.copy(
                 exerciseId = newExerciseId,
@@ -1470,8 +1526,9 @@ class ActiveWorkoutViewModel @Inject constructor(
                 equipment = newExercise.equipment,
                 type = newExercise.type,
                 noteText = newNote?.noteText ?: "",
-                sets = uiSets,
-                previousSets = previousSets
+                sets = prefillSuggestion(workoutExerciseId, uiSets, suggestion),
+                previousSets = previousSets,
+                suggestion = suggestion
             )
             _state.update { it.copy(workoutExercises = updatedExercises) }
             persistExerciseOrderAndIds()
@@ -1623,6 +1680,109 @@ class ActiveWorkoutViewModel @Inject constructor(
             }
             _state.value = ActiveWorkoutState()
             onCancelled()
+        }
+    }
+
+    // --- Progression suggestions ---
+
+    /**
+     * Today's suggestion for [exercise], following its sessions in [routineId] when there are
+     * any. Cardio, stretches and holds are logged as time, so they get none.
+     */
+    private suspend fun progressionSuggestionFor(
+        exercise: Exercise?,
+        routineId: Long?,
+        repMin: Int? = null,
+        repMax: Int? = null,
+        targetRpe: Int? = null,
+        plannedReps: Int? = null
+    ): ProgressionSuggestion? {
+        if (exercise == null) return null
+        if (exercise.muscleGroup == MuscleGroup.CARDIO || exercise.muscleGroup == MuscleGroup.STRETCHING ||
+            exercise.type == ExerciseType.ISOMETRIC
+        ) return null
+        val settings = settingsRepository.settingsFlow.first()
+        // RPE only steers suggestions while it is being logged.
+        val config = settings.progression.copy(
+            useRpe = settings.progression.useRpe && settings.rpeTrackingEnabled
+        )
+        if (!config.enabled) return null
+        val prefs = repository.getExerciseSettings(exercise.id)
+        val method = prefs?.progressionMethod
+            ?.let { name -> ProgressionMethod.entries.firstOrNull { it.name == name } }
+            ?: ProgressionMethod.DOUBLE
+        if (method == ProgressionMethod.OFF) return null
+        val track = selectProgressionTrack(repository.getProgressionSessions(exercise.id), routineId)
+        if (track.isEmpty()) return null
+        val target = resolveProgressionTarget(
+            repMin, repMax, targetRpe, plannedReps ?: lastTopReps(track), config
+        )
+        val lastWeight = track.first().sets
+            .filter { it.setType.takesProgressionSuggestion() }
+            .maxOfOrNull { it.weightKg } ?: 0f
+        val step = prefs?.weightStepKg
+            ?: defaultWeightStepKg(exercise.equipment, settings.weightUnit, lastWeight)
+        return suggestProgression(track, method, target, step, config, System.currentTimeMillis())
+    }
+
+    /** Writes [suggestion] into the sets when Settings → Progression says to fill them in. */
+    private suspend fun prefillSuggestion(
+        workoutExerciseId: Long,
+        sets: List<SetUi>,
+        suggestion: ProgressionSuggestion?
+    ): List<SetUi> {
+        if (suggestion == null || !settingsRepository.settingsFlow.first().progression.autoFill) return sets
+        return applySuggestionTo(workoutExerciseId, sets, suggestion)
+    }
+
+    /**
+     * Puts the suggested weight and reps on the open top-weight working sets. Warm-ups, drop
+     * sets, lighter back-off sets and sets already done keep what they have.
+     */
+    private suspend fun applySuggestionTo(
+        workoutExerciseId: Long,
+        sets: List<SetUi>,
+        suggestion: ProgressionSuggestion
+    ): List<SetUi> {
+        fun open(set: SetUi) = !set.isCompleted && set.setType.takesProgressionSuggestion()
+        val top = sets.filter(::open).maxOfOrNull { it.weight } ?: return sets
+        return sets.map { set ->
+            if (open(set) && kotlin.math.abs(set.weight - top) < 0.01f) {
+                set.copy(weight = suggestion.weightKg, reps = suggestion.reps)
+                    .also { persistSetNow(workoutExerciseId, it) }
+            } else set
+        }
+    }
+
+    /** Tapping the suggestion: fill it in now (e.g. after editing, or with auto-fill off). */
+    fun applySuggestion(workoutExerciseId: Long) {
+        viewModelScope.launch {
+            val exercise = _state.value.workoutExercises
+                .firstOrNull { it.workoutExerciseId == workoutExerciseId } ?: return@launch
+            val suggestion = exercise.suggestion ?: return@launch
+            val updated = applySuggestionTo(workoutExerciseId, exercise.sets, suggestion)
+            _state.update { st ->
+                st.copy(workoutExercises = st.workoutExercises.map {
+                    if (it.workoutExerciseId == workoutExerciseId) it.copy(sets = updated) else it
+                })
+            }
+        }
+    }
+
+    /** Re-works the suggestion after this exercise's progression preferences changed. */
+    fun refreshSuggestion(workoutExerciseId: Long) {
+        viewModelScope.launch {
+            val ex = _state.value.workoutExercises
+                .firstOrNull { it.workoutExerciseId == workoutExerciseId } ?: return@launch
+            val suggestion = progressionSuggestionFor(
+                repository.getExerciseById(ex.exerciseId), _state.value.sourceRoutineId,
+                ex.repMin, ex.repMax, ex.targetRpe
+            )
+            _state.update { st ->
+                st.copy(workoutExercises = st.workoutExercises.map {
+                    if (it.workoutExerciseId == workoutExerciseId) it.copy(suggestion = suggestion) else it
+                })
+            }
         }
     }
 

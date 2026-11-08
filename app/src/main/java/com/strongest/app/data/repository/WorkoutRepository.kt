@@ -24,6 +24,9 @@ import com.strongest.app.data.model.SECONDARY_MUSCLE_WEIGHT
 import com.strongest.app.data.model.SetLog
 import com.strongest.app.data.model.Workout
 import com.strongest.app.data.model.WorkoutExercise
+import com.strongest.app.utils.ProgressionMethod
+import com.strongest.app.utils.ProgressionSession
+import com.strongest.app.utils.ProgressionSet
 import com.strongest.app.utils.localDayStart
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
@@ -203,6 +206,22 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun getPreviousSessionSets(exerciseId: Long): List<ExerciseHistoryEntry> =
         workoutDao.getLastSessionSets(exerciseId)
+
+    /** Recent finished sessions of an exercise, most recent first, for progression suggestions. */
+    suspend fun getProgressionSessions(exerciseId: Long, sessionLimit: Int = 30): List<ProgressionSession> =
+        workoutDao.getProgressionHistory(exerciseId, sessionLimit)
+            .groupBy { it.workoutId }
+            .map { (workoutId, rows) ->
+                ProgressionSession(
+                    workoutId = workoutId,
+                    routineId = rows.first().routineId,
+                    startTime = rows.first().startTime,
+                    sets = rows.map { ProgressionSet(it.weightKg, it.reps, it.rpe, it.setType) }
+                )
+            }
+            .sortedByDescending { it.startTime }
+
+    suspend fun countCompletedWorkouts(): Int = workoutDao.countCompletedWorkouts()
 
     suspend fun getExerciseHistory(exerciseId: Long): List<ExerciseHistoryEntry> =
         workoutDao.getExerciseHistory(exerciseId)
@@ -507,6 +526,12 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun saveWarmUpSetCount(exerciseId: Long, count: Int) =
         updateExerciseSettings(exerciseId) { it.copy(warmUpSetCount = count) }
+
+    /** [method] null = double progression; [weightStepKg] null = based on the equipment. */
+    suspend fun saveProgressionPreferences(exerciseId: Long, method: ProgressionMethod?, weightStepKg: Float?) =
+        updateExerciseSettings(exerciseId) {
+            it.copy(progressionMethod = method?.name, weightStepKg = weightStepKg)
+        }
 
     /** Remembers how this exercise is loaded, so the plate calculator opens ready to use. */
     suspend fun savePlatePreferences(exerciseId: Long, barWeightKg: Float, singleSide: Boolean) =

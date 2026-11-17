@@ -24,9 +24,9 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -74,6 +74,7 @@ import com.strongest.app.utils.formatWeightForDisplay
 import com.strongest.app.utils.kgToDisplay
 import com.strongest.app.utils.parseDecimalInput
 import com.strongest.app.utils.weightUnitLabel
+import com.strongest.app.ui.theme.LocalOnSuccessColor
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -175,9 +176,13 @@ fun ProgressionSuggestionChip(
     val icon = when (suggestion.kind) {
         SuggestionKind.INCREASE_WEIGHT, SuggestionKind.ADD_REPS -> Icons.AutoMirrored.Filled.TrendingUp
         SuggestionKind.REPEAT -> Icons.Default.Repeat
-        SuggestionKind.DECREASE -> Icons.AutoMirrored.Filled.TrendingDown
-        SuggestionKind.DELOAD -> Icons.Default.SelfImprovement
+        SuggestionKind.DECREASE, SuggestionKind.DELOAD -> Icons.AutoMirrored.Filled.TrendingDown
         SuggestionKind.LONG_BREAK -> Icons.Default.Refresh
+    }
+    val iconTint = when (suggestion.kind) {
+        SuggestionKind.INCREASE_WEIGHT, SuggestionKind.ADD_REPS -> LocalOnSuccessColor.current
+        SuggestionKind.DECREASE, SuggestionKind.DELOAD -> MaterialTheme.colorScheme.error
+        else -> LocalContentColor.current
     }
 
     Box(modifier = modifier) {
@@ -198,7 +203,7 @@ fun ProgressionSuggestionChip(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(title, style = MaterialTheme.typography.labelLarge)
                     Text(

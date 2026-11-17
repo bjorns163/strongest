@@ -83,6 +83,10 @@ private val LightColorScheme = lightColorScheme(
 // and kept clearly distinct from the crimson-amber warm-up accent.
 val LocalSuccessColor = staticCompositionLocalOf { Color(0xFFA5D6A7) }
 
+// The same green as a foreground colour (icons, text). LocalSuccessColor is a fill and is too
+// pale to read as an icon on the light theme.
+val LocalOnSuccessColor = staticCompositionLocalOf { Color(0xFF2E7D32) }
+
 @Composable
 fun StrongestTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -91,7 +95,8 @@ fun StrongestTheme(
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     CompositionLocalProvider(
-        LocalSuccessColor provides if (darkTheme) Color(0xFF2E7D32) else Color(0xFFA5D6A7)
+        LocalSuccessColor provides if (darkTheme) Color(0xFF2E7D32) else Color(0xFFA5D6A7),
+        LocalOnSuccessColor provides if (darkTheme) Color(0xFF81C784) else Color(0xFF2E7D32)
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

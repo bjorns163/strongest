@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,9 +77,9 @@ private fun openPlayStore(context: Context) {
 }
 
 /**
- * Shows the "what's new" intro once, to people updating who already have workouts logged.
- * A fresh install has nothing to base suggestions on, so it is marked as seen silently.
- * Closing the intro in any way counts as seen.
+ * Shows the "what's new" intro on each launch to people updating who already have workouts
+ * logged, until they tick "Don't show again". A fresh install has nothing to base suggestions
+ * on, so it is marked as seen silently.
  */
 @Composable
 fun WhatsNewHost() {
@@ -92,8 +94,11 @@ fun WhatsNewHost() {
     val scope = rememberCoroutineScope()
     var show by remember { mutableStateOf(false) }
     var initialEnabled by remember { mutableStateOf(true) }
+    // Closed without "Don't show again": stay away until the next launch, not the next rotation.
+    var dismissedThisLaunch by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        if (dismissedThisLaunch) return@LaunchedEffect
         if (settingsRepository.whatsNewSeenVersionFlow.first() >= WHATS_NEW_VERSION) return@LaunchedEffect
         if (workoutRepository.countCompletedWorkouts() == 0) {
             settingsRepository.setWhatsNewSeenVersion(WHATS_NEW_VERSION)
@@ -106,11 +111,12 @@ fun WhatsNewHost() {
     if (show) {
         WhatsNewDialog(
             initialEnabled = initialEnabled,
-            onFinish = { enabled ->
+            onFinish = { enabled, dontShowAgain ->
                 show = false
+                dismissedThisLaunch = true
                 scope.launch {
                     settingsRepository.updateProgression { it.copy(enabled = enabled) }
-                    settingsRepository.setWhatsNewSeenVersion(WHATS_NEW_VERSION)
+                    if (dontShowAgain) settingsRepository.setWhatsNewSeenVersion(WHATS_NEW_VERSION)
                 }
             }
         )
@@ -120,14 +126,15 @@ fun WhatsNewHost() {
 @Composable
 fun WhatsNewDialog(
     initialEnabled: Boolean,
-    onFinish: (progressionEnabled: Boolean) -> Unit
+    onFinish: (progressionEnabled: Boolean, dontShowAgain: Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 2 })
     var enabled by remember { mutableStateOf(initialEnabled) }
+    var dontShowAgain by remember { mutableStateOf(false) }
 
-    Dialog(onDismissRequest = { onFinish(enabled) }) {
+    Dialog(onDismissRequest = { onFinish(enabled, dontShowAgain) }) {
         Surface(
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -228,6 +235,24 @@ fun WhatsNewDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .toggleable(
+                            value = dontShowAgain,
+                            onValueChange = { dontShowAgain = it },
+                            role = Role.Checkbox
+                        )
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = dontShowAgain, onCheckedChange = null, modifier = Modifier.padding(12.dp))
+                    Text(
+                        stringResource(R.string.whats_new_dont_show_again),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .padding(horizontal = 24.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
@@ -240,7 +265,7 @@ fun WhatsNewDialog(
                             Text(stringResource(R.string.back))
                         }
                         Spacer(Modifier.size(8.dp))
-                        Button(onClick = { onFinish(enabled) }) {
+                        Button(onClick = { onFinish(enabled, dontShowAgain) }) {
                             Text(stringResource(R.string.done))
                         }
                     }

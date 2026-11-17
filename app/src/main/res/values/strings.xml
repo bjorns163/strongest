@@ -742,5 +742,6 @@
     <string name="whats_new_feedback_body">Found a bug or have an idea?</string>
     <string name="whats_new_feedback">Give feedback on GitHub</string>
     <string name="done">Done</string>
+    <string name="whats_new_dont_show_again">Don\'t show again</string>
     <string name="whats_new_page">Page %1$d of %2$d</string>
 </resources>

@@ -72,7 +72,7 @@ enum class CaliperMode(val siteCount: Int, @StringRes val labelRes: Int) {
  * Bumped each time there is a new "what's new" intro to show. The intro shows when the stored
  * value is lower than this; see [SettingsRepository.whatsNewSeenVersionFlow].
  */
-const val WHATS_NEW_VERSION = 1
+const val WHATS_NEW_VERSION = 2
 
 /** Muscle groups that have a recovery window (trainable, non-cardio/stretching). */
 val RECOVERABLE_MUSCLE_GROUPS: List<MuscleGroup> = listOf(

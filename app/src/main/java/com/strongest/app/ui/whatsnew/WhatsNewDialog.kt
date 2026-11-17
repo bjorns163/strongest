@@ -57,7 +57,6 @@ import com.strongest.app.data.repository.WHATS_NEW_VERSION
 import com.strongest.app.ui.workout.openUrl
 import com.strongest.app.ui.workout.progressionFeedbackUrl
 import com.strongest.app.utils.SettingsEntryPoint
-import com.strongest.app.utils.WorkoutRepositoryEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -77,19 +76,13 @@ private fun openPlayStore(context: Context) {
 }
 
 /**
- * Shows the "what's new" intro on each launch to people updating who already have workouts
- * logged, until they tick "Don't show again". A fresh install has nothing to base suggestions
- * on, so it is marked as seen silently.
+ * Shows the "what's new" intro on each launch until "Don't show again" is ticked.
  */
 @Composable
 fun WhatsNewHost() {
     val context = LocalContext.current
     val settingsRepository = remember {
         EntryPointAccessors.fromApplication(context, SettingsEntryPoint::class.java).settingsRepository()
-    }
-    val workoutRepository = remember {
-        EntryPointAccessors.fromApplication(context, WorkoutRepositoryEntryPoint::class.java)
-            .workoutRepository()
     }
     val scope = rememberCoroutineScope()
     var show by remember { mutableStateOf(false) }
@@ -100,12 +93,8 @@ fun WhatsNewHost() {
     LaunchedEffect(Unit) {
         if (dismissedThisLaunch) return@LaunchedEffect
         if (settingsRepository.whatsNewSeenVersionFlow.first() >= WHATS_NEW_VERSION) return@LaunchedEffect
-        if (workoutRepository.countCompletedWorkouts() == 0) {
-            settingsRepository.setWhatsNewSeenVersion(WHATS_NEW_VERSION)
-        } else {
-            initialEnabled = settingsRepository.settingsFlow.first().progression.enabled
-            show = true
-        }
+        initialEnabled = settingsRepository.settingsFlow.first().progression.enabled
+        show = true
     }
 
     if (show) {

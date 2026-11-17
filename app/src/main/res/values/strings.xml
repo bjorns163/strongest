@@ -700,6 +700,7 @@
 
     <!-- Settings → Progression -->
     <string name="settings_progression">Progression</string>
+    <string name="settings_beta_badge">Beta</string>
     <string name="settings_progression_enabled">Progression suggestions</string>
     <string name="settings_progression_enabled_desc">Suggests your next weight and reps from your last session</string>
     <string name="settings_progression_use_rpe">Use RPE in suggestions</string>

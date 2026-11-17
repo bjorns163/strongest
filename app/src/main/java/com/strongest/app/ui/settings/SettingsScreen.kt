@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -42,6 +43,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -678,15 +680,34 @@ fun SettingsScreen(
 private fun SettingsGroup(
     title: String,
     modifier: Modifier = Modifier,
+    badge: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(modifier = modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
-        )
+        Row(
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            if (badge != null) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    Text(
+                        text = badge,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
@@ -976,7 +997,10 @@ private fun ProgressionSettingsGroup(
     val context = LocalContext.current
     var showRangeDialog by remember { mutableStateOf(false) }
 
-    SettingsGroup(title = stringResource(R.string.settings_progression)) {
+    SettingsGroup(
+        title = stringResource(R.string.settings_progression),
+        badge = stringResource(R.string.settings_beta_badge)
+    ) {
         SettingsSwitchRow(
             title = stringResource(R.string.settings_progression_enabled),
             description = stringResource(R.string.settings_progression_enabled_desc),

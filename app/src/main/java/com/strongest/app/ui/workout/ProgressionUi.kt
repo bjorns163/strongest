@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Feedback
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
@@ -176,12 +175,13 @@ fun ProgressionSuggestionChip(
     val icon = when (suggestion.kind) {
         SuggestionKind.INCREASE_WEIGHT, SuggestionKind.ADD_REPS -> Icons.AutoMirrored.Filled.TrendingUp
         SuggestionKind.REPEAT -> Icons.Default.Repeat
-        SuggestionKind.DECREASE, SuggestionKind.DELOAD -> Icons.AutoMirrored.Filled.TrendingDown
-        SuggestionKind.LONG_BREAK -> Icons.Default.Refresh
+        SuggestionKind.DECREASE, SuggestionKind.DELOAD, SuggestionKind.LONG_BREAK ->
+            Icons.AutoMirrored.Filled.TrendingDown
     }
     val iconTint = when (suggestion.kind) {
         SuggestionKind.INCREASE_WEIGHT, SuggestionKind.ADD_REPS -> LocalOnSuccessColor.current
-        SuggestionKind.DECREASE, SuggestionKind.DELOAD -> MaterialTheme.colorScheme.error
+        SuggestionKind.DECREASE, SuggestionKind.DELOAD, SuggestionKind.LONG_BREAK ->
+            MaterialTheme.colorScheme.error
         else -> LocalContentColor.current
     }
 

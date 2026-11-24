@@ -37,6 +37,7 @@ spreadsheets, not an import format, and is not described here.
 | `oneRmFormula` | `EPLEY` *(fallback)*, `BRZYCKI`, `BOTH` |
 | `userSex` | `MALE`, `FEMALE`, `UNSET` *(fallback)* |
 | `caliperMode` | `THREE_SITE` *(fallback)*, `FOUR_SITE`, `SEVEN_SITE` |
+| `progressionMethod` | `DOUBLE`, `LINEAR`, `OFF`; `null` means `DOUBLE` |
 
 `muscleGroup`, `equipment`, `classification` and `metric` are defined in
 [`Exercise.kt`](../app/src/main/java/com/strongest/app/data/model/Exercise.kt) and
@@ -129,6 +130,9 @@ disabled during import, so a dangling reference is stored rather than reported.
 | `defaultReps` | int | `10` | |
 | `defaultWeight` | float (kg) | `0` | |
 | `restSeconds` | int | `90` | |
+| `repMin` | int or `null` | `null` | Progression rep range for this exercise in this routine. `null` (either bound) means use `settings.progression`. |
+| `repMax` | int or `null` | `null` | |
+| `targetRpe` | int or `null` | `null` | Target RPE (7–9) for progression; `null` means the settings default. |
 
 ## routineSets
 
@@ -164,6 +168,8 @@ loaded so the plate calculator opens ready to use.
 | `warmUpSetCount` | int | `3` | How many warm-up sets the calculator generates (1–4). |
 | `barWeightKg` | float (kg) or `null` | `null` | Bar last used for this exercise. `null` means never chosen; `0` means **no bar** (a machine or loadable dumbbell). |
 | `plateSingleSide` | bool | `false` | `true` when the exercise loads from one side only, so plates are not counted in pairs. |
+| `progressionMethod` | enum or `null` | `null` | How progression suggestions treat this exercise. |
+| `weightStepKg` | float (kg) or `null` | `null` | One weight increase. `null` means based on the equipment. |
 
 ## workouts
 
@@ -234,6 +240,21 @@ Logged sets of a performed workout.
 | `userSex` | enum | `UNSET` | |
 | `birthYear` | int | `0` | `0` means unset. |
 | `caliperMode` | enum | `THREE_SITE` | |
+| `progression` | object | defaults below | Settings → Progression. |
+
+`progression` keys, all optional:
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `enabled` | bool | `true` | |
+| `useRpe` | bool | `true` | Only has an effect while `rpeTrackingEnabled` is on. |
+| `defaultRepMin` / `defaultRepMax` | int | `8` / `12` | For routine exercises without their own range. |
+| `defaultTargetRpe` | int | `8` | |
+| `longBreakDays` | int | `21` | |
+| `failDropPercent` | int | `5` | |
+| `plateauSessions` | int | `3` | `0` turns plateau detection off. |
+| `deloadPercent` | int | `10` | |
+| `autoFill` | bool | `true` | |
 
 The two plate maps and `recoveryHoursByMuscle` store their **values as strings**, not
 numbers — that is what the app writes and what it expects to read back. Entries whose
@@ -275,6 +296,7 @@ ungrouped.
 | `defaultWeight` | float (kg) | `0` | |
 | `defaultReps` | int | `10` | |
 | `restSeconds` | int | `90` | Also the fallback for a set that omits `restSeconds`. |
+| `repMin` / `repMax` / `targetRpe` | int | omitted | Progression target; written only when the routine sets one. |
 
 ## exercises[].sets[]
 
